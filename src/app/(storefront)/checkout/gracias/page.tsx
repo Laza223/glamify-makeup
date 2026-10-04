@@ -3,6 +3,7 @@ import Link from "next/link";
 import { CheckCircle2, Clock } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { formatARS } from "@/lib/money";
+import { whatsappLink } from "@/lib/whatsapp";
 import { Button } from "@/components/ui/button";
 import { TrackOnMount } from "@/components/analytics/track-on-mount";
 
@@ -14,6 +15,11 @@ export default async function GraciasPage({ searchParams }: { searchParams: Prom
   const order = orderId ? await prisma.order.findUnique({ where: { id: orderId }, include: { items: true } }) : null;
 
   const paid = order?.status === "paid" || order?.status === "preparing" || order?.status === "shipped" || order?.status === "delivered";
+  const setting = await prisma.setting.findUnique({ where: { id: "default" }, select: { whatsappNumber: true } });
+  const waHref = whatsappLink(
+    setting?.whatsappNumber,
+    order ? `¡Hola! Tengo una consulta sobre mi pedido ${order.orderNumber}` : undefined,
+  );
 
   return (
     <div className="mx-auto max-w-lg py-10 text-center">
@@ -49,9 +55,11 @@ export default async function GraciasPage({ searchParams }: { searchParams: Prom
 
       <div className="mt-8 flex flex-col items-center gap-3">
         <Button asChild><Link href="/tienda">Seguir comprando</Link></Button>
-        <a href="https://wa.me/5491100000000" className="text-sm text-primary hover:underline" target="_blank" rel="noopener noreferrer">
-          ¿Dudas? Escribinos por WhatsApp
-        </a>
+        {waHref && (
+          <a href={waHref} className="text-sm text-primary hover:underline" target="_blank" rel="noopener noreferrer">
+            ¿Dudas? Escribinos por WhatsApp
+          </a>
+        )}
       </div>
     </div>
   );
