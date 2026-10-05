@@ -1,101 +1,70 @@
-# Glamify Makeup — Runbook de lanzamiento (M5)
+# Glamify Makeup — Checklist de lanzamiento
 
-> La **mitad de código** de M5 ya está hecha y verificada (legales, arrepentimiento, a11y AA, perf, tests).
-> Este runbook es la **mitad de ops**: lo ejecutás vos. Al terminarlo se cierra el DoD del milestone:
-> **tienda en producción en `glamifymakeup.site`**.
->
-> Regla de oro: los **secretos** van solo en `.env.local` y en los secrets de Cloudflare (`wrangler secret put`). Nunca en git ni en el chat.
+> Estado real al 2026-10-05. Producción: `https://www.glamifymakeup.site` en **Vercel** (proyecto `glamify-makeup-1`, deploy automático al mergear a `main`). Reemplaza el runbook viejo de Cloudflare Workers.
+> Backlog post-lanzamiento: `TODO.md` — **no bloquea** el lanzamiento.
 
-## Orden de ejecución
+**Regla:** un punto por vez, en orden. No se pasa al siguiente sin la verificación del actual.
+**Quién:** **Yo** = Claude · **Vos** = Lazar / la dueña.
 
-### 1. Completar los datos legales del negocio
-Editar `src/lib/legal/business-info.ts` y reemplazar **todos** los `[COMPLETAR: ...]`:
-- `legalName` — razón social o nombre y apellido del/la titular
-- `taxId` — CUIT/CUIL
-- `taxCondition` — condición fiscal (ej. Monotributo)
-- `address` — domicilio comercial/legal
-- `email` — email de contacto
-- `whatsapp` — WhatsApp con código país
-- `jurisdiction` — jurisdicción para T&C
-- `paymentMethods` — medios de pago aceptados
+## Ya hecho y verificado
 
-También revisar el copy `[COMPLETAR]` en `src/app/(storefront)/nosotras/page.tsx` (historia de marca).
+- [x] Sitio en producción en `www.glamifymakeup.site`; páginas legales responden 200; CUIT, condición fiscal, email y WhatsApp cargados.
+- [x] Compra real de punta a punta (Mercado Pago PROD → webhook → pedido pagado → carga en MiCorreo): 28/8 y 13/9.
+- [x] Envíos: despacho **manual** en la plataforma de MiCorreo. En el pedido del admin se carga el seguimiento → pasa a "enviado" → mail a la clienta con el número y el link de Correo Argentino. La carga automática a MiCorreo es best-effort: si falla, no rompe nada.
+- [x] Resend: dominio `glamifymakeup.site` verificado (SPF/DKIM/DMARC), remitente `hola@glamifymakeup.site`.
+- [x] Auditoría pre-lanzamiento: guard de escritura a prod en scripts, timeout a Mercado Pago, email best-effort en el webhook, checkbox de T&C en checkout.
+- [x] Cron horario (`/api/cron`: carrito abandonado + cancelación de pedidos vencidos) registrado y activo en Vercel.
+- [x] CI verde en `main`: lint, typecheck, 481 tests, build.
 
-Verificá que no quede ninguno:
-```bash
-pnpm test -- launch-readiness   # el warning debe listar 0 claves
-```
-> Para que `/contacto` muestre WhatsApp/IG/TikTok, cargá `Setting.whatsappNumber`, `instagramUrl`, `tiktokUrl`
-> en la DB (panel `/admin` o seed). El WhatsApp FAB también depende de `Setting.whatsappNumber`.
+## Bloque 1 — Código pendiente
 
-### 2. Cargar el catálogo real
-- Subir productos, variantes (tono + stock + SKU) y fotos desde `/admin` (las imágenes van a Supabase Storage).
-- Alternativa: adaptar `prisma/seed.ts` y correr `pnpm db:seed`.
-- Revisá que haya categorías, destacados y combos para que la home no quede vacía.
+- [ ] **1.1 (Vos)** Mergear el PR #13: WhatsApp real en `/checkout/gracias` (hoy apunta a un número falso).
+  Verificación: `curl -s https://www.glamifymakeup.site/checkout/gracias | grep -o "wa.me/[0-9]*"` → `wa.me/5492323582495`.
 
-### 3. Credenciales de producción (secrets de Cloudflare)
-```bash
-wrangler secret put DATABASE_URL          # pooled 6543 (?pgbouncer=true)
-wrangler secret put DIRECT_URL            # direct 5432 (migraciones)
-wrangler secret put SUPABASE_SERVICE_ROLE_KEY
-wrangler secret put MP_ACCESS_TOKEN       # token PROD de Mercado Pago (no TEST)
-wrangler secret put MP_WEBHOOK_SECRET
-wrangler secret put RESEND_API_KEY
-wrangler secret put RESEND_FROM           # ej. "Glamify Makeup <hola@glamifymakeup.site>"
-wrangler secret put RESEND_OWNER_EMAIL    # email donde caen alertas (pedidos + arrepentimientos)
-```
-Variables públicas (`NEXT_PUBLIC_*`) van en `wrangler.jsonc → [vars]` o dashboard:
-`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_APP_URL=https://glamifymakeup.site`,
-`NEXT_PUBLIC_POSTHOG_KEY`, `NEXT_PUBLIC_POSTHOG_HOST`, `NEXT_PUBLIC_WELCOME_COUPON_CODE`.
+## Bloque 2 — Dominio canónico y región
 
-- **Resend:** verificar el dominio `glamifymakeup.site` (registros SPF/DKIM) para entregabilidad.
-- **Mercado Pago:** configurar la URL del webhook de PROD apuntando a `https://glamifymakeup.site/api/webhooks/mercadopago` y excluir efectivo (Checkout Pro).
-- **MiCorreo (envíos, cotización en vivo):** cargar los secrets `MICORREO_EMAIL`, `MICORREO_PASSWORD`,
-  `MICORREO_GATEWAY_AUTH` y `MICORREO_SANDBOX` (`"true"`/`"false"` — ausente cae al lado seguro, API PROD;
-  ver `docs/decisions/0001-shipping-provider.md` para qué es cada uno).
-  Sin ellos la cotización cae a la tabla de zonas (ya recalibrada al costo real, así que no hay
-  pérdida grave). Verificar con `pnpm micorreo:probe` — debe dar ~$6.113 a sucursal para La Plata (1900).
-  Opcionales: `MICORREO_VELOCITY` (`classic` por defecto / `express`), `MICORREO_ORIGIN_CP` (6700).
-  - Zipnova fue **cancelado** (markup ~2x); `lib/shipping/zipnova.ts` y sus secrets quedan sin uso.
-  - Requisito operativo (no de código): la cuenta MiCorreo se debita de un **saldo prepago** al crear
-    cada envío; cargar crédito antes de la primera venta.
+Hoy `NEXT_PUBLIC_APP_URL` apunta a `glamify-makeup-1.vercel.app`: sitemap, robots, canonical, mails y la vuelta desde Mercado Pago usan ese dominio. Las funciones corren en `iad1` (EE.UU.) y la base está en São Paulo.
 
-### 4. Aplicar la migración M5 a la base
-La migración `20260606120000_m5_retraction_request` (tabla `RetractionRequest` del Botón de Arrepentimiento)
-está versionada pero **aún no aplicada**. En el entorno con `DIRECT_URL` de PROD:
-```bash
-pnpm exec prisma migrate deploy
-```
-> Es aditiva (solo crea enum + tabla + índices); no toca datos existentes.
+- [ ] **2.1 (Vos)** Supabase → Authentication → URL Configuration: que `https://www.glamifymakeup.site/auth/callback` esté en Redirect URLs (y Site URL = `https://www.glamifymakeup.site`). Si falta, se rompen el login y la confirmación de mail al cambiar el dominio.
+- [ ] **2.2 (Yo, con tu OK)** En Vercel (Production): `NEXT_PUBLIC_APP_URL=https://www.glamifymakeup.site` y región de funciones `gru1`; redeploy.
+  Verificación: `robots.txt` y `sitemap.xml` con `www.glamifymakeup.site`; la tienda carga más rápido.
+- [ ] **2.3 (Vos)** Crear una cuenta de prueba por mail en el dominio nuevo: tiene que llegar el mail de confirmación y volver logueada al sitio.
 
-### 5. DNS + dominio
-- Apuntar `glamifymakeup.site` a Cloudflare (nameservers o registro).
-- En el Worker → **Custom Domains** → agregar `glamifymakeup.site` (Cloudflare gestiona SSL).
+## Bloque 3 — Catálogo (Vos, desde `/admin`)
 
-### 6. Deploy
-```bash
-pnpm deploy        # build:worker + wrangler deploy
-```
-o auto-deploy desde `main` (mergear la rama `m5-pulido-qa-launch` a `main` primero).
+- [ ] **3.1** Peso real cargado en cada producto/variante (la cotización de envío depende de eso).
+- [ ] **3.2** "Box de Maquillaje Personalizada" y "Ramo de Maquillaje Personalizado" figuran **Agotado** en la home: cargarles stock o despublicarlos.
+- [ ] **3.3** Stock y fotos reales de todo lo publicado.
+- [ ] **3.4** Home sin productos de prueba (ver 6.6: "Eduardo" se despublica después de la compra de prueba).
 
-### 7. Verificación en producción
-- **Lighthouse** en `https://glamifymakeup.site` (mobile): a11y ≥ 90, best-practices ≥ 90, perf razonable, **CLS < 0.1**, **LCP** real (en local da ~2.3s dominado por TTFB de dev; en PROD con edge + Hyperdrive debe bajar fuerte).
-- Verificar que **`/robots.txt`** valide en PROD (en dev Lighthouse lo marca por la negociación RSC de Next; en el Worker se sirve estático).
-- E2E en CI verdes (incluye `a11y.spec.ts` y `legal.spec.ts`).
-- Probar el **Botón de Arrepentimiento**: enviar el form → ver constancia `ARR-000001` → confirmar que llega el email a `RESEND_OWNER_EMAIL`.
-- Revisar el footer: todos los links legales/contenido y el FAB de WhatsApp visibles.
+## Bloque 4 — Pagos y legal (decisiones tuyas)
 
-### 8. Compra real de prueba (cierra el DoD)
-Flujo completo end-to-end con tarjeta real (monto chico):
-catálogo → carrito → checkout → **Mercado Pago PROD** → webhook → estado del pedido `paid` → emails (clienta + dueña).
-Verificar que el stock se descuente y el pedido aparezca en `/admin/pedidos`.
+- [ ] **4.1 (Vos)** Facturación AFIP: definir cómo se factura cada venta (hoy el sistema no emite comprobantes). Consultarlo con la contadora.
+- [ ] **4.2 (Vos)** Rotar `MP_ACCESS_TOKEN`: quedó expuesto en la transcripción de un subagente durante la auditoría del 28/8. Generar uno nuevo en Mercado Pago y avisarme para cargarlo en Vercel + redeploy.
+- [ ] **4.3 (Vos)** "3 cuotas sin interés" aparece en la barra de anuncios y en los beneficios de la home, y las cards muestran "3 cuotas de $X": confirmar que está activado en tu cuenta de Mercado Pago. Si no lo está, **Yo** saco ese copy (es publicidad engañosa).
+- [ ] **4.4 (Vos)** `/terminos` y `/privacidad`: definir si los revisa una abogada o quedan como están.
 
----
+## Bloque 5 — Operativo
 
-## Qué ya quedó hecho y verificado (código)
-- Páginas: `/terminos`, `/privacidad`, `/arrepentimiento` (form + constancia), `/contacto`, `/nosotras`, `/preguntas-frecuentes`, `/envios-y-pagos`.
-- Footer con legales + Botón de Arrepentimiento; rutas en `sitemap`.
-- WhatsApp FAB site-wide (condicionado a `Setting.whatsappNumber`).
-- Accesibilidad WCAG AA: **0 violaciones axe** (wcag2a/2aa/21a/21aa) en home, tienda, producto, carrito, ingresar, arrepentimiento, términos, FAQ, contacto. Lighthouse a11y **100**. Skip-link + landmark `main`.
-- Performance: **CLS 0.00**, imágenes con `aspect-ratio` reservado, LCP image con `priority`, fuentes `swap`.
-- Tests: 356 unit/integración verdes + e2e axe/legales para CI.
+- [ ] **5.1 (Vos)** Tener saldo o medio de pago cargado en MiCorreo antes de la primera venta (el envío se paga al generar la etiqueta).
+- [ ] **5.2 (Vos)** Supabase Auth con SMTP propio (Resend), según `docs/auth-email-setup.md`: sin eso el SMTP compartido corta los mails a las 2–3 por hora.
+
+## Bloque 6 — Compra de prueba final (Vos + Yo)
+
+Con "Eduardo" ($200), con tarjeta real, en `www.glamifymakeup.site`, **después** de los bloques 1 a 5:
+
+- [ ] **6.1** Checkout → Mercado Pago → vuelve a `www.glamifymakeup.site/checkout/gracias` (no a `vercel.app`).
+- [ ] **6.2** El pedido aparece como pagado en `/admin/pedidos` y el stock se descontó.
+- [ ] **6.3** Llegan el mail de confirmación a la clienta y la alerta a `RESEND_OWNER_EMAIL`.
+- [ ] **6.4** Cargar un número de seguimiento cualquiera en el pedido → pasa a "enviado" → llega el mail de despacho.
+- [ ] **6.5** Botón de Arrepentimiento: enviar el formulario → constancia `ARR-NNNNNN` → llega el mail a la dueña.
+- [ ] **6.6** Reembolso manual del pago en Mercado Pago y **despublicar "Eduardo"**.
+
+## Bloque 7 — Limpieza (Yo, no bloquea)
+
+- [ ] **7.1** `CLAUDE.md` y `SETUP.md` todavía hablan de Cloudflare Workers; pasar a Vercel. El DoD menciona `format:check`, pero el CI no lo corre (371 archivos fallan por CRLF): sacarlo o arreglarlo.
+- [ ] **7.2** 6 stashes viejos y ramas ya mergeadas por squash: revisar y borrar **con tu OK**.
+
+## Cuándo está terminado
+
+Bloques 1 a 6 completos = tienda lista para vender. Lo de `TODO.md` (WhatsApp automatizado, Sentry, captcha en reseñas, libreta de direcciones, magic link, import CSV, CRUD de zonas de envío, historial de stock, etc.) es mejora posterior, no condición.
