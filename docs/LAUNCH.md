@@ -32,13 +32,13 @@ Hoy `NEXT_PUBLIC_APP_URL` apunta a `glamify-makeup-1.vercel.app`: sitemap, robot
 
 ## Bloque 2b — Migración de Supabase (proyecto propio, plan Pro)
 
-Se migró del proyecto Supabase free (cuenta de titi) a un proyecto nuevo en la organización propia: ref , región São Paulo, con RLS activado en todas las tablas y SMTP propio (Resend). Catálogo, cupones, zonas, ajustes y las 66 fotos copiados; sin pedidos ni clientas que migrar.
+Se migró del proyecto Supabase free (cuenta de titi) a un proyecto nuevo en la organización propia: ref `npdvfjaqmigmttwaeydh`, región São Paulo, con RLS activado en todas las tablas y SMTP propio (Resend). Catálogo, cupones, zonas, ajustes y las 66 fotos copiados; sin pedidos ni clientas que migrar.
 
-- [x] **2b.1** Esquema, datos, bucket  y usuario admin  en el proyecto nuevo.
-- [x] **2b.2** Variables de Vercel apuntadas al proyecto nuevo ( con el pooler IPv4 ); región de funciones ;  con el dominio propio. Verificado en producción.
-- [ ] **2b.3 (Vos)** Entrar a  con tu usuario y confirmar que carga pedidos, productos y fotos.
-- [ ] **2b.4 (Vos)** Actualizar tu  local con las claves del proyecto nuevo (hoy apunta al viejo).
-- [ ] **2b.5 (Vos)** Activar  en Supabase (Authentication → Sign In / Providers → Email).
+- [x] **2b.1** Esquema, datos, bucket `product-images` y usuario admin `owner` en el proyecto nuevo.
+- [x] **2b.2** Variables de Vercel apuntadas al proyecto nuevo (`DATABASE_URL` con el pooler IPv4 `aws-0-sa-east-1`); región de funciones `gru1`; `NEXT_PUBLIC_APP_URL` con el dominio propio. Verificado en producción.
+- [ ] **2b.3 (Vos)** Entrar a `/admin` con tu usuario y confirmar que carga pedidos, productos y fotos.
+- [ ] **2b.4 (Vos)** Actualizar tu `.env.local` local con las claves del proyecto nuevo (hoy apunta al viejo).
+- [ ] **2b.5 (Vos)** Activar `Leaked password protection` en Supabase (Authentication → Sign In / Providers → Email).
 - [ ] **2b.6 (Vos)** Pausar el proyecto viejo después de la compra de prueba (Bloque 6) y borrarlo unos días después.
 - [ ] **2b.7 (más adelante)** Google OAuth: no estaba activo antes; queda como mejora posterior.
 
