@@ -48,18 +48,6 @@ describe("newOrderAlertEmail", () => {
     const m = newOrderAlertEmail({ ...data, amountPaid: 10900 });
     expect(m.subject.toLowerCase()).not.toContain("revisar");
   });
-  it("avisa cuando el envío NO se cargó solo en MiCorreo", () => {
-    const m = newOrderAlertEmail({ ...data, micorreoImport: { imported: false, detail: "dirección incompleta en el pedido" } });
-    expect(m.subject.toLowerCase()).toContain("revisar");
-    expect(m.html).toContain("NO se cargó");
-    expect(m.html).toContain("dirección incompleta en el pedido");
-    expect(m.text.toLowerCase()).toContain("micorreo");
-  });
-  it("no flaggea cuando el envío SÍ se cargó solo", () => {
-    const m = newOrderAlertEmail({ ...data, micorreoImport: { imported: true, detail: "importado (ok)" } });
-    expect(m.subject.toLowerCase()).not.toContain("revisar");
-    expect(m.html).not.toContain("NO se cargó");
-  });
 });
 
 describe("shipmentDispatchedEmail", () => {

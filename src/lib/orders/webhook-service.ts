@@ -8,7 +8,6 @@ import { sendEmail as realSendEmail } from "@/lib/email/resend";
 import { orderConfirmationEmail, newOrderAlertEmail, type OrderEmailData } from "@/lib/email/templates";
 import { storeWhatsappUrl } from "@/lib/email/whatsapp-url";
 import { toNumber } from "@/lib/catalog/pricing";
-import { autoImportShipment as autoImportShipmentImpl, type AutoShipmentOrder, type AutoShipmentOutcome } from "@/lib/orders/auto-shipment";
 import type { CartLine } from "@/lib/cart/types";
 import type { OrderStatus } from "@prisma/client";
 import type { Money } from "@/lib/catalog/types";
@@ -21,7 +20,6 @@ export interface ProcessWebhookInput {
 /** Interfaz mínima de la DB necesaria para el webhook (para inyectar fakes en tests). */
 export interface WebhookDb {
   order: { findFirst: (args: Record<string, unknown>) => Promise<WebhookOrder | null> };
-  shipment: { update: (args: { where: { orderId: string }; data: { service?: string; micorreoImportedAt?: Date } }) => Promise<unknown> };
   $transaction: <T>(fn: (tx: PrismaTransactionClient) => Promise<T>) => Promise<T>;
 }
 
@@ -64,8 +62,6 @@ export interface ProcessWebhookDeps {
   verifySignature: (input: { xSignature: string | null; xRequestId: string | null; dataId: string; secret: string }) => Promise<boolean>;
   secret: string;
   ownerEmail?: string;
-  /** Envío automático a MiCorreo al pagar (inyectable para tests). Best-effort. */
-  autoImportShipment?: (order: AutoShipmentOrder) => Promise<AutoShipmentOutcome>;
   /** Link de WhatsApp de la tienda para el mail a la clienta (inyectable para tests). Best-effort. */
   getWhatsappUrl?: (message?: string) => Promise<string | null>;
   now?: Date;
@@ -228,37 +224,7 @@ export async function processWebhook(input: ProcessWebhookInput, deps: ProcessWe
 
   // 6. Efectos externos (fuera de tx) — solo si ganamos la transición a paid (una sola vez).
   if (wonPaidTransition) {
-    // 6a. Envío automático a MiCorreo PRIMERO, así la alerta a la dueña puede avisar si falló.
-    // Best-effort: un fallo NO voltea el webhook (el pedido ya está pagado). Idempotente por
-    // wonPaidTransition (una vez) + el extOrderId único de MiCorreo.
-    let micorreoImport: { imported: boolean; detail: string } | undefined;
-    try {
-      const doImport = deps.autoImportShipment ?? ((o: AutoShipmentOrder) => autoImportShipmentImpl(o));
-      const outcome = await doImport({
-        orderNumber: order.orderNumber,
-        contactName: order.contactName,
-        contactEmail: order.contactEmail,
-        contactPhone: order.contactPhone,
-        shippingMethod: order.shippingMethod,
-        shippingAddress: order.shippingAddress,
-        weightGr: order.weightGr,
-        declaredValue: toNumber(order.subtotal),
-      });
-      micorreoImport = { imported: outcome.imported, detail: outcome.detail };
-      if (outcome.imported) {
-        await deps.db.shipment.update({ where: { orderId: order.id }, data: { service: outcome.service, micorreoImportedAt: deps.now ?? new Date() } });
-      } else {
-        console.info(`[webhook] pedido ${order.orderNumber}: no auto-importado a MiCorreo (${outcome.detail})`);
-      }
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      micorreoImport = { imported: false, detail: msg };
-      console.error(`[webhook] auto-import MiCorreo falló (pedido ${order.orderNumber}):`, msg);
-    }
-
-    // 6b. Emails. La alerta a la dueña incluye el resultado del auto-import (si falló, hay que
-    // cargarlo a mano / reintentar desde el panel).
-    // Best-effort, mismo criterio que 6a: el pago YA está confirmado en DB — un fallo de Resend
+    // 6. Emails (best-effort): el pago YA está confirmado en DB — un fallo de Resend
     // acá no debe voltear el webhook (si no, MP reintenta indefinidamente sobre un pago que ya
     // es idempotente, en vez de cerrar con 200).
     try {
@@ -274,7 +240,7 @@ export async function processWebhook(input: ProcessWebhookInput, deps: ProcessWe
       const customer = orderConfirmationEmail({ ...emailData, whatsappUrl });
       await deps.sendEmail({ to: order.contactEmail, subject: customer.subject, html: customer.html, text: customer.text });
       if (deps.ownerEmail) {
-        const owner = newOrderAlertEmail({ ...emailData, oversoldLines: oversoldLines.length ? oversoldLines : undefined, micorreoImport });
+        const owner = newOrderAlertEmail({ ...emailData, oversoldLines: oversoldLines.length ? oversoldLines : undefined });
         await deps.sendEmail({ to: deps.ownerEmail, subject: owner.subject, html: owner.html, text: owner.text });
       }
     } catch (e) {

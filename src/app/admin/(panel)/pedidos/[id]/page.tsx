@@ -30,6 +30,7 @@ import { STATUS_LABELS } from "@/lib/admin/orders/service";
 import { OrderStatusControl } from "../order-status-control";
 import { ShipmentForm, type ShipmentDefaults } from "../shipment-form";
 import { MicorreoPanel } from "../micorreo-panel";
+import { DEFAULT_ITEM_CM } from "@/lib/shipping/micorreo";
 import type { OrderStatus, ShipmentStatus } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
@@ -139,16 +140,6 @@ export default async function PedidoDetallePage({
   // Panel de instrucciones MiCorreo: sólo tiene sentido una vez pagado el pedido.
   const showMicorreo = ["paid", "preparing", "shipped", "delivered"].includes(order.status);
   const isSucursal = order.shippingMethod === "sucursal";
-  const destino = isSucursal
-    ? addr.agencyLabel ?? (addr.agencyCode ? `Sucursal ${addr.agencyCode}` : "Sucursal (no guardada)")
-    : [
-        [addr.street, addr.number].filter(Boolean).join(" "),
-        addr.floorApt,
-        [addr.city, addr.province].filter(Boolean).join(", "),
-        addr.cp ? `CP ${addr.cp}` : null,
-      ]
-        .filter(Boolean)
-        .join(", ");
 
   return (
     <div className="stagger space-y-6">
@@ -330,15 +321,15 @@ export default async function PedidoDetallePage({
       {/* Instrucciones MiCorreo (qué hacer con este pedido) */}
       {showMicorreo ? (
         <MicorreoPanel
-          orderId={order.id}
           orderNumber={order.orderNumber}
-          imported={Boolean(order.shipment?.micorreoImportedAt)}
           trackingLoaded={Boolean(order.shipment?.trackingNumber)}
           recipientName={order.contactName}
+          recipientEmail={order.contactEmail}
           recipientPhone={order.contactPhone}
-          destino={destino}
-          metodoLabel={isSucursal ? "Sucursal" : "Dirección"}
+          isSucursal={isSucursal}
+          address={addr}
           weightGr={order.weightGr}
+          dimensions={`${DEFAULT_ITEM_CM.length} × ${DEFAULT_ITEM_CM.width} × ${DEFAULT_ITEM_CM.height} cm`}
           declaredValue={toNumber(order.subtotal)}
         />
       ) : null}
