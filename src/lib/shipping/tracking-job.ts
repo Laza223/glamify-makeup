@@ -159,6 +159,7 @@ export async function runShipmentTrackingJob(deps: TrackingJobDeps): Promise<Tra
           contactName: order.contactName,
           trackingNumber: s.trackingNumber,
           facility: d.pickupFacility,
+          trackingUrl: `${deps.appUrl}/seguimiento/${order.id}`,
           whatsappUrl: await whatsapp(),
         });
         if (await notifyOnce(deps, s.id, "awaiting_pickup", order.contactEmail, mail)) result.notified++;

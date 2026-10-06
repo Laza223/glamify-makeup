@@ -159,3 +159,20 @@ describe("mails de seguimiento automático", () => {
     for (const s of subjects) expect(s).not.toMatch(/\p{Extended_Pictographic}/u);
   });
 });
+
+describe("link a la página de seguimiento propia", () => {
+  const url = "https://www.glamifymakeup.site/seguimiento/2f0c1d4e-1111-4222-8333-444455556666";
+  it("el botón del mail de despacho va a la página de la tienda, no a la de Correo", () => {
+    const m = shipmentDispatchedEmail({ orderNumber: "GLM-1", contactName: "Ana", trackingNumber: "CA1", trackingUrl: url });
+    expect(m.html).toContain(`href="${url}"`);
+    expect(m.html).not.toContain("Pegá ese número");
+    expect(m.text).toContain(url);
+  });
+  it("sin URL propia cae a la página de Correo (compatibilidad)", () => {
+    expect(shipmentDispatchedEmail({ orderNumber: "GLM-1", contactName: "Ana", trackingNumber: "CA1" }).html).toContain(CORREO_TRACKING_URL);
+  });
+  it("el mail de sucursal también usa la página propia", () => {
+    const m = shipmentAwaitingPickupEmail({ orderNumber: "GLM-1", contactName: "Ana", trackingNumber: "CA1", facility: null, trackingUrl: url });
+    expect(m.html).toContain(`href="${url}"`);
+  });
+});

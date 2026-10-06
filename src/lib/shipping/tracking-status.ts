@@ -54,3 +54,21 @@ export function deriveShipmentStatus(events: TrackingEvent[]): DerivedTracking {
   const pickup = events.find(isAwaitingPickup);
   return { status: "in_transit", awaitingPickup: Boolean(pickup), pickupFacility: pickup?.facility ?? null, lastEvent };
 }
+
+/** Estado del envío en palabras de la clienta (página de seguimiento, Mis pedidos). */
+export function shipmentStatusLabel(status: ShipmentStatus, awaitingPickup: boolean): string {
+  if (status === "in_transit" && awaitingPickup) return "Te espera en la sucursal";
+  switch (status) {
+    case "pending":
+    case "ready":
+      return "Preparando tu pedido";
+    case "dispatched":
+      return "Despachado";
+    case "in_transit":
+      return "En camino";
+    case "delivered":
+      return "Entregado";
+    case "returned":
+      return "Devuelto al remitente";
+  }
+}

@@ -3,6 +3,7 @@ import { canTransition } from "@/lib/orders/state-machine";
 import { sendEmail as realSendEmail } from "@/lib/email/resend";
 import { shipmentDispatchedEmail } from "@/lib/email/templates";
 import { storeWhatsappUrl } from "@/lib/email/whatsapp-url";
+import { absoluteUrl } from "@/lib/seo/url";
 import { autoImportShipment } from "@/lib/orders/auto-shipment";
 import { toNumber } from "@/lib/catalog/pricing";
 import type { Money } from "@/lib/catalog/types";
@@ -106,6 +107,7 @@ export async function upsertShipment(
         contactName: order.contactName,
         trackingNumber,
         service,
+        trackingUrl: absoluteUrl(`/seguimiento/${order.id}`),
         whatsappUrl: deps.getWhatsappUrl ? await deps.getWhatsappUrl(`¡Hola! Tengo una consulta sobre mi pedido ${order.orderNumber}`) : null,
       });
       await deps.sendEmail({ to: order.contactEmail, subject: mail.subject, html: mail.html, text: mail.text });
