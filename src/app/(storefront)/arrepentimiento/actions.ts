@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { storeWhatsappUrl } from "@/lib/email/whatsapp-url";
 import { createRetractionRequest } from "@/lib/legal/retraction/service";
 import type { RetractionInput } from "@/lib/legal/retraction/validation";
 import type { ActionResult } from "@/lib/forms/action-result";
@@ -11,6 +12,6 @@ export interface RetractionActionResult extends ActionResult {
 }
 
 export async function requestRetractionAction(input: RetractionInput): Promise<RetractionActionResult> {
-  const r = await createRetractionRequest(input, { db: prisma });
+  const r = await createRetractionRequest(input, { db: prisma, getWhatsappUrl: storeWhatsappUrl });
   return r.ok ? { ok: true, ticket: r.ticket, date: r.date } : { ok: false, error: r.error };
 }
