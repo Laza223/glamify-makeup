@@ -269,8 +269,18 @@ export async function quoteMicorreo(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Provincias (para /agencies y /rates). El envío NO se importa a MiCorreo: la dueña
-// lo carga a mano desde la tarjeta "Cómo despachar" del panel.
+// Importación de envíos (POST /shipping/import)
+//
+// OJO — qué hace y qué NO hace (verificado en la librería `ylazzari-correoargentino`):
+// "Importar" es una PRE-IMPOSICIÓN: deja el pedido cargado en la cuenta de MiCorreo.
+// La respuesta es sólo `{ createdAt }` — NO devuelve número de seguimiento ni etiqueta.
+// El tracking y el rótulo se obtienen después entrando a MiCorreo, pagando el envío
+// con el saldo e imprimiendo. O sea: ahorra recargar los datos a mano y evita errores
+// de tipeo, pero no reemplaza el paso por el panel.
+//
+// Idempotencia: `extOrderId` debe ser único; MiCorreo rechaza el duplicado con
+// "La orden ya fue importada con anterioridad". Usamos el orderNumber del pedido,
+// así reintentar el botón nunca genera un envío doble.
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** Códigos oficiales de provincia de MiCorreo (tomados del selector de su propia web). */
@@ -313,4 +323,137 @@ export function provinceCode(name: string | null | undefined): string | null {
     .replace(/\s+/g, " ")
     .trim();
   return PROVINCE_CODES[key] ?? null;
+}
+
+/**
+ * Teléfono en el formato que espera MiCorreo: sólo dígitos, número nacional sin
+ * código de país (54), sin el 9 de celular internacional ni el 0 de larga
+ * distancia (ej. "+54 9 11 3018 1532" → "1130181532"). Mandarlo crudo hacía que
+ * MiCorreo lo cortara mal en el panel. Devuelve null si no queda ningún dígito.
+ */
+export function normalizeArPhone(raw: string | null | undefined): string | null {
+  let digits = (raw ?? "").replace(/\D/g, "");
+  if (digits.startsWith("54") && digits.length >= 12) digits = digits.slice(2);
+  if (digits.startsWith("9") && digits.length === 11) digits = digits.slice(1);
+  if (digits.startsWith("0")) digits = digits.slice(1);
+  return digits || null;
+}
+
+export interface MicorreoShipmentInput {
+  /** ID único del pedido de nuestro lado (orderNumber). Da idempotencia. */
+  extOrderId: string;
+  recipient: { name: string; email: string; phone?: string | null };
+  metodo: "domicilio" | "sucursal";
+  pesoGr: number;
+  valorDeclarado: number;
+  /** Requerido si metodo === "domicilio". */
+  address?: {
+    streetName: string;
+    streetNumber: string;
+    /** Piso/depto tal cual lo escribió la clienta (el checkout lo pide en un solo campo). */
+    apartment?: string | null;
+    city: string;
+    province: string;
+    postalCode: string;
+  } | null;
+  /** Código de sucursal (de /agencies). Requerido si metodo === "sucursal". */
+  agency?: string | null;
+}
+
+export type MicorreoShipmentResult =
+  | { ok: true; createdAt: string | null }
+  | { ok: false; error: string };
+
+/**
+ * Importa (pre-impone) un envío en MiCorreo. Ver el bloque de arriba: NO devuelve
+ * tracking ni etiqueta. A diferencia de `quoteMicorreo`, acá los fallos se devuelven
+ * con el motivo — es una acción del panel y la admin necesita saber qué pasó.
+ */
+export async function createMicorreoShipment(
+  input: MicorreoShipmentInput,
+  env: MicorreoEnv = process.env as MicorreoEnv,
+  fetchImpl: typeof fetch = fetch,
+  nowMs: number = Date.now(),
+): Promise<MicorreoShipmentResult> {
+  if (!isMicorreoConfigured(env)) {
+    return { ok: false, error: "Falta configurar las credenciales de MiCorreo." };
+  }
+  if (!input.extOrderId?.trim()) return { ok: false, error: "Falta el número de pedido." };
+  if (!input.recipient?.name?.trim() || !input.recipient?.email?.trim()) {
+    return { ok: false, error: "El pedido no tiene nombre o email de contacto." };
+  }
+
+  const deliveryType = DELIVERED_BY_METHOD[input.metodo];
+  const shipping: Record<string, unknown> = { deliveryType };
+
+  if (input.metodo === "sucursal") {
+    if (!input.agency?.trim()) {
+      return {
+        ok: false,
+        error:
+          "Este pedido es a sucursal y todavía no guardamos cuál eligió la clienta. Cargalo a mano en MiCorreo.",
+      };
+    }
+    shipping.agency = input.agency.trim();
+  } else {
+    const a = input.address;
+    if (!a?.streetName?.trim() || !a?.streetNumber?.trim() || !a?.city?.trim() || !a?.postalCode?.trim()) {
+      return { ok: false, error: "La dirección del pedido está incompleta (calle, número, localidad o CP)." };
+    }
+    const code = provinceCode(a.province);
+    if (!code) return { ok: false, error: `No reconozco la provincia "${a.province}".` };
+    shipping.address = {
+      streetName: a.streetName.trim(),
+      streetNumber: a.streetNumber.trim(),
+      // Va entero en `apartment`: el checkout junta piso y depto en un campo libre
+      // ("A", "3 B", "PB 2") y partirlo adivinando perdería datos.
+      ...(a.apartment?.trim() ? { apartment: a.apartment.trim() } : {}),
+      city: a.city.trim(),
+      provinceCode: code,
+      postalCode: a.postalCode.trim(),
+    };
+  }
+
+  // Peso en gramos acá (a diferencia de /rates, que lo toma en kg).
+  shipping.weight = Math.max(1, Math.round(input.pesoGr));
+  shipping.declaredValue = input.valorDeclarado;
+  shipping.length = DEFAULT_ITEM_CM.length;
+  shipping.width = DEFAULT_ITEM_CM.width;
+  shipping.height = DEFAULT_ITEM_CM.height;
+
+  const phone = normalizeArPhone(input.recipient.phone);
+
+  try {
+    const auth = await getAuth(env, fetchImpl, nowMs);
+    if (!auth) return { ok: false, error: "No pude autenticarme con MiCorreo. Revisá las credenciales." };
+
+    const res = await fetchImpl(`${apiBase(env)}/shipping/import`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${auth.token}`,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({
+        customerId: auth.customerId,
+        extOrderId: input.extOrderId.trim(),
+        recipient: {
+          name: input.recipient.name.trim(),
+          email: input.recipient.email.trim(),
+          // El checkout pide un solo teléfono (casi siempre celular): va en los dos campos.
+          ...(phone ? { phone, cellPhone: phone } : {}),
+        },
+        shipping,
+      }),
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+    });
+
+    const json = (await res.json().catch(() => null)) as { createdAt?: string; message?: string } | null;
+    if (!res.ok) {
+      return { ok: false, error: json?.message || `MiCorreo rechazó el envío (HTTP ${res.status}).` };
+    }
+    return { ok: true, createdAt: json?.createdAt ?? null };
+  } catch {
+    return { ok: false, error: "No pude conectarme con MiCorreo. Probá de nuevo en un momento." };
+  }
 }

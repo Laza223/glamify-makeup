@@ -207,7 +207,3 @@ revertir, que esta no es.
   permanente, no transitoria — vale la pena asumirlo así desde el vamos.
 - `lib/shipping/zipnova.ts` queda huérfano (sin importadores fuera de sus propios tests y del
   script de prueba) pero intacto — no se borra sin autorización explícita de Lazar por ítem.
-
-## Actualización (2026-10-06): se quitó la precarga (`/shipping/import`)
-
-La pre-imposición automática a MiCorreo se eliminó (`createMicorreoShipment`, `auto-shipment.ts`, el reintento del panel). En la prueba real, MiCorreo mostró la altura de la calle vacía, no mostró las observaciones y rotuló el envío como "WooCommerce", lo que confunde a la dueña; y el paso por el panel (pagar, rótulo, despacho) se mantiene igual. El sistema solo **cotiza** en vivo (`quoteMicorreo`, `getMicorreoAgencies`, `provinceCode`). La tarjeta "Cómo despachar" del pedido en el admin muestra todos los datos del formulario de envío para cargarlos a mano.

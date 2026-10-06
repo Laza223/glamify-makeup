@@ -30,6 +30,7 @@ function makeDeps(order: WebhookOrder) {
     sendEmail: vi.fn(async () => ({ id: null, logged: true })),
     verifySignature: vi.fn(async () => true),
     secret: "s",
+    autoImportShipment: vi.fn(async () => ({ imported: false, detail: "test: no-op" }) as const),
     now: new Date("2026-06-06T12:00:00Z"),
   };
   return { deps, couponUpsert };
