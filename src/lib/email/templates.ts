@@ -31,8 +31,6 @@ export interface OrderEmailData {
   oversoldLines?: Array<{ name: string }>;
   /** Monto realmente acreditado por MP (para reconciliar contra `total` en la alerta a la dueña). */
   amountPaid?: number;
-  /** Resultado del auto-import a MiCorreo (para avisarle a la dueña si hay que cargarlo a mano). */
-  micorreoImport?: { imported: boolean; detail: string };
   /** Link de WhatsApp de la tienda para el "escribinos" del mail a la clienta (opcional). */
   whatsappUrl?: string | null;
 }
@@ -183,9 +181,7 @@ export function orderConfirmationEmail(d: OrderEmailData): EmailContent {
 export function newOrderAlertEmail(d: OrderEmailData): EmailContent {
   const oversell = d.oversoldLines && d.oversoldLines.length > 0;
   const amountMismatch = d.amountPaid != null && Math.abs(d.amountPaid - d.total) > 0.01;
-  // Sólo cuenta como "no cargado" si sabemos el resultado y fue negativo. Sin dato → no alarmar.
-  const notImported = d.micorreoImport != null && !d.micorreoImport.imported;
-  const needsReview = oversell || amountMismatch || notImported;
+  const needsReview = oversell || amountMismatch;
   const subject = needsReview
     ? `Nuevo pedido ${d.orderNumber} — REVISAR`
     : `Nuevo pedido pagado ${d.orderNumber} (${formatARS(d.total)})`;
@@ -199,11 +195,6 @@ export function newOrderAlertEmail(d: OrderEmailData): EmailContent {
         `<strong>Monto:</strong> MP acreditó ${formatARS(d.amountPaid!)} pero el total del pedido es ${formatARS(d.total)}. Revisar antes de despachar.`,
       )
     : "";
-  const importHtml = notImported
-    ? alertBox(
-        `<strong>MiCorreo:</strong> este envío <strong>NO se cargó solo</strong> (${escapeHtml(d.micorreoImport!.detail)}). Entrá al pedido en el panel y tocá "Reintentar carga en MiCorreo", o cargalo a mano.`,
-      )
-    : "";
   const html = layout({
     preheader: `${d.orderNumber} · ${formatARS(d.total)} · ${d.contactName}`,
     title: `Nuevo pedido ${d.orderNumber}`,
@@ -212,14 +203,13 @@ export function newOrderAlertEmail(d: OrderEmailData): EmailContent {
       title(`Nuevo pedido ${escapeHtml(d.orderNumber)}`),
       oversellHtml,
       amountHtml,
-      importHtml,
       paragraph(`<strong>${escapeHtml(d.contactName)}</strong><br /><a href="mailto:${escapeHtml(d.contactEmail)}" style="color:${COLOR.link};">${escapeHtml(d.contactEmail)}</a>`),
       itemsHtml(d.items),
       totalsHtml(d),
       paragraph(`Envío ${shippingLabel(d.shippingMethod)}.`),
     ].join("\n"),
   });
-  const text = `Nuevo pedido ${d.orderNumber}\nCliente: ${d.contactName} (${d.contactEmail})\nTotal: ${formatARS(d.total)}${oversell ? `\nOVERSELL: ${d.oversoldLines!.map((l) => l.name).join(", ")}` : ""}${amountMismatch ? `\nMONTO: acreditado ${formatARS(d.amountPaid!)} ≠ total ${formatARS(d.total)}` : ""}${notImported ? `\nMiCorreo NO cargó solo: ${d.micorreoImport!.detail}` : ""}`;
+  const text = `Nuevo pedido ${d.orderNumber}\nCliente: ${d.contactName} (${d.contactEmail})\nTotal: ${formatARS(d.total)}${oversell ? `\nOVERSELL: ${d.oversoldLines!.map((l) => l.name).join(", ")}` : ""}${amountMismatch ? `\nMONTO: acreditado ${formatARS(d.amountPaid!)} ≠ total ${formatARS(d.total)}` : ""}`;
   return { subject, html, text };
 }
 

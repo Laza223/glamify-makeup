@@ -10,7 +10,7 @@
 
 - [x] Sitio en producción en `www.glamifymakeup.site`; páginas legales responden 200; CUIT, condición fiscal, email y WhatsApp cargados.
 - [x] Compra real de punta a punta (Mercado Pago PROD → webhook → pedido pagado → carga en MiCorreo): 28/8 y 13/9.
-- [x] Envíos: despacho **manual** en la plataforma de MiCorreo. En el pedido del admin se carga el seguimiento → pasa a "enviado" → mail a la clienta con el número y el link de Correo Argentino. La carga automática a MiCorreo es best-effort: si falla, no rompe nada.
+- [x] Envíos: despacho **manual** en la plataforma de MiCorreo. En el pedido del admin se carga el seguimiento → pasa a "enviado" → mail a la clienta con el número y el link de Correo Argentino. El sistema NO precarga el envío en MiCorreo (se sacó: la precarga perdía la altura, mostraba el envío como "WooCommerce" y no ahorraba el paso por el panel); solo cotiza en vivo. En el pedido del admin, la tarjeta "Cómo despachar" trae todos los datos del formulario de envío para cargarlos a mano.
 - [x] Resend: dominio `glamifymakeup.site` verificado (SPF/DKIM/DMARC), remitente `hola@glamifymakeup.site`.
 - [x] Auditoría pre-lanzamiento: guard de escritura a prod en scripts, timeout a Mercado Pago, email best-effort en el webhook, checkbox de T&C en checkout.
 - [x] Cron horario (`/api/cron`: carrito abandonado + cancelación de pedidos vencidos) registrado y activo en Vercel.

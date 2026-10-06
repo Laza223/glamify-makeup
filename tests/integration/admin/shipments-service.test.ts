@@ -1,10 +1,8 @@
 import { describe, it, expect, vi } from "vitest";
 import {
   upsertShipment,
-  retryMicorreoImport,
   type ShipmentsDeps,
   type ShipmentInput,
-  type RetryImportDeps,
 } from "@/lib/admin/shipments/service";
 
 const baseInput: ShipmentInput = {
@@ -122,91 +120,5 @@ describe("upsertShipment · aviso de despacho a la clienta", () => {
     const { deps, sendEmail } = makeDeps({ orderStatus: "shipped", existingShipment: { id: "shp-1", status: "ready" } });
     await upsertShipment("ord-1", baseInput, deps);
     expect(sendEmail).not.toHaveBeenCalled();
-  });
-});
-
-describe("retryMicorreoImport", () => {
-  const baseOrder = {
-    status: "paid",
-    orderNumber: "GLM-1",
-    contactName: "Ana",
-    contactEmail: "a@a.com",
-    contactPhone: "11",
-    shippingMethod: "domicilio",
-    shippingAddress: { cp: "1900", province: "Buenos Aires", street: "Calle 1", number: "2", city: "La Plata" },
-    weightGr: 100,
-    subtotal: 5000,
-    shippingCost: 2500,
-    shipment: null,
-  };
-  function makeRetryDeps(over: {
-    order?: Record<string, unknown> | null;
-    outcome?: { imported: true; service: string; detail: string } | { imported: false; detail: string };
-  } = {}) {
-    const shipmentUpsert = vi.fn(async () => ({}));
-    const autoImport = vi.fn(async () => over.outcome ?? ({ imported: true, service: "Correo Argentino Clásico", detail: "importado (ok)" } as const));
-    const order = over.order === undefined ? baseOrder : over.order;
-    const deps: RetryImportDeps = {
-      db: {
-        order: { findUnique: vi.fn(async () => order) },
-        shipment: { upsert: shipmentUpsert },
-      } as never,
-      autoImport: autoImport as never,
-      now: new Date("2026-08-27T00:00:00Z"),
-    };
-    return { deps, shipmentUpsert, autoImport };
-  }
-
-  it("import OK → upsert marca micorreoImportedAt y devuelve imported:true", async () => {
-    const { deps, shipmentUpsert } = makeRetryDeps();
-    const r = await retryMicorreoImport("ord-1", deps);
-    expect(r.imported).toBe(true);
-    expect(shipmentUpsert).toHaveBeenCalledWith({
-      where: { orderId: "ord-1" },
-      update: { service: "Correo Argentino Clásico", micorreoImportedAt: deps.now },
-      create: { orderId: "ord-1", cost: 2500, status: "pending", service: "Correo Argentino Clásico", micorreoImportedAt: deps.now },
-    });
-  });
-
-  it("import falla → NO toca el Shipment y devuelve el motivo", async () => {
-    const { deps, shipmentUpsert } = makeRetryDeps({ outcome: { imported: false, detail: "dirección incompleta en el pedido" } });
-    const r = await retryMicorreoImport("ord-1", deps);
-    expect(r.imported).toBe(false);
-    expect(r.detail).toContain("incompleta");
-    expect(shipmentUpsert).not.toHaveBeenCalled();
-  });
-
-  it("pedido inexistente → imported:false sin llamar a la API", async () => {
-    const { deps, autoImport } = makeRetryDeps({ order: null });
-    const r = await retryMicorreoImport("ord-x", deps);
-    expect(r.imported).toBe(false);
-    expect(autoImport).not.toHaveBeenCalled();
-  });
-
-  it("pedido no pagado (pending_payment) → rechaza sin llamar a la API", async () => {
-    const { deps, autoImport } = makeRetryDeps({ order: { ...baseOrder, status: "pending_payment" } });
-    const r = await retryMicorreoImport("ord-1", deps);
-    expect(r.imported).toBe(false);
-    expect(autoImport).not.toHaveBeenCalled();
-  });
-
-  it("pedido ya despachado (tiene tracking) → NO re-importa, imported:true", async () => {
-    const { deps, autoImport, shipmentUpsert } = makeRetryDeps({
-      order: { ...baseOrder, status: "delivered", shipment: { trackingNumber: "CA999AR", micorreoImportedAt: null } },
-    });
-    const r = await retryMicorreoImport("ord-1", deps);
-    expect(r.imported).toBe(true);
-    expect(r.detail).toMatch(/despachado/i);
-    expect(autoImport).not.toHaveBeenCalled();
-    expect(shipmentUpsert).not.toHaveBeenCalled();
-  });
-
-  it("pedido ya importado antes → NO repega a la API, imported:true", async () => {
-    const { deps, autoImport } = makeRetryDeps({
-      order: { ...baseOrder, shipment: { trackingNumber: null, micorreoImportedAt: new Date("2026-08-01T00:00:00Z") } },
-    });
-    const r = await retryMicorreoImport("ord-1", deps);
-    expect(r.imported).toBe(true);
-    expect(autoImport).not.toHaveBeenCalled();
   });
 });
