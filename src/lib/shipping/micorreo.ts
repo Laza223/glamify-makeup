@@ -457,3 +457,135 @@ export async function createMicorreoShipment(
     return { ok: false, error: "No pude conectarme con MiCorreo. Probá de nuevo en un momento." };
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Seguimiento (GET /shipping/tracking)
+//
+// No figura en la documentación pública: verificado contra la API real (2026-10-06).
+// Es un GET con body JSON `{ "shippingId": "..." }` (el server lo deserializa a
+// `HistoryOrderRequest`; rechaza cualquier otro campo). Para un envío que no ve
+// responde 200 con `{ "error": "No existe el cliente o pedido" }`. Un envío cargado a
+// mano en la web de MiCorreo NO aparece; la hipótesis es que sólo ve los importados
+// por la API (por eso el seguimiento automático depende de la precarga).
+//
+// El JSON de un envío encontrado todavía no se vio: el parser es tolerante con los
+// nombres de campo (los de la tabla "Movimientos del envío" de la web: Fecha, Planta,
+// Historia, Estado) y, si no reconoce el formato, devuelve error con el crudo.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface TrackingEvent {
+  /** Fecha tal cual la manda Correo (ej. "11-05-2026 10:10" o ISO). */
+  date: string | null;
+  /** Planta / sucursal donde ocurrió (ej. "OAM VILLA BALLESTER"). */
+  facility: string | null;
+  /** Movimiento (columna "Historia", ej. "INTENTO DE ENTREGA"). */
+  event: string;
+  /** Detalle (columna "Estado", ej. "EN ESPERA EN SUCURSAL"). */
+  status: string | null;
+}
+
+export type MicorreoTrackingResult =
+  | { ok: true; events: TrackingEvent[] }
+  | { ok: false; notFound: boolean; error: string };
+
+/** GET con body: `fetch` no lo permite, así que el default usa `node:https`. */
+export type TrackingRequest = (url: string, token: string, body: string) => Promise<{ status: number; body: string }>;
+
+const defaultTrackingRequest: TrackingRequest = async (url, token, body) => {
+  const https = await import("node:https");
+  return new Promise((resolve, reject) => {
+    const req = https.request(
+      url,
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          "Content-Length": Buffer.byteLength(body),
+        },
+        timeout: TIMEOUT_MS,
+      },
+      (res) => {
+        let data = "";
+        res.on("data", (chunk) => (data += chunk));
+        res.on("end", () => resolve({ status: res.statusCode ?? 0, body: data }));
+      },
+    );
+    req.on("timeout", () => req.destroy(new Error("timeout")));
+    req.on("error", reject);
+    req.write(body);
+    req.end();
+  });
+};
+
+const pick = (o: Record<string, unknown>, keys: string[]): string | null => {
+  for (const [k, v] of Object.entries(o)) {
+    if (keys.includes(k.toLowerCase()) && (typeof v === "string" || typeof v === "number") && String(v).trim()) {
+      return String(v).trim();
+    }
+  }
+  return null;
+};
+
+/** Interpreta la respuesta de /shipping/tracking. Pura y testeable. */
+export function parseTrackingResponse(json: unknown): MicorreoTrackingResult {
+  if (json && typeof json === "object" && !Array.isArray(json)) {
+    const err = (json as { error?: unknown }).error;
+    if (typeof err === "string" && err.trim()) {
+      return { ok: false, notFound: /no existe/i.test(err), error: err };
+    }
+  }
+  const list = Array.isArray(json)
+    ? json
+    : json && typeof json === "object"
+      ? Object.values(json as Record<string, unknown>).find(Array.isArray)
+      : undefined;
+  if (!list) return { ok: false, notFound: false, error: `Formato de seguimiento desconocido: ${JSON.stringify(json).slice(0, 300)}` };
+
+  const events: TrackingEvent[] = [];
+  for (const row of list) {
+    if (!row || typeof row !== "object") continue;
+    const r = row as Record<string, unknown>;
+    const event = pick(r, ["historia", "event", "evento", "description", "descripcion", "eventdescription"]);
+    if (!event) continue;
+    events.push({
+      date: pick(r, ["fecha", "date", "eventdate", "fechahora", "datetime"]),
+      facility: pick(r, ["planta", "facility", "sucursal", "office", "branch", "location"]),
+      event,
+      status: pick(r, ["estado", "status", "statusdescription"]),
+    });
+  }
+  if (list.length > 0 && events.length === 0) {
+    return { ok: false, notFound: false, error: `Formato de seguimiento desconocido: ${JSON.stringify(list[0]).slice(0, 300)}` };
+  }
+  return { ok: true, events };
+}
+
+/** Historial de un envío en MiCorreo. Nunca tira: los fallos vuelven como `ok:false`. */
+export async function getMicorreoTracking(
+  shippingId: string,
+  env: MicorreoEnv = process.env as MicorreoEnv,
+  fetchImpl: typeof fetch = fetch,
+  request: TrackingRequest = defaultTrackingRequest,
+  nowMs: number = Date.now(),
+): Promise<MicorreoTrackingResult> {
+  if (!isMicorreoConfigured(env)) return { ok: false, notFound: false, error: "Falta configurar las credenciales de MiCorreo." };
+  try {
+    const auth = await getAuth(env, fetchImpl, nowMs);
+    if (!auth) return { ok: false, notFound: false, error: "No pude autenticarme con MiCorreo." };
+    const res = await request(`${apiBase(env)}/shipping/tracking`, auth.token, JSON.stringify({ shippingId }));
+    if (res.status < 200 || res.status >= 300) {
+      return { ok: false, notFound: false, error: `MiCorreo respondió HTTP ${res.status}: ${res.body.slice(0, 200)}` };
+    }
+    let json: unknown;
+    try {
+      json = JSON.parse(res.body);
+    } catch {
+      return { ok: false, notFound: false, error: `Respuesta no JSON: ${res.body.slice(0, 200)}` };
+    }
+    return parseTrackingResponse(json);
+  } catch (e) {
+    return { ok: false, notFound: false, error: e instanceof Error ? e.message : String(e) };
+  }
+}

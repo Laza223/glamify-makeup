@@ -2,7 +2,8 @@ import type { OrderStatus, PaymentStatus, ShipmentStatus } from "@prisma/client"
 
 const TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
   pending_payment: ["paid", "cancelled"],
-  paid: ["preparing", "refunded", "cancelled"],
+  // paid → shipped directo: cargar el seguimiento no exige marcar "preparando" antes.
+  paid: ["preparing", "shipped", "refunded", "cancelled"],
   preparing: ["shipped", "cancelled"],
   shipped: ["delivered"],
   delivered: [],
@@ -16,11 +17,13 @@ export function canTransition(from: OrderStatus, to: OrderStatus): boolean {
 }
 
 /** Flujo de envío (blueprint 05 §6): pending → ready → dispatched → in_transit → delivered (+returned
- *  desde que ya salió, no antes). `delivered`/`returned` son terminales. */
+ *  desde que ya salió, no antes). `delivered`/`returned` son terminales. Los saltos (pending →
+ *  dispatched al cargar el seguimiento, dispatched → delivered si Correo no informó tránsito) los
+ *  hace el sistema, no la dueña. */
 const SHIPMENT_TRANSITIONS: Record<ShipmentStatus, ShipmentStatus[]> = {
-  pending: ["ready"],
+  pending: ["ready", "dispatched"],
   ready: ["dispatched"],
-  dispatched: ["in_transit", "returned"],
+  dispatched: ["in_transit", "delivered", "returned"],
   in_transit: ["delivered", "returned"],
   delivered: [],
   returned: [],

@@ -390,6 +390,9 @@ model Shipment {
   status         ShipmentStatus  @default(pending)
   labelUrl       String?
   micorreoImportedAt DateTime?    // set al pre-imponer en MiCorreo (auto o reintento); null = falta cargarlo a mano
+  trackingLastEvent  String?      // último movimiento de Correo, legible (lo actualiza el cron de seguimiento)
+  trackingCheckedAt  DateTime?    // última consulta al seguimiento de MiCorreo
+  trackingNotified   String[]     @default([]) // avisos ya mandados (awaiting_pickup, delivered, returned_alert): una sola vez
   cost           Decimal         @db.Decimal(12, 2)
   createdAt      DateTime        @default(now())
 }

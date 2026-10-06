@@ -5,7 +5,7 @@ import { requireAdmin } from "@/lib/admin/auth";
 import type { AdminResult } from "@/lib/admin/result";
 import { changeOrderStatus, cancelOrder, defaultOrdersDeps } from "@/lib/admin/orders/service";
 import { upsertShipment, defaultShipmentsDeps, retryMicorreoImport, defaultRetryImportDeps } from "@/lib/admin/shipments/service";
-import type { OrderStatus, ShipmentStatus, ShipmentCarrier } from "@prisma/client";
+import type { OrderStatus } from "@prisma/client";
 
 export async function changeOrderStatusAction(orderId: string, to: OrderStatus): Promise<AdminResult> {
   try {
@@ -31,30 +31,11 @@ export async function cancelOrderAction(orderId: string): Promise<AdminResult> {
   }
 }
 
-export interface ShipmentFormInput {
-  service?: string;
-  trackingNumber?: string;
-  labelUrl?: string;
-  cost: number;
-  status: ShipmentStatus;
-  carrier?: ShipmentCarrier;
-}
-
-export async function upsertShipmentAction(orderId: string, input: ShipmentFormInput): Promise<AdminResult> {
+/** Guarda el número de seguimiento: el pedido pasa a Enviado y se avisa a la clienta. */
+export async function upsertShipmentAction(orderId: string, trackingNumber: string): Promise<AdminResult> {
   try {
     await requireAdmin();
-    const r = await upsertShipment(
-      orderId,
-      {
-        service: input.service?.trim() ? input.service.trim() : null,
-        trackingNumber: input.trackingNumber?.trim() ? input.trackingNumber.trim() : null,
-        labelUrl: input.labelUrl?.trim() ? input.labelUrl.trim() : null,
-        cost: input.cost,
-        status: input.status,
-        carrier: input.carrier,
-      },
-      defaultShipmentsDeps(),
-    );
+    const r = await upsertShipment(orderId, { trackingNumber }, defaultShipmentsDeps());
     revalidatePath("/admin/pedidos");
     revalidatePath(`/admin/pedidos/${orderId}`);
     return { ok: true, id: r.id };

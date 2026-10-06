@@ -343,3 +343,90 @@ export function retractionReceiptEmail(d: RetractionReceiptData): EmailContent {
   const text = `Recibimos tu solicitud de arrepentimiento.\nConstancia: ${d.ticket}\nFecha: ${d.date}\nTe contactaremos para coordinar la devolución y el reintegro. Guardá este correo como comprobante.${d.whatsappUrl ? `\nDudas por WhatsApp: ${d.whatsappUrl}` : ""}`;
   return { subject, html, text };
 }
+
+export interface AwaitingPickupEmailData {
+  orderNumber: string;
+  contactName: string;
+  trackingNumber: string;
+  /** Sucursal / planta donde quedó el paquete, según Correo. */
+  facility: string | null;
+  whatsappUrl?: string | null;
+}
+
+/** Email a la clienta: Correo intentó entregar y el paquete quedó en la sucursal para retirar. */
+export function shipmentAwaitingPickupEmail(d: AwaitingPickupEmailData): EmailContent {
+  const subject = `Tu pedido ${d.orderNumber} te espera en la sucursal — Glamify Makeup`;
+  const where = d.facility ? ` en <strong>${escapeHtml(d.facility)}</strong>` : " en la sucursal de Correo";
+  const html = layout({
+    preheader: `Correo intentó entregar tu pedido ${d.orderNumber}. Retiralo en la sucursal.`,
+    title: "Tu pedido te espera en la sucursal",
+    footer: FOOTER_CUSTOMER,
+    body: [
+      title(`¡Hola, ${escapeHtml(d.contactName)}!`),
+      paragraph(`Correo Argentino intentó entregarte el pedido <strong>${escapeHtml(d.orderNumber)}</strong> y lo dejó${where} para que lo retires.`),
+      paragraph(`Llevá tu DNI y el número de seguimiento <strong>${escapeHtml(d.trackingNumber)}</strong>. Si no se retira a tiempo, Correo lo devuelve.`),
+      button(CORREO_TRACKING_URL, "Ver dónde está"),
+      helpLine(d.whatsappUrl),
+    ].join("\n"),
+  });
+  const text = `¡Hola, ${d.contactName}! Correo intentó entregarte el pedido ${d.orderNumber} y lo dejó ${d.facility ? `en ${d.facility}` : "en la sucursal"} para que lo retires. Llevá tu DNI y el seguimiento ${d.trackingNumber}. Si no se retira a tiempo, Correo lo devuelve.\nSeguimiento: ${CORREO_TRACKING_URL}${d.whatsappUrl ? `\nDudas por WhatsApp: ${d.whatsappUrl}` : ""}`;
+  return { subject, html, text };
+}
+
+export interface DeliveredEmailData {
+  orderNumber: string;
+  contactName: string;
+  /** Link para dejar reseña (sólo si la clienta tiene cuenta). */
+  reviewUrl?: string | null;
+  whatsappUrl?: string | null;
+}
+
+/** Email a la clienta cuando Correo informa el pedido entregado. */
+export function shipmentDeliveredEmail(d: DeliveredEmailData): EmailContent {
+  const subject = `¡Tu pedido ${d.orderNumber} llegó! — Glamify Makeup`;
+  const html = layout({
+    preheader: `Correo nos avisó que tu pedido ${d.orderNumber} fue entregado.`,
+    title: "Tu pedido llegó",
+    footer: FOOTER_CUSTOMER,
+    body: [
+      title(`¡Llegó, ${escapeHtml(d.contactName)}!`),
+      paragraph(`Correo Argentino nos avisó que tu pedido <strong>${escapeHtml(d.orderNumber)}</strong> fue entregado. Esperamos que lo disfrutes.`),
+      ...(d.reviewUrl
+        ? [paragraph("¿Nos contás qué te pareció? Tu reseña ayuda a otras chicas a elegir."), button(d.reviewUrl, "Dejar una reseña")]
+        : []),
+      helpLine(d.whatsappUrl),
+    ].join("\n"),
+  });
+  const text = `¡Llegó, ${d.contactName}! Correo nos avisó que tu pedido ${d.orderNumber} fue entregado.${d.reviewUrl ? `\nDejá tu reseña: ${d.reviewUrl}` : ""}${d.whatsappUrl ? `\nDudas por WhatsApp: ${d.whatsappUrl}` : ""}`;
+  return { subject, html, text };
+}
+
+export interface ReturnedAlertEmailData {
+  orderNumber: string;
+  contactName: string;
+  contactEmail: string;
+  contactPhone: string | null;
+  trackingNumber: string;
+  lastEvent: string | null;
+}
+
+/** Alerta a la dueña: Correo informa que el paquete vuelve al remitente. */
+export function shipmentReturnedAlertEmail(d: ReturnedAlertEmailData): EmailContent {
+  const subject = `Envío devuelto: pedido ${d.orderNumber} — REVISAR`;
+  const html = layout({
+    preheader: `Correo devuelve el paquete del pedido ${d.orderNumber}.`,
+    title: `Envío devuelto ${d.orderNumber}`,
+    footer: FOOTER_INTERNAL,
+    body: [
+      title(`Envío devuelto · ${escapeHtml(d.orderNumber)}`),
+      alertBox(
+        `Correo informa que el paquete <strong>vuelve al remitente</strong>${d.lastEvent ? ` (${escapeHtml(d.lastEvent)})` : ""}. Contactá a la clienta para reenviarlo o coordinar el reintegro.`,
+      ),
+      paragraph(
+        `<strong>${escapeHtml(d.contactName)}</strong><br /><a href="mailto:${escapeHtml(d.contactEmail)}" style="color:${COLOR.link};">${escapeHtml(d.contactEmail)}</a>${d.contactPhone ? `<br />${escapeHtml(d.contactPhone)}` : ""}<br />Seguimiento: ${escapeHtml(d.trackingNumber)}`,
+      ),
+    ].join("\n"),
+  });
+  const text = `Envío devuelto: pedido ${d.orderNumber}\nCliente: ${d.contactName} (${d.contactEmail}${d.contactPhone ? `, ${d.contactPhone}` : ""})\nSeguimiento: ${d.trackingNumber}${d.lastEvent ? `\nÚltimo movimiento: ${d.lastEvent}` : ""}`;
+  return { subject, html, text };
+}
