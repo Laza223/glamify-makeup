@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { formatARS } from "@/lib/money";
 import { whatsappLink } from "@/lib/whatsapp";
 import { Button } from "@/components/ui/button";
+import { RetryPaymentButton } from "@/components/orders/retry-payment-button";
 import { TrackOnMount } from "@/components/analytics/track-on-mount";
 
 export const metadata: Metadata = { title: "¡Gracias por tu compra!" };
@@ -35,6 +36,14 @@ export default async function GraciasPage({ searchParams }: { searchParams: Prom
             Pedido <strong className="text-foreground">{order.orderNumber}</strong>
             {!paid && " — apenas se acredite te llega el email de confirmación."}
           </p>
+          {order.status === "pending_payment" && (
+            <div className="mx-auto mt-5 max-w-sm space-y-2">
+              <p className="text-sm text-muted-foreground">
+                Si el pago no se completó (por ejemplo, no tenías saldo), podés volver a intentarlo. Si ya pagaste, esperá unos minutos.
+              </p>
+              <div className="flex justify-center"><RetryPaymentButton orderId={order.id} /></div>
+            </div>
+          )}
           <div className="mx-auto mt-6 max-w-sm rounded-2xl border border-border p-5 text-left text-sm">
             <ul className="space-y-1">
               {order.items.map((it) => (

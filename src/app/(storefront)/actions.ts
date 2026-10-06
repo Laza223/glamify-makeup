@@ -30,6 +30,7 @@ import {
   createCheckout,
   defaultCheckoutDeps,
 } from "@/lib/orders/checkout-service";
+import { retryOrderPayment, defaultRetryPaymentDeps } from "@/lib/orders/retry-payment";
 import { getCustomer } from "@/lib/customer/auth";
 import type { ActionResult } from "@/lib/forms/action-result";
 
@@ -346,5 +347,18 @@ export async function createCheckoutAction(input: {
       ok: false,
       error: e instanceof Error ? e.message : "No se pudo iniciar el pago.",
     };
+  }
+}
+
+/** Reintento de pago de un pedido que sigue pendiente (pago rechazado, sin saldo o abandonado en MP). */
+export async function retryPaymentAction(orderId: string): Promise<CheckoutResult> {
+  try {
+    const { initPoint } = await retryOrderPayment(orderId, defaultRetryPaymentDeps(appUrl()));
+    return { ok: true, initPoint };
+  } catch (e) {
+    if (e instanceof DOMException && (e.name === "TimeoutError" || e.name === "AbortError")) {
+      return { ok: false, error: "No pudimos conectar con Mercado Pago. Probá de nuevo en unos segundos." };
+    }
+    return { ok: false, error: e instanceof Error ? e.message : "No se pudo iniciar el pago." };
   }
 }
