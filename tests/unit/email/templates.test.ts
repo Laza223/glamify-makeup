@@ -78,3 +78,31 @@ describe("shipmentDispatchedEmail", () => {
     expect(m.html).toContain("&lt;script&gt;");
   });
 });
+
+describe("escape de HTML en los mails de pedido", () => {
+  const hostile: OrderEmailData = {
+    ...data,
+    contactName: "<script>x</script>",
+    items: [{ name: "<img src=x onerror=1>", variantName: "<b>Rojo</b>", qty: 1, lineTotal: 100 }],
+  };
+  it("la confirmación a la clienta escapa nombre y productos", () => {
+    const m = orderConfirmationEmail(hostile);
+    expect(m.html).not.toContain("<script>x</script>");
+    expect(m.html).not.toContain("<img src=x");
+    expect(m.html).toContain("&lt;script&gt;");
+  });
+  it("el aviso a la dueña escapa nombre, productos y líneas con oversell", () => {
+    const m = newOrderAlertEmail({ ...hostile, oversoldLines: [{ name: "<i>x</i>" }] });
+    expect(m.html).not.toContain("<script>x</script>");
+    expect(m.html).not.toContain("<i>x</i>");
+    expect(m.html).toContain("&lt;i&gt;x&lt;/i&gt;");
+  });
+  it("muestra el envío de forma legible", () => {
+    expect(orderConfirmationEmail(data).html).toContain("a domicilio");
+    expect(orderConfirmationEmail({ ...data, shippingMethod: "sucursal" }).html).toContain("a sucursal de Correo Argentino");
+  });
+  it("no usa emojis en el asunto", () => {
+    const subjects = [orderConfirmationEmail(data).subject, newOrderAlertEmail(data).subject];
+    for (const s of subjects) expect(s).not.toMatch(/\p{Extended_Pictographic}/u);
+  });
+});
