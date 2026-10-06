@@ -22,11 +22,23 @@ export interface MicorreoPanelProps {
   /** true si el pedido ya tiene número de seguimiento (ya despachado). */
   trackingLoaded: boolean;
   recipientName: string;
+  recipientEmail: string;
   recipientPhone: string;
-  /** Dirección formateada o "Sucursal XXXX" según el método. */
-  destino: string;
-  metodoLabel: string;
+  isSucursal: boolean;
+  /** Dirección tal cual la cargó la clienta en el checkout. */
+  address: {
+    street?: string;
+    number?: string;
+    floorApt?: string | null;
+    city?: string;
+    province?: string | null;
+    cp?: string;
+    notes?: string | null;
+    agencyLabel?: string | null;
+  };
   weightGr: number;
+  /** Medidas del paquete, ej. "12 × 5 × 5 cm". */
+  dimensions: string;
   declaredValue: number;
 }
 
@@ -50,14 +62,31 @@ export function MicorreoPanel(props: MicorreoPanelProps) {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const datosTexto = [
-    `Pedido: ${orderNumber}`,
-    `Destinatario: ${props.recipientName}`,
-    `Teléfono: ${props.recipientPhone}`,
-    `${props.metodoLabel}: ${props.destino}`,
-    `Peso: ${props.weightGr} g`,
-    `Valor declarado: $${props.declaredValue.toLocaleString("es-AR")}`,
-  ].join("\n");
+  // Mismos campos que pide el formulario de envío de MiCorreo, en su orden. Lo que la clienta
+  // no completó (piso, observaciones) no se muestra.
+  const a = props.address;
+  const rows = [
+    { label: "Pedido", value: orderNumber },
+    { label: "Destinatario", value: props.recipientName },
+    { label: "Email", value: props.recipientEmail },
+    { label: "Teléfono", value: props.recipientPhone },
+    { label: "Tipo de entrega", value: props.isSucursal ? "Sucursal" : "Domicilio" },
+    ...(props.isSucursal
+      ? [{ label: "Sucursal", value: a.agencyLabel || "No guardada" }]
+      : [
+          { label: "Calle", value: a.street ?? "" },
+          { label: "Altura", value: a.number ?? "" },
+          { label: "Piso / Dpto", value: a.floorApt ?? "" },
+        ]),
+    { label: "Localidad", value: a.city ?? "" },
+    { label: "Provincia", value: a.province ?? "" },
+    { label: "Código postal", value: a.cp ?? "" },
+    { label: "Observaciones", value: a.notes ?? "" },
+    { label: "Peso", value: `${props.weightGr} g` },
+    { label: "Medidas", value: props.dimensions },
+    { label: "Valor declarado", value: `$${props.declaredValue.toLocaleString("es-AR")}` },
+  ].filter((r) => r.value.trim() !== "");
+  const datosTexto = rows.map((r) => `${r.label}: ${r.value}`).join("\n");
 
   const copiar = async () => {
     try {
@@ -82,7 +111,7 @@ export function MicorreoPanel(props: MicorreoPanelProps) {
   const pasos = handled
     ? [
         "Entrá a MiCorreo con tu cuenta.",
-        `En "Mis Envíos" buscá el pedido ${orderNumber} (ya está cargado).`,
+        `En "Mis Envíos" buscá el pedido ${orderNumber} (ya está cargado; figura con integración "WooCommerce", es normal: así se ven los envíos que carga la tienda).`,
         "Pagá el envío con tu saldo de MiCorreo.",
         "Imprimí el rótulo (etiqueta) y pegalo en el paquete.",
         "Despachá el paquete (llevalo o pedí retiro).",
@@ -149,12 +178,9 @@ export function MicorreoPanel(props: MicorreoPanelProps) {
             </Button>
           </div>
           <dl className="divide-y divide-border/50">
-            <DataRow label="Pedido" value={orderNumber} />
-            <DataRow label="Destinatario" value={props.recipientName} />
-            <DataRow label="Teléfono" value={props.recipientPhone} />
-            <DataRow label={props.metodoLabel} value={props.destino} />
-            <DataRow label="Peso" value={`${props.weightGr} g`} />
-            <DataRow label="Valor declarado" value={`$${props.declaredValue.toLocaleString("es-AR")}`} />
+            {rows.map((r) => (
+              <DataRow key={r.label} label={r.label} value={r.value} />
+            ))}
           </dl>
         </div>
 
