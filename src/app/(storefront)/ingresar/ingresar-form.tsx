@@ -40,7 +40,7 @@ export function IngresarForm({ initialError = null, googleEnabled = false }: Ing
           marketingConsent: fd.get("consent") === "on",
         });
         if (!res.ok) { setError(res.error ?? "Error"); return; }
-        if (res.needsConfirmation) setInfo("¡Listo! Revisá tu correo para confirmar tu cuenta.");
+        if (res.needsConfirmation) setInfo("¡Listo! Revisá tu correo para confirmar tu cuenta. Si no lo ves, fijate en la casilla de spam.");
         else { router.push("/cuenta"); router.refresh(); }
       }
     } finally { setPending(false); }
