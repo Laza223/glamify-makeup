@@ -1,0 +1,71 @@
+<!--
+  Template "Confirm signup" de Supabase Auth (Authentication → Emails → Templates).
+  Subject: Confirmá tu cuenta en Glamify Makeup
+  Variables de Supabase: {{ .ConfirmationURL }}, {{ .Email }}.
+  El logo vive en public/images/email-logo.png (se sirve desde el sitio).
+-->
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Confirmá tu cuenta en Glamify Makeup</title>
+  </head>
+  <body style="margin:0;padding:0;background-color:#FFF5F9;">
+    <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:#FFF5F9;">
+      Un último paso para activar tu cuenta y empezar a comprar.
+    </div>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#FFF5F9;">
+      <tr>
+        <td align="center" style="padding:32px 16px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background-color:#FFFFFF;border-radius:16px;border:1px solid #FFD6E8;">
+            <tr>
+              <td align="center" style="padding:36px 32px 8px 32px;">
+                <img src="https://www.glamifymakeup.site/images/email-logo.png" width="260" alt="Glamify Makeup" style="display:block;width:260px;max-width:100%;height:auto;border:0;" />
+              </td>
+            </tr>
+            <tr>
+              <td align="center" style="padding:8px 32px 0 32px;">
+                <div style="height:3px;width:56px;background-color:#FF2E93;border-radius:3px;line-height:3px;font-size:3px;">&nbsp;</div>
+              </td>
+            </tr>
+            <tr>
+              <td align="center" style="padding:28px 32px 0 32px;font-family:Georgia,'Times New Roman',serif;font-size:26px;line-height:34px;font-weight:bold;color:#6E0B3F;">
+                Te damos la bienvenida
+              </td>
+            </tr>
+            <tr>
+              <td align="center" style="padding:14px 32px 0 32px;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:25px;color:#6E0B3F;">
+                Gracias por sumarte a Glamify Makeup. Confirmá tu email para activar tu cuenta y guardar tus favoritos, tus pedidos y tus datos de envío.
+              </td>
+            </tr>
+            <tr>
+              <td align="center" style="padding:28px 32px 0 32px;">
+                <a href="{{ .ConfirmationURL }}" style="display:inline-block;background-color:#FF2E93;color:#FFFFFF;font-family:Arial,Helvetica,sans-serif;font-size:17px;font-weight:bold;line-height:20px;text-decoration:none;padding:16px 36px;border-radius:14px;">
+                  Confirmar mi cuenta
+                </a>
+              </td>
+            </tr>
+            <tr>
+              <td align="center" style="padding:28px 32px 0 32px;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:20px;color:#8A4A68;">
+                Si el botón no funciona, copiá y pegá este link en tu navegador:<br />
+                <a href="{{ .ConfirmationURL }}" style="color:#E01E7D;word-break:break-all;">{{ .ConfirmationURL }}</a>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:28px 32px 0 32px;">
+                <div style="border-top:1px solid #FFD6E8;line-height:1px;font-size:1px;">&nbsp;</div>
+              </td>
+            </tr>
+            <tr>
+              <td align="center" style="padding:18px 32px 32px 32px;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;color:#8A4A68;">
+                Pediste esta cuenta con el email {{ .Email }}. Si no fuiste vos, ignorá este mensaje y no pasa nada.<br /><br />
+                Glamify Makeup &middot; Luján, Buenos Aires, Argentina &middot; Envíos a todo el país
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
