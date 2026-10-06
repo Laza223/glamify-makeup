@@ -18,17 +18,29 @@
 
 ## Bloque 1 — Código pendiente
 
-- [ ] **1.1 (Vos)** Mergear el PR #13: WhatsApp real en `/checkout/gracias` (hoy apunta a un número falso).
+- [x] **1.1 (Vos)** Mergear el PR #13: WhatsApp real en `/checkout/gracias` (hoy apunta a un número falso).
   Verificación: `curl -s https://www.glamifymakeup.site/checkout/gracias | grep -o "wa.me/[0-9]*"` → `wa.me/5492323582495`.
 
 ## Bloque 2 — Dominio canónico y región
 
 Hoy `NEXT_PUBLIC_APP_URL` apunta a `glamify-makeup-1.vercel.app`: sitemap, robots, canonical, mails y la vuelta desde Mercado Pago usan ese dominio. Las funciones corren en `iad1` (EE.UU.) y la base está en São Paulo.
 
-- [ ] **2.1 (Vos)** Supabase → Authentication → URL Configuration: que `https://www.glamifymakeup.site/auth/callback` esté en Redirect URLs (y Site URL = `https://www.glamifymakeup.site`). Si falta, se rompen el login y la confirmación de mail al cambiar el dominio.
-- [ ] **2.2 (Yo, con tu OK)** En Vercel (Production): `NEXT_PUBLIC_APP_URL=https://www.glamifymakeup.site` y región de funciones `gru1`; redeploy.
+- [x] **2.1 (Vos)** Supabase → Authentication → URL Configuration: que `https://www.glamifymakeup.site/auth/callback` esté en Redirect URLs (y Site URL = `https://www.glamifymakeup.site`). Si falta, se rompen el login y la confirmación de mail al cambiar el dominio.
+- [x] **2.2** En Vercel (Production): `NEXT_PUBLIC_APP_URL=https://www.glamifymakeup.site` y región de funciones `gru1`; redeploy.
   Verificación: `robots.txt` y `sitemap.xml` con `www.glamifymakeup.site`; la tienda carga más rápido.
 - [ ] **2.3 (Vos)** Crear una cuenta de prueba por mail en el dominio nuevo: tiene que llegar el mail de confirmación y volver logueada al sitio.
+
+## Bloque 2b — Migración de Supabase (proyecto propio, plan Pro)
+
+Se migró del proyecto Supabase free (cuenta de titi) a un proyecto nuevo en la organización propia: ref , región São Paulo, con RLS activado en todas las tablas y SMTP propio (Resend). Catálogo, cupones, zonas, ajustes y las 66 fotos copiados; sin pedidos ni clientas que migrar.
+
+- [x] **2b.1** Esquema, datos, bucket  y usuario admin  en el proyecto nuevo.
+- [x] **2b.2** Variables de Vercel apuntadas al proyecto nuevo ( con el pooler IPv4 ); región de funciones ;  con el dominio propio. Verificado en producción.
+- [ ] **2b.3 (Vos)** Entrar a  con tu usuario y confirmar que carga pedidos, productos y fotos.
+- [ ] **2b.4 (Vos)** Actualizar tu  local con las claves del proyecto nuevo (hoy apunta al viejo).
+- [ ] **2b.5 (Vos)** Activar  en Supabase (Authentication → Sign In / Providers → Email).
+- [ ] **2b.6 (Vos)** Pausar el proyecto viejo después de la compra de prueba (Bloque 6) y borrarlo unos días después.
+- [ ] **2b.7 (más adelante)** Google OAuth: no estaba activo antes; queda como mejora posterior.
 
 ## Bloque 3 — Catálogo (Vos, desde `/admin`)
 
@@ -47,7 +59,7 @@ Hoy `NEXT_PUBLIC_APP_URL` apunta a `glamify-makeup-1.vercel.app`: sitemap, robot
 ## Bloque 5 — Operativo
 
 - [ ] **5.1 (Vos)** Tener saldo o medio de pago cargado en MiCorreo antes de la primera venta (el envío se paga al generar la etiqueta).
-- [ ] **5.2 (Vos)** Supabase Auth con SMTP propio (Resend), según `docs/auth-email-setup.md`: sin eso el SMTP compartido corta los mails a las 2–3 por hora.
+- [x] **5.2 (Vos)** Supabase Auth con SMTP propio (Resend), según `docs/auth-email-setup.md`: sin eso el SMTP compartido corta los mails a las 2–3 por hora.
 
 ## Bloque 6 — Compra de prueba final (Vos + Yo)
 
