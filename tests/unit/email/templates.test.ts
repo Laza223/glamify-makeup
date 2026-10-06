@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { orderConfirmationEmail, newOrderAlertEmail, shipmentDispatchedEmail, type OrderEmailData } from "@/lib/email/templates";
+import { orderConfirmationEmail, newOrderAlertEmail, shipmentDispatchedEmail, retractionReceiptEmail, type OrderEmailData } from "@/lib/email/templates";
 import { CORREO_TRACKING_URL } from "@/lib/shipping/tracking";
 
 const data: OrderEmailData = {
@@ -104,5 +104,27 @@ describe("escape de HTML en los mails de pedido", () => {
   it("no usa emojis en el asunto", () => {
     const subjects = [orderConfirmationEmail(data).subject, newOrderAlertEmail(data).subject];
     for (const s of subjects) expect(s).not.toMatch(/\p{Extended_Pictographic}/u);
+  });
+});
+
+describe("link de WhatsApp en los mails a la clienta", () => {
+  const url = "https://wa.me/5492323582495?text=Hola";
+  const dispatch = { orderNumber: "GM-1", contactName: "Ana", trackingNumber: "AB123" };
+
+  it("linkea el 'escribinos por WhatsApp' cuando hay número", () => {
+    expect(orderConfirmationEmail({ ...data, whatsappUrl: url }).html).toContain(`<a href="${url}"`);
+    expect(shipmentDispatchedEmail({ ...dispatch, whatsappUrl: url }).html).toContain(`<a href="${url}"`);
+    expect(retractionReceiptEmail({ ticket: "ARR-000001", date: "1/1/2026", contactName: "Ana", whatsappUrl: url }).html).toContain(`<a href="${url}"`);
+  });
+
+  it("sin número deja el texto plano, sin link a wa.me", () => {
+    for (const html of [
+      orderConfirmationEmail(data).html,
+      shipmentDispatchedEmail(dispatch).html,
+      retractionReceiptEmail({ ticket: "ARR-000001", date: "1/1/2026", contactName: "Ana" }).html,
+    ]) {
+      expect(html).toContain("escribinos por WhatsApp");
+      expect(html).not.toContain("wa.me");
+    }
   });
 });

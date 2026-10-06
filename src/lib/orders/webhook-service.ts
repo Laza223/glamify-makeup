@@ -6,6 +6,7 @@ import { decideWebhookEffects, paymentStatusAdvances } from "@/lib/payments/webh
 import { computeStockDecrements, type Shortage } from "@/lib/orders/stock";
 import { sendEmail as realSendEmail } from "@/lib/email/resend";
 import { orderConfirmationEmail, newOrderAlertEmail, type OrderEmailData } from "@/lib/email/templates";
+import { storeWhatsappUrl } from "@/lib/email/whatsapp-url";
 import { toNumber } from "@/lib/catalog/pricing";
 import { autoImportShipment as autoImportShipmentImpl, type AutoShipmentOrder, type AutoShipmentOutcome } from "@/lib/orders/auto-shipment";
 import type { CartLine } from "@/lib/cart/types";
@@ -65,6 +66,8 @@ export interface ProcessWebhookDeps {
   ownerEmail?: string;
   /** Envío automático a MiCorreo al pagar (inyectable para tests). Best-effort. */
   autoImportShipment?: (order: AutoShipmentOrder) => Promise<AutoShipmentOutcome>;
+  /** Link de WhatsApp de la tienda para el mail a la clienta (inyectable para tests). Best-effort. */
+  getWhatsappUrl?: (message?: string) => Promise<string | null>;
   now?: Date;
 }
 export interface ProcessWebhookResult {
@@ -80,6 +83,7 @@ export function defaultWebhookDeps(): ProcessWebhookDeps {
     verifySignature: verifyMpSignature,
     secret: process.env.MP_WEBHOOK_SECRET ?? "",
     ownerEmail: process.env.RESEND_OWNER_EMAIL ?? "",
+    getWhatsappUrl: storeWhatsappUrl,
   };
 }
 
@@ -266,7 +270,8 @@ export async function processWebhook(input: ProcessWebhookInput, deps: ProcessWe
         // Defensa: monto realmente acreditado por MP → la alerta a la dueña flaggea si no coincide con el total.
         amountPaid: mpPayment.transaction_amount ?? undefined,
       };
-      const customer = orderConfirmationEmail(emailData);
+      const whatsappUrl = deps.getWhatsappUrl ? await deps.getWhatsappUrl(`¡Hola! Tengo una consulta sobre mi pedido ${order.orderNumber}`) : null;
+      const customer = orderConfirmationEmail({ ...emailData, whatsappUrl });
       await deps.sendEmail({ to: order.contactEmail, subject: customer.subject, html: customer.html, text: customer.text });
       if (deps.ownerEmail) {
         const owner = newOrderAlertEmail({ ...emailData, oversoldLines: oversoldLines.length ? oversoldLines : undefined, micorreoImport });

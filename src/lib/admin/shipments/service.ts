@@ -2,6 +2,7 @@ import { prisma, type PrismaTransactionClient } from "@/lib/prisma";
 import { canTransition, canTransitionShipment } from "@/lib/orders/state-machine";
 import { sendEmail as realSendEmail } from "@/lib/email/resend";
 import { shipmentDispatchedEmail } from "@/lib/email/templates";
+import { storeWhatsappUrl } from "@/lib/email/whatsapp-url";
 import { autoImportShipment } from "@/lib/orders/auto-shipment";
 import { toNumber } from "@/lib/catalog/pricing";
 import type { Money } from "@/lib/catalog/types";
@@ -35,11 +36,13 @@ export interface ShipmentsDeps {
   db: ShipmentsDb;
   /** Aviso de despacho a la clienta (inyectable para tests). Best-effort. */
   sendEmail?: typeof realSendEmail;
+  /** Link de WhatsApp de la tienda para el mail a la clienta (inyectable para tests). Best-effort. */
+  getWhatsappUrl?: (message?: string) => Promise<string | null>;
   now?: Date;
 }
 
 export function defaultShipmentsDeps(): ShipmentsDeps {
-  return { db: prisma as unknown as ShipmentsDb, sendEmail: realSendEmail };
+  return { db: prisma as unknown as ShipmentsDb, sendEmail: realSendEmail, getWhatsappUrl: storeWhatsappUrl };
 }
 
 /**
@@ -99,6 +102,7 @@ export async function upsertShipment(
         contactName: order.contactName,
         trackingNumber: input.trackingNumber,
         service: input.service,
+        whatsappUrl: deps.getWhatsappUrl ? await deps.getWhatsappUrl(`¡Hola! Tengo una consulta sobre mi pedido ${order.orderNumber}`) : null,
       });
       await deps.sendEmail({ to: order.contactEmail, subject: mail.subject, html: mail.html, text: mail.text });
     } catch (e) {

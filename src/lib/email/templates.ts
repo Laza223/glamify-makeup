@@ -33,6 +33,8 @@ export interface OrderEmailData {
   amountPaid?: number;
   /** Resultado del auto-import a MiCorreo (para avisarle a la dueña si hay que cargarlo a mano). */
   micorreoImport?: { imported: boolean; detail: string };
+  /** Link de WhatsApp de la tienda para el "escribinos" del mail a la clienta (opcional). */
+  whatsappUrl?: string | null;
 }
 export interface EmailContent {
   subject: string;
@@ -84,6 +86,14 @@ function alertBox(html: string): string {
 /** Tabla de filas etiqueta/valor, ya con celdas HTML. */
 function table(rows: string): string {
   return `<tr><td style="padding:18px 32px 0 32px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0">${rows}</table></td></tr>`;
+}
+
+/** Línea "Cualquier duda, escribinos por WhatsApp": linkeada si hay número, texto plano si no. */
+function helpLine(whatsappUrl?: string | null): string {
+  const action = whatsappUrl
+    ? `<a href="${escapeHtml(whatsappUrl)}" style="color:${COLOR.link};font-weight:bold;">escribinos por WhatsApp</a>`
+    : "escribinos por WhatsApp";
+  return block(`Cualquier duda, ${action} y te ayudamos.`, "8px 32px 0 32px", `font-size:14px;color:${COLOR.muted};`);
 }
 
 function itemLabel(it: OrderEmailItem): string {
@@ -162,10 +172,10 @@ export function orderConfirmationEmail(d: OrderEmailData): EmailContent {
       itemsHtml(d.items),
       totalsHtml(d),
       paragraph(`Envío ${shippingLabel(d.shippingMethod)}.`),
-      block("Cualquier duda, escribinos por WhatsApp y te ayudamos.", "8px 32px 0 32px", `font-size:14px;color:${COLOR.muted};`),
+      helpLine(d.whatsappUrl),
     ].join("\n"),
   });
-  const text = `¡Gracias, ${d.contactName}!\nPedido ${d.orderNumber}\n\n${itemsText(d.items)}\n\nSubtotal: ${formatARS(d.subtotal)}\nDescuento: ${formatARS(d.discountTotal)}\nEnvío: ${formatARS(d.shippingCost)}\nTotal: ${formatARS(d.total)}\nEnvío: ${d.shippingMethod}`;
+  const text = `¡Gracias, ${d.contactName}!\nPedido ${d.orderNumber}\n\n${itemsText(d.items)}\n\nSubtotal: ${formatARS(d.subtotal)}\nDescuento: ${formatARS(d.discountTotal)}\nEnvío: ${formatARS(d.shippingCost)}\nTotal: ${formatARS(d.total)}\nEnvío: ${d.shippingMethod}${d.whatsappUrl ? `\n\nDudas por WhatsApp: ${d.whatsappUrl}` : ""}`;
   return { subject, html, text };
 }
 
@@ -219,6 +229,8 @@ export interface DispatchEmailData {
   trackingNumber: string;
   /** Servicio de envío (ej. "Correo Argentino Clásico"), opcional. */
   service?: string | null;
+  /** Link de WhatsApp de la tienda (opcional). */
+  whatsappUrl?: string | null;
 }
 
 /**
@@ -240,10 +252,10 @@ export function shipmentDispatchedEmail(d: DispatchEmailData): EmailContent {
       `<tr><td align="center" style="padding:8px 32px 0 32px;"><table role="presentation" cellpadding="0" cellspacing="0" style="background-color:${COLOR.page};border:1px solid ${COLOR.line};border-radius:12px;"><tr><td style="padding:12px 22px;font-family:${FONT_BODY};font-size:20px;font-weight:bold;letter-spacing:1px;color:${COLOR.primary};">${escapeHtml(d.trackingNumber)}</td></tr></table></td></tr>`,
       button(CORREO_TRACKING_URL, "Seguir mi envío"),
       block("Pegá ese número en la página de Correo Argentino. Puede tardar hasta 24 h en aparecer.", "16px 32px 0 32px", `font-size:13px;line-height:20px;color:${COLOR.muted};`),
-      block("Cualquier duda, escribinos por WhatsApp.", "8px 32px 0 32px", `font-size:14px;color:${COLOR.muted};`),
+      helpLine(d.whatsappUrl),
     ].join("\n"),
   });
-  const text = `¡Ya salió, ${d.contactName}!\nDespachamos tu pedido ${d.orderNumber}${d.service ? ` por ${d.service}` : ""}.\n\nSeguimiento: ${d.trackingNumber}\nRastrealo en ${CORREO_TRACKING_URL} (puede tardar hasta 24 h en aparecer).`;
+  const text = `¡Ya salió, ${d.contactName}!\nDespachamos tu pedido ${d.orderNumber}${d.service ? ` por ${d.service}` : ""}.\n\nSeguimiento: ${d.trackingNumber}\nRastrealo en ${CORREO_TRACKING_URL} (puede tardar hasta 24 h en aparecer).${d.whatsappUrl ? `\nDudas por WhatsApp: ${d.whatsappUrl}` : ""}`;
   return { subject, html, text };
 }
 
@@ -308,6 +320,8 @@ export interface RetractionReceiptData {
   ticket: string;
   date: string;
   contactName: string;
+  /** Link de WhatsApp de la tienda (opcional). */
+  whatsappUrl?: string | null;
 }
 
 /** Constancia al consumidor: comprobante del ejercicio del derecho de arrepentimiento. */
@@ -323,8 +337,9 @@ export function retractionReceiptEmail(d: RetractionReceiptData): EmailContent {
       paragraph(`Hola ${name}, registramos tu solicitud de arrepentimiento.`),
       `<tr><td align="center" style="padding:18px 32px 0 32px;"><table role="presentation" cellpadding="0" cellspacing="0" style="background-color:${COLOR.page};border:1px solid ${COLOR.line};border-radius:12px;"><tr><td align="center" style="padding:14px 28px;font-family:${FONT_BODY};font-size:14px;line-height:22px;color:${COLOR.muted};">Constancia<br /><span style="font-size:20px;font-weight:bold;letter-spacing:1px;color:${COLOR.primary};">${escapeHtml(d.ticket)}</span><br />${escapeHtml(d.date)}</td></tr></table></td></tr>`,
       paragraph("Te vamos a contactar para coordinar la devolución del producto y el reintegro del importe."),
+      helpLine(d.whatsappUrl),
     ].join("\n"),
   });
-  const text = `Recibimos tu solicitud de arrepentimiento.\nConstancia: ${d.ticket}\nFecha: ${d.date}\nTe contactaremos para coordinar la devolución y el reintegro. Guardá este correo como comprobante.`;
+  const text = `Recibimos tu solicitud de arrepentimiento.\nConstancia: ${d.ticket}\nFecha: ${d.date}\nTe contactaremos para coordinar la devolución y el reintegro. Guardá este correo como comprobante.${d.whatsappUrl ? `\nDudas por WhatsApp: ${d.whatsappUrl}` : ""}`;
   return { subject, html, text };
 }
