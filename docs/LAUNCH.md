@@ -28,7 +28,8 @@ Hoy `NEXT_PUBLIC_APP_URL` apunta a `glamify-makeup-1.vercel.app`: sitemap, robot
 - [ ] **2.1 (Vos)** Supabase → Authentication → URL Configuration: que `https://www.glamifymakeup.site/auth/callback` esté en Redirect URLs (y Site URL = `https://www.glamifymakeup.site`). Si falta, se rompen el login y la confirmación de mail al cambiar el dominio.
 - [ ] **2.2 (Yo, con tu OK)** En Vercel (Production): `NEXT_PUBLIC_APP_URL=https://www.glamifymakeup.site` y región de funciones `gru1`; redeploy.
   Verificación: `robots.txt` y `sitemap.xml` con `www.glamifymakeup.site`; la tienda carga más rápido.
-- [ ] **2.3 (Vos)** Crear una cuenta de prueba por mail en el dominio nuevo: tiene que llegar el mail de confirmación y volver logueada al sitio.
+- [x] **2.3 (Vos)** Cuenta de prueba por mail: el mail de confirmación llega con la marca de Glamify. A cuentas nuevas puede caer en spam hasta que el dominio gane reputación (SPF/DKIM/DMARC están bien); el aviso "fijate en spam" está en el mensaje de registro.
+- [ ] **2.4 (Después)** Login con Google: conectar el proveedor en Supabase (Authentication → Providers → Google). Pendiente a propósito, es feature nueva.
 
 ## Bloque 3 — Catálogo (Vos, desde `/admin`)
 
