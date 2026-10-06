@@ -12,6 +12,11 @@ const STATUS_LABEL: Record<string, string> = {
   shipped: "Enviado", delivered: "Entregado", cancelled: "Cancelado", refunded: "Reembolsado",
 };
 
+/** Estado del envío según Correo (lo actualiza solo el cron de seguimiento). */
+const SHIPMENT_LABEL: Partial<Record<string, string>> = {
+  dispatched: "Despachado", in_transit: "En camino", delivered: "Entregado", returned: "Devuelto",
+};
+
 export default async function PedidoDetallePage({ params }: { params: Promise<{ orderNumber: string }> }) {
   const { orderNumber } = await params;
   const customer = await requireCustomer();
@@ -59,6 +64,12 @@ export default async function PedidoDetallePage({ params }: { params: Promise<{ 
       )}
       {order.shipment?.trackingNumber && (
         <p className="text-sm text-muted-foreground">
+          {SHIPMENT_LABEL[order.shipment.status] ? (
+            <>
+              Envío: <strong className="text-foreground">{SHIPMENT_LABEL[order.shipment.status]}</strong>
+              {order.shipment.trackingLastEvent ? ` (${order.shipment.trackingLastEvent})` : ""}.{" "}
+            </>
+          ) : null}
           Seguimiento: <strong>{order.shipment.trackingNumber}</strong>{" "}
           <a
             href={CORREO_TRACKING_URL}

@@ -208,6 +208,17 @@ revertir, que esta no es.
 - `lib/shipping/zipnova.ts` queda huérfano (sin importadores fuera de sus propios tests y del
   script de prueba) pero intacto — no se borra sin autorización explícita de Lazar por ítem.
 
-## Actualización (2026-10-06): se quitó la precarga (`/shipping/import`)
+## Actualización (2026-10-06): seguimiento automático
 
-La pre-imposición automática a MiCorreo se eliminó (`createMicorreoShipment`, `auto-shipment.ts`, el reintento del panel). En la prueba real, MiCorreo mostró la altura de la calle vacía, no mostró las observaciones y rotuló el envío como "WooCommerce", lo que confunde a la dueña; y el paso por el panel (pagar, rótulo, despacho) se mantiene igual. El sistema solo **cotiza** en vivo (`quoteMicorreo`, `getMicorreoAgencies`, `provinceCode`). La tarjeta "Cómo despachar" del pedido en el admin muestra todos los datos del formulario de envío para cargarlos a mano.
+La API de MiCorreo tiene `GET /shipping/tracking` (no documentado públicamente): GET con body
+JSON `{ "shippingId": "..." }`, que el server deserializa a `HistoryOrderRequest` y rechaza
+cualquier otro campo. Para un envío que no ve responde 200 con
+`{ "error": "No existe el cliente o pedido" }`. Con el único envío real de la cuenta, cargado a
+mano en la web, no lo encuentra ni por número de seguimiento ni por recortes: la hipótesis es que
+sólo ve los envíos **importados por la API**. Por eso se mantiene la precarga (se revirtió el PR
+#21, que la sacaba).
+
+Implementado en `getMicorreoTracking()` + `deriveShipmentStatus()` + el job
+`runShipmentTrackingJob` (cron horario). Pendiente de confirmar con el primer envío precargado y
+pagado: que la API lo ve, el formato real del JSON y las cadenas exactas de "entregado" y
+"devuelto" (hoy se matchean de forma conservadora; lo desconocido queda "en camino").

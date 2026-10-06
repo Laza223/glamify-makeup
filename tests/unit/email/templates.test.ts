@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { orderConfirmationEmail, newOrderAlertEmail, shipmentDispatchedEmail, retractionReceiptEmail, type OrderEmailData } from "@/lib/email/templates";
+import { orderConfirmationEmail, newOrderAlertEmail, shipmentDispatchedEmail, shipmentAwaitingPickupEmail, shipmentDeliveredEmail, shipmentReturnedAlertEmail, retractionReceiptEmail, type OrderEmailData } from "@/lib/email/templates";
 import { CORREO_TRACKING_URL } from "@/lib/shipping/tracking";
 
 const data: OrderEmailData = {
@@ -47,6 +47,18 @@ describe("newOrderAlertEmail", () => {
   it("no flaggea cuando el monto coincide", () => {
     const m = newOrderAlertEmail({ ...data, amountPaid: 10900 });
     expect(m.subject.toLowerCase()).not.toContain("revisar");
+  });
+  it("avisa cuando el envío NO se cargó solo en MiCorreo", () => {
+    const m = newOrderAlertEmail({ ...data, micorreoImport: { imported: false, detail: "dirección incompleta en el pedido" } });
+    expect(m.subject.toLowerCase()).toContain("revisar");
+    expect(m.html).toContain("NO se cargó");
+    expect(m.html).toContain("dirección incompleta en el pedido");
+    expect(m.text.toLowerCase()).toContain("micorreo");
+  });
+  it("no flaggea cuando el envío SÍ se cargó solo", () => {
+    const m = newOrderAlertEmail({ ...data, micorreoImport: { imported: true, detail: "importado (ok)" } });
+    expect(m.subject.toLowerCase()).not.toContain("revisar");
+    expect(m.html).not.toContain("NO se cargó");
   });
 });
 
@@ -114,5 +126,36 @@ describe("link de WhatsApp en los mails a la clienta", () => {
       expect(html).toContain("escribinos por WhatsApp");
       expect(html).not.toContain("wa.me");
     }
+  });
+});
+
+describe("mails de seguimiento automático", () => {
+  const xss = "<script>alert(1)</script>";
+
+  it("esperando en sucursal: menciona la sucursal y escapa los datos", () => {
+    const m = shipmentAwaitingPickupEmail({ orderNumber: "GLM-1", contactName: xss, trackingNumber: "CA1", facility: "OAM VILLA BALLESTER" });
+    expect(m.subject).toContain("sucursal");
+    expect(m.html).toContain("OAM VILLA BALLESTER");
+    expect(m.html).not.toContain(xss);
+  });
+
+  it("entregado: con cuenta trae el botón de reseña; sin cuenta no", () => {
+    expect(shipmentDeliveredEmail({ orderNumber: "GLM-1", contactName: "Ana", reviewUrl: "https://x/cuenta/pedidos/GLM-1" }).html).toContain("Dejar una reseña");
+    expect(shipmentDeliveredEmail({ orderNumber: "GLM-1", contactName: "Ana" }).html).not.toContain("Dejar una reseña");
+  });
+
+  it("devuelto: alerta interna marcada REVISAR, escapa los datos", () => {
+    const m = shipmentReturnedAlertEmail({ orderNumber: "GLM-1", contactName: xss, contactEmail: "a@x.com", contactPhone: null, trackingNumber: "CA1", lastEvent: null });
+    expect(m.subject).toContain("REVISAR");
+    expect(m.html).not.toContain(xss);
+  });
+
+  it("sin emojis en los asuntos", () => {
+    const subjects = [
+      shipmentAwaitingPickupEmail({ orderNumber: "GLM-1", contactName: "Ana", trackingNumber: "CA1", facility: null }).subject,
+      shipmentDeliveredEmail({ orderNumber: "GLM-1", contactName: "Ana" }).subject,
+      shipmentReturnedAlertEmail({ orderNumber: "GLM-1", contactName: "Ana", contactEmail: "a@x.com", contactPhone: null, trackingNumber: "CA1", lastEvent: null }).subject,
+    ];
+    for (const s of subjects) expect(s).not.toMatch(/\p{Extended_Pictographic}/u);
   });
 });

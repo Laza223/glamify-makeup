@@ -119,6 +119,7 @@ function makeDeps(over: Partial<ProcessWebhookDeps> = {}): ProcessWebhookDeps {
     verifySignature: vi.fn(async () => true),
     secret: "s",
     ownerEmail: "owner@test.com",
+    autoImportShipment: vi.fn(async () => ({ imported: true, service: "Correo Argentino Clásico", detail: "importado (ok)" }) as const),
     now: new Date("2026-06-04T12:00:00Z"),
     ...over,
   };
@@ -147,12 +148,54 @@ describe("processWebhook", () => {
     expect(state.payments[0].mpPaymentId).toBe("mp-pay-1");
   });
 
+  it("approved (domicilio) → auto-importa a MiCorreo y guarda el service en el Shipment", async () => {
+    const { db, state } = makeFakeDb();
+    const deps = makeDeps({ db });
+    await processWebhook({ dataId: "mp-pay-1", xSignature: "ok", xRequestId: "r" }, deps);
+    expect((deps.autoImportShipment as any).mock.calls.length).toBe(1);
+    expect((deps.autoImportShipment as any).mock.calls[0][0]).toMatchObject({ orderNumber: "GLM-000009", shippingMethod: "domicilio", weightGr: 100 });
+    expect(state.shipments.find((s) => s.orderId === "ord-1")?.service).toBe("Correo Argentino Clásico");
+  });
+
+  it("un fallo del auto-import NO voltea el webhook (best-effort): el pedido queda pagado", async () => {
+    const { db, state } = makeFakeDb();
+    const deps = makeDeps({ db, autoImportShipment: vi.fn(async () => { throw new Error("MiCorreo caído"); }) });
+    const r = await processWebhook({ dataId: "mp-pay-1", xSignature: "ok", xRequestId: "r" }, deps);
+    expect(r.status).toBe(200);
+    expect(state.order.status).toBe("paid");
+  });
+
   it("un fallo de Resend al mandar los emails NO voltea el webhook (best-effort): el pedido queda pagado", async () => {
     const { db, state } = makeFakeDb();
     const deps = makeDeps({ db, sendEmail: vi.fn(async () => { throw new Error("Resend caído"); }) });
     const r = await processWebhook({ dataId: "mp-pay-1", xSignature: "ok", xRequestId: "r" }, deps);
     expect(r.status).toBe(200);
     expect(state.order.status).toBe("paid");
+  });
+
+  it("sucursal → no auto-importa (imported:false), no toca el Shipment", async () => {
+    const { db, state } = makeFakeDb();
+    const importSpy = vi.fn(async () => ({ imported: false, detail: "sucursal" }) as const);
+    const deps = makeDeps({ db, autoImportShipment: importSpy });
+    await processWebhook({ dataId: "mp-pay-1", xSignature: "ok", xRequestId: "r" }, deps);
+    expect(importSpy).toHaveBeenCalledTimes(1);
+    expect(state.shipments.find((s) => s.orderId === "ord-1")?.service).toBeUndefined();
+  });
+
+  it("auto-import OK → marca micorreoImportedAt en el Shipment", async () => {
+    const { db, state } = makeFakeDb();
+    const deps = makeDeps({ db });
+    await processWebhook({ dataId: "mp-pay-1", xSignature: "ok", xRequestId: "r" }, deps);
+    expect(state.shipments.find((s) => s.orderId === "ord-1")?.micorreoImportedAt).toBeInstanceOf(Date);
+  });
+
+  it("auto-import falla → el mail a la dueña avisa que NO se cargó solo (REVISAR)", async () => {
+    const { db } = makeFakeDb();
+    const deps = makeDeps({ db, autoImportShipment: vi.fn(async () => ({ imported: false, detail: "dirección incompleta en el pedido" }) as const) });
+    await processWebhook({ dataId: "mp-pay-1", xSignature: "ok", xRequestId: "r" }, deps);
+    const ownerEmail = (deps.sendEmail as any).mock.calls.find((c: any) => c[0].to === "owner@test.com");
+    expect(ownerEmail[0].html).toContain("NO se cargó");
+    expect(ownerEmail[0].subject).toContain("REVISAR");
   });
 
   it("idempotente: el mismo webhook 2× descuenta stock una sola vez", async () => {

@@ -2,64 +2,51 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Truck, Save, AlertCircle, CircleCheck } from "lucide-react";
+import { Truck, Send, AlertCircle, CircleCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { upsertShipmentAction } from "./actions";
-import { canTransitionShipment } from "@/lib/orders/state-machine";
 import type { ShipmentStatus } from "@prisma/client";
 
 const fieldClass =
   "h-11 rounded-xl border border-input bg-background px-3 text-base transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:text-sm";
 
-const SHIPMENT_STATES: Array<{ value: ShipmentStatus; label: string }> = [
-  { value: "pending", label: "Pendiente" },
-  { value: "ready", label: "Listo para despachar" },
-  { value: "dispatched", label: "Despachado" },
-  { value: "in_transit", label: "En camino" },
-  { value: "delivered", label: "Entregado" },
-  { value: "returned", label: "Devuelto" },
-];
+/** Estado del envío en palabras de la dueña. Lo actualiza solo el cron de seguimiento. */
+const SHIPMENT_LABELS: Record<ShipmentStatus, string> = {
+  pending: "Todavía no salió",
+  ready: "Todavía no salió",
+  dispatched: "Despachado (esperando el primer movimiento de Correo)",
+  in_transit: "En camino",
+  delivered: "Entregado",
+  returned: "Devuelto al remitente",
+};
 
 export interface ShipmentDefaults {
-  service: string;
   trackingNumber: string;
-  labelUrl: string;
-  cost: number;
   status: ShipmentStatus;
+  /** Último movimiento informado por Correo, legible. */
+  lastEvent: string | null;
+  /** Cuándo se consultó Correo por última vez (texto ya formateado en ART). */
+  checkedAt: string | null;
+  /** Correo dejó el paquete en la sucursal para que la clienta lo retire. */
+  awaitingPickup: boolean;
 }
 
-export function ShipmentForm({
-  orderId,
-  defaults,
-}: {
-  orderId: string;
-  defaults: ShipmentDefaults;
-}) {
+export function ShipmentForm({ orderId, defaults }: { orderId: string; defaults: ShipmentDefaults }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState(false);
-
-  // Solo el estado actual + próximos válidos (mismo patrón que OrderStatusControl con canTransition)
-  // — no se puede saltar pasos ni retroceder desde el select.
-  const availableStates = SHIPMENT_STATES.filter((s) => canTransitionShipment(defaults.status, s.value));
+  const hasTracking = Boolean(defaults.trackingNumber);
 
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
     setOk(false);
-    const fd = new FormData(e.currentTarget);
-    const input = {
-      service: String(fd.get("service") ?? ""),
-      trackingNumber: String(fd.get("trackingNumber") ?? ""),
-      labelUrl: String(fd.get("labelUrl") ?? ""),
-      cost: Number(fd.get("cost") ?? 0),
-      status: String(fd.get("status") ?? "pending") as ShipmentStatus,
-    };
+    const trackingNumber = String(new FormData(e.currentTarget).get("trackingNumber") ?? "");
     startTransition(async () => {
-      const r = await upsertShipmentAction(orderId, input);
-      if (!r.ok) setError(r.error ?? "No se pudo guardar el envío.");
+      const r = await upsertShipmentAction(orderId, trackingNumber);
+      if (!r.ok) setError(r.error ?? "No se pudo guardar el seguimiento.");
       else {
         setOk(true);
         router.refresh();
@@ -69,73 +56,37 @@ export function ShipmentForm({
 
   return (
     <form onSubmit={onSubmit} className="space-y-5">
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="grid gap-2">
-          <Label htmlFor="service">Servicio</Label>
-          <input
-            id="service"
-            name="service"
-            defaultValue={defaults.service}
-            placeholder="Clásico, Expreso…"
-            className={fieldClass}
-          />
-        </div>
-        <div className="grid gap-2">
-          <Label htmlFor="cost">Costo del envío (ARS)</Label>
-          <input
-            id="cost"
-            name="cost"
-            type="number"
-            min="0"
-            step="0.01"
-            defaultValue={defaults.cost}
-            className={`${fieldClass} tabular-nums`}
-          />
-        </div>
-      </div>
-
       <div className="grid gap-2">
         <Label htmlFor="trackingNumber">Número de seguimiento</Label>
         <input
           id="trackingNumber"
           name="trackingNumber"
+          required
           defaultValue={defaults.trackingNumber}
-          placeholder="Ej: CA123456789AR"
+          placeholder="Lo copiás de MiCorreo al despachar"
           className={fieldClass}
         />
         <p className="text-xs text-muted-foreground">
-          Al cargar el seguimiento, el pedido pasa a &quot;Enviado&quot;.
+          Al guardarlo, el pedido pasa a &quot;Enviado&quot; y la clienta recibe el mail con el seguimiento. Después los
+          estados (en camino, en sucursal, entregado) se actualizan solos con lo que informa Correo.
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="grid gap-2">
-          <Label htmlFor="labelUrl">Link de la etiqueta (opcional)</Label>
-          <input
-            id="labelUrl"
-            name="labelUrl"
-            type="url"
-            defaultValue={defaults.labelUrl}
-            placeholder="https://…"
-            className={fieldClass}
-          />
+      {hasTracking ? (
+        <div className="rounded-xl border border-border/70 bg-surface-alt/40 p-4 text-sm">
+          <p className="font-semibold text-foreground">
+            {defaults.awaitingPickup && defaults.status === "in_transit"
+              ? "Esperando que la clienta lo retire en la sucursal"
+              : SHIPMENT_LABELS[defaults.status]}
+          </p>
+          {defaults.lastEvent ? <p className="mt-1 text-muted-foreground">{defaults.lastEvent}</p> : null}
+          <p className="mt-1 text-xs text-muted-foreground">
+            {defaults.checkedAt
+              ? `Consultado en Correo: ${defaults.checkedAt}. Se vuelve a consultar cada pocas horas.`
+              : "Todavía no se consultó en Correo: se hace solo dentro de la próxima hora."}
+          </p>
         </div>
-        <div className="grid gap-2">
-          <Label htmlFor="status">Estado del envío</Label>
-          <select
-            id="status"
-            name="status"
-            defaultValue={defaults.status}
-            className={fieldClass}
-          >
-            {availableStates.map((s) => (
-              <option key={s.value} value={s.value}>
-                {s.label}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
+      ) : null}
 
       {error ? (
         <p className="flex items-center gap-1.5 text-sm font-medium text-destructive">
@@ -146,7 +97,7 @@ export function ShipmentForm({
       {ok ? (
         <p className="flex items-center gap-1.5 text-sm font-medium text-success">
           <CircleCheck className="size-4 shrink-0" aria-hidden />
-          Envío guardado.
+          Seguimiento guardado.
         </p>
       ) : null}
 
@@ -158,8 +109,8 @@ export function ShipmentForm({
           </>
         ) : (
           <>
-            <Save className="size-4" aria-hidden />
-            Guardar envío
+            <Send className="size-4" aria-hidden />
+            {hasTracking ? "Corregir número" : "Guardar y avisar a la clienta"}
           </>
         )}
       </Button>

@@ -269,8 +269,18 @@ export async function quoteMicorreo(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Provincias (para /agencies y /rates). El envío NO se importa a MiCorreo: la dueña
-// lo carga a mano desde la tarjeta "Cómo despachar" del panel.
+// Importación de envíos (POST /shipping/import)
+//
+// OJO — qué hace y qué NO hace (verificado en la librería `ylazzari-correoargentino`):
+// "Importar" es una PRE-IMPOSICIÓN: deja el pedido cargado en la cuenta de MiCorreo.
+// La respuesta es sólo `{ createdAt }` — NO devuelve número de seguimiento ni etiqueta.
+// El tracking y el rótulo se obtienen después entrando a MiCorreo, pagando el envío
+// con el saldo e imprimiendo. O sea: ahorra recargar los datos a mano y evita errores
+// de tipeo, pero no reemplaza el paso por el panel.
+//
+// Idempotencia: `extOrderId` debe ser único; MiCorreo rechaza el duplicado con
+// "La orden ya fue importada con anterioridad". Usamos el orderNumber del pedido,
+// así reintentar el botón nunca genera un envío doble.
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** Códigos oficiales de provincia de MiCorreo (tomados del selector de su propia web). */
@@ -313,4 +323,269 @@ export function provinceCode(name: string | null | undefined): string | null {
     .replace(/\s+/g, " ")
     .trim();
   return PROVINCE_CODES[key] ?? null;
+}
+
+/**
+ * Teléfono en el formato que espera MiCorreo: sólo dígitos, número nacional sin
+ * código de país (54), sin el 9 de celular internacional ni el 0 de larga
+ * distancia (ej. "+54 9 11 3018 1532" → "1130181532"). Mandarlo crudo hacía que
+ * MiCorreo lo cortara mal en el panel. Devuelve null si no queda ningún dígito.
+ */
+export function normalizeArPhone(raw: string | null | undefined): string | null {
+  let digits = (raw ?? "").replace(/\D/g, "");
+  if (digits.startsWith("54") && digits.length >= 12) digits = digits.slice(2);
+  if (digits.startsWith("9") && digits.length === 11) digits = digits.slice(1);
+  if (digits.startsWith("0")) digits = digits.slice(1);
+  return digits || null;
+}
+
+export interface MicorreoShipmentInput {
+  /** ID único del pedido de nuestro lado (orderNumber). Da idempotencia. */
+  extOrderId: string;
+  recipient: { name: string; email: string; phone?: string | null };
+  metodo: "domicilio" | "sucursal";
+  pesoGr: number;
+  valorDeclarado: number;
+  /** Requerido si metodo === "domicilio". */
+  address?: {
+    streetName: string;
+    streetNumber: string;
+    /** Piso/depto tal cual lo escribió la clienta (el checkout lo pide en un solo campo). */
+    apartment?: string | null;
+    city: string;
+    province: string;
+    postalCode: string;
+  } | null;
+  /** Código de sucursal (de /agencies). Requerido si metodo === "sucursal". */
+  agency?: string | null;
+}
+
+export type MicorreoShipmentResult =
+  | { ok: true; createdAt: string | null }
+  | { ok: false; error: string };
+
+/**
+ * Importa (pre-impone) un envío en MiCorreo. Ver el bloque de arriba: NO devuelve
+ * tracking ni etiqueta. A diferencia de `quoteMicorreo`, acá los fallos se devuelven
+ * con el motivo — es una acción del panel y la admin necesita saber qué pasó.
+ */
+export async function createMicorreoShipment(
+  input: MicorreoShipmentInput,
+  env: MicorreoEnv = process.env as MicorreoEnv,
+  fetchImpl: typeof fetch = fetch,
+  nowMs: number = Date.now(),
+): Promise<MicorreoShipmentResult> {
+  if (!isMicorreoConfigured(env)) {
+    return { ok: false, error: "Falta configurar las credenciales de MiCorreo." };
+  }
+  if (!input.extOrderId?.trim()) return { ok: false, error: "Falta el número de pedido." };
+  if (!input.recipient?.name?.trim() || !input.recipient?.email?.trim()) {
+    return { ok: false, error: "El pedido no tiene nombre o email de contacto." };
+  }
+
+  const deliveryType = DELIVERED_BY_METHOD[input.metodo];
+  const shipping: Record<string, unknown> = { deliveryType };
+
+  if (input.metodo === "sucursal") {
+    if (!input.agency?.trim()) {
+      return {
+        ok: false,
+        error:
+          "Este pedido es a sucursal y todavía no guardamos cuál eligió la clienta. Cargalo a mano en MiCorreo.",
+      };
+    }
+    shipping.agency = input.agency.trim();
+  } else {
+    const a = input.address;
+    if (!a?.streetName?.trim() || !a?.streetNumber?.trim() || !a?.city?.trim() || !a?.postalCode?.trim()) {
+      return { ok: false, error: "La dirección del pedido está incompleta (calle, número, localidad o CP)." };
+    }
+    const code = provinceCode(a.province);
+    if (!code) return { ok: false, error: `No reconozco la provincia "${a.province}".` };
+    shipping.address = {
+      streetName: a.streetName.trim(),
+      streetNumber: a.streetNumber.trim(),
+      // Va entero en `apartment`: el checkout junta piso y depto en un campo libre
+      // ("A", "3 B", "PB 2") y partirlo adivinando perdería datos.
+      ...(a.apartment?.trim() ? { apartment: a.apartment.trim() } : {}),
+      city: a.city.trim(),
+      provinceCode: code,
+      postalCode: a.postalCode.trim(),
+    };
+  }
+
+  // Peso en gramos acá (a diferencia de /rates, que lo toma en kg).
+  shipping.weight = Math.max(1, Math.round(input.pesoGr));
+  shipping.declaredValue = input.valorDeclarado;
+  shipping.length = DEFAULT_ITEM_CM.length;
+  shipping.width = DEFAULT_ITEM_CM.width;
+  shipping.height = DEFAULT_ITEM_CM.height;
+
+  const phone = normalizeArPhone(input.recipient.phone);
+
+  try {
+    const auth = await getAuth(env, fetchImpl, nowMs);
+    if (!auth) return { ok: false, error: "No pude autenticarme con MiCorreo. Revisá las credenciales." };
+
+    const res = await fetchImpl(`${apiBase(env)}/shipping/import`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${auth.token}`,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({
+        customerId: auth.customerId,
+        extOrderId: input.extOrderId.trim(),
+        recipient: {
+          name: input.recipient.name.trim(),
+          email: input.recipient.email.trim(),
+          // El checkout pide un solo teléfono (casi siempre celular): va en los dos campos.
+          ...(phone ? { phone, cellPhone: phone } : {}),
+        },
+        shipping,
+      }),
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+    });
+
+    const json = (await res.json().catch(() => null)) as { createdAt?: string; message?: string } | null;
+    if (!res.ok) {
+      return { ok: false, error: json?.message || `MiCorreo rechazó el envío (HTTP ${res.status}).` };
+    }
+    return { ok: true, createdAt: json?.createdAt ?? null };
+  } catch {
+    return { ok: false, error: "No pude conectarme con MiCorreo. Probá de nuevo en un momento." };
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Seguimiento (GET /shipping/tracking)
+//
+// No figura en la documentación pública: verificado contra la API real (2026-10-06).
+// Es un GET con body JSON `{ "shippingId": "..." }` (el server lo deserializa a
+// `HistoryOrderRequest`; rechaza cualquier otro campo). Para un envío que no ve
+// responde 200 con `{ "error": "No existe el cliente o pedido" }`. Un envío cargado a
+// mano en la web de MiCorreo NO aparece; la hipótesis es que sólo ve los importados
+// por la API (por eso el seguimiento automático depende de la precarga).
+//
+// El JSON de un envío encontrado todavía no se vio: el parser es tolerante con los
+// nombres de campo (los de la tabla "Movimientos del envío" de la web: Fecha, Planta,
+// Historia, Estado) y, si no reconoce el formato, devuelve error con el crudo.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface TrackingEvent {
+  /** Fecha tal cual la manda Correo (ej. "11-05-2026 10:10" o ISO). */
+  date: string | null;
+  /** Planta / sucursal donde ocurrió (ej. "OAM VILLA BALLESTER"). */
+  facility: string | null;
+  /** Movimiento (columna "Historia", ej. "INTENTO DE ENTREGA"). */
+  event: string;
+  /** Detalle (columna "Estado", ej. "EN ESPERA EN SUCURSAL"). */
+  status: string | null;
+}
+
+export type MicorreoTrackingResult =
+  | { ok: true; events: TrackingEvent[] }
+  | { ok: false; notFound: boolean; error: string };
+
+/** GET con body: `fetch` no lo permite, así que el default usa `node:https`. */
+export type TrackingRequest = (url: string, token: string, body: string) => Promise<{ status: number; body: string }>;
+
+const defaultTrackingRequest: TrackingRequest = async (url, token, body) => {
+  const https = await import("node:https");
+  return new Promise((resolve, reject) => {
+    const req = https.request(
+      url,
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          "Content-Length": Buffer.byteLength(body),
+        },
+        timeout: TIMEOUT_MS,
+      },
+      (res) => {
+        let data = "";
+        res.on("data", (chunk) => (data += chunk));
+        res.on("end", () => resolve({ status: res.statusCode ?? 0, body: data }));
+      },
+    );
+    req.on("timeout", () => req.destroy(new Error("timeout")));
+    req.on("error", reject);
+    req.write(body);
+    req.end();
+  });
+};
+
+const pick = (o: Record<string, unknown>, keys: string[]): string | null => {
+  for (const [k, v] of Object.entries(o)) {
+    if (keys.includes(k.toLowerCase()) && (typeof v === "string" || typeof v === "number") && String(v).trim()) {
+      return String(v).trim();
+    }
+  }
+  return null;
+};
+
+/** Interpreta la respuesta de /shipping/tracking. Pura y testeable. */
+export function parseTrackingResponse(json: unknown): MicorreoTrackingResult {
+  if (json && typeof json === "object" && !Array.isArray(json)) {
+    const err = (json as { error?: unknown }).error;
+    if (typeof err === "string" && err.trim()) {
+      return { ok: false, notFound: /no existe/i.test(err), error: err };
+    }
+  }
+  const list = Array.isArray(json)
+    ? json
+    : json && typeof json === "object"
+      ? Object.values(json as Record<string, unknown>).find(Array.isArray)
+      : undefined;
+  if (!list) return { ok: false, notFound: false, error: `Formato de seguimiento desconocido: ${JSON.stringify(json).slice(0, 300)}` };
+
+  const events: TrackingEvent[] = [];
+  for (const row of list) {
+    if (!row || typeof row !== "object") continue;
+    const r = row as Record<string, unknown>;
+    const event = pick(r, ["historia", "event", "evento", "description", "descripcion", "eventdescription"]);
+    if (!event) continue;
+    events.push({
+      date: pick(r, ["fecha", "date", "eventdate", "fechahora", "datetime"]),
+      facility: pick(r, ["planta", "facility", "sucursal", "office", "branch", "location"]),
+      event,
+      status: pick(r, ["estado", "status", "statusdescription"]),
+    });
+  }
+  if (list.length > 0 && events.length === 0) {
+    return { ok: false, notFound: false, error: `Formato de seguimiento desconocido: ${JSON.stringify(list[0]).slice(0, 300)}` };
+  }
+  return { ok: true, events };
+}
+
+/** Historial de un envío en MiCorreo. Nunca tira: los fallos vuelven como `ok:false`. */
+export async function getMicorreoTracking(
+  shippingId: string,
+  env: MicorreoEnv = process.env as MicorreoEnv,
+  fetchImpl: typeof fetch = fetch,
+  request: TrackingRequest = defaultTrackingRequest,
+  nowMs: number = Date.now(),
+): Promise<MicorreoTrackingResult> {
+  if (!isMicorreoConfigured(env)) return { ok: false, notFound: false, error: "Falta configurar las credenciales de MiCorreo." };
+  try {
+    const auth = await getAuth(env, fetchImpl, nowMs);
+    if (!auth) return { ok: false, notFound: false, error: "No pude autenticarme con MiCorreo." };
+    const res = await request(`${apiBase(env)}/shipping/tracking`, auth.token, JSON.stringify({ shippingId }));
+    if (res.status < 200 || res.status >= 300) {
+      return { ok: false, notFound: false, error: `MiCorreo respondió HTTP ${res.status}: ${res.body.slice(0, 200)}` };
+    }
+    let json: unknown;
+    try {
+      json = JSON.parse(res.body);
+    } catch {
+      return { ok: false, notFound: false, error: `Respuesta no JSON: ${res.body.slice(0, 200)}` };
+    }
+    return parseTrackingResponse(json);
+  } catch (e) {
+    return { ok: false, notFound: false, error: e instanceof Error ? e.message : String(e) };
+  }
 }

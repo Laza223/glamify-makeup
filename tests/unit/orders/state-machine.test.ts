@@ -8,6 +8,9 @@ describe("canTransition", () => {
     expect(canTransition("preparing", "shipped")).toBe(true);
     expect(canTransition("shipped", "delivered")).toBe(true);
   });
+  it("paid → shipped directo (cargar el seguimiento no exige marcar preparando)", () => {
+    expect(canTransition("paid", "shipped")).toBe(true);
+  });
   it("permite cancelar/reembolsar según el estado", () => {
     expect(canTransition("pending_payment", "cancelled")).toBe(true);
     expect(canTransition("paid", "refunded")).toBe(true);
@@ -49,9 +52,13 @@ describe("canTransitionShipment", () => {
     expect(canTransitionShipment("pending", "pending")).toBe(true);
     expect(canTransitionShipment("delivered", "delivered")).toBe(true);
   });
+  it("permite los saltos que hace el sistema (cargar seguimiento, Correo que entrega sin informar tránsito)", () => {
+    expect(canTransitionShipment("pending", "dispatched")).toBe(true);
+    expect(canTransitionShipment("dispatched", "delivered")).toBe(true);
+  });
   it("rechaza saltar pasos o retroceder", () => {
     expect(canTransitionShipment("pending", "delivered")).toBe(false);
-    expect(canTransitionShipment("pending", "dispatched")).toBe(false);
+    expect(canTransitionShipment("pending", "in_transit")).toBe(false);
     expect(canTransitionShipment("in_transit", "ready")).toBe(false);
     expect(canTransitionShipment("delivered", "in_transit")).toBe(false);
   });

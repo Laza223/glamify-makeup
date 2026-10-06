@@ -127,11 +127,11 @@ export default async function PedidoDetallePage({
 
   const addr = (order.shippingAddress ?? {}) as AddressSnapshot;
   const shipmentDefaults: ShipmentDefaults = {
-    service: order.shipment?.service ?? "",
     trackingNumber: order.shipment?.trackingNumber ?? "",
-    labelUrl: order.shipment?.labelUrl ?? "",
-    cost: order.shipment ? toNumber(order.shipment.cost) : toNumber(order.shippingCost),
     status: (order.shipment?.status ?? "pending") as ShipmentStatus,
+    lastEvent: order.shipment?.trackingLastEvent ?? null,
+    checkedAt: order.shipment?.trackingCheckedAt ? ART_FMT.format(order.shipment.trackingCheckedAt) : null,
+    awaitingPickup: order.shipment?.trackingNotified.includes("awaiting_pickup") ?? false,
   };
 
   const statusPres = ORDER_PRESENTATION[order.status];
@@ -321,13 +321,18 @@ export default async function PedidoDetallePage({
       {/* Instrucciones MiCorreo (qué hacer con este pedido) */}
       {showMicorreo ? (
         <MicorreoPanel
+          orderId={order.id}
           orderNumber={order.orderNumber}
+          imported={Boolean(order.shipment?.micorreoImportedAt)}
           trackingLoaded={Boolean(order.shipment?.trackingNumber)}
           recipientName={order.contactName}
           recipientEmail={order.contactEmail}
           recipientPhone={order.contactPhone}
           isSucursal={isSucursal}
-          address={addr}
+          address={{
+            ...addr,
+            agencyLabel: addr.agencyLabel ?? (addr.agencyCode ? `Sucursal ${addr.agencyCode}` : null),
+          }}
           weightGr={order.weightGr}
           dimensions={`${DEFAULT_ITEM_CM.length} × ${DEFAULT_ITEM_CM.width} × ${DEFAULT_ITEM_CM.height} cm`}
           declaredValue={toNumber(order.subtotal)}
@@ -339,7 +344,7 @@ export default async function PedidoDetallePage({
         <SectionHead
           icon={Truck}
           title="Envío y seguimiento"
-          help="Cargá el servicio, el número de seguimiento y el estado del envío."
+          help="Pegá el número de seguimiento de MiCorreo; los estados se actualizan solos."
         />
         <div className="p-5">
           <ShipmentForm orderId={order.id} defaults={shipmentDefaults} />
