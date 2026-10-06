@@ -224,6 +224,8 @@ export function newOrderAlertEmail(d: OrderEmailData): EmailContent {
 }
 
 export interface DispatchEmailData {
+  /** Página de seguimiento de la tienda (`/seguimiento/<id>`); sin ella, la de Correo. */
+  trackingUrl?: string | null;
   orderNumber: string;
   contactName: string;
   trackingNumber: string;
@@ -250,12 +252,15 @@ export function shipmentDispatchedEmail(d: DispatchEmailData): EmailContent {
       paragraph(`Despachamos tu pedido <strong>${escapeHtml(d.orderNumber)}</strong>${svc}.`),
       block("Tu número de seguimiento es", "20px 32px 0 32px", `font-size:14px;color:${COLOR.muted};`),
       `<tr><td align="center" style="padding:8px 32px 0 32px;"><table role="presentation" cellpadding="0" cellspacing="0" style="background-color:${COLOR.page};border:1px solid ${COLOR.line};border-radius:12px;"><tr><td style="padding:12px 22px;font-family:${FONT_BODY};font-size:20px;font-weight:bold;letter-spacing:1px;color:${COLOR.primary};">${escapeHtml(d.trackingNumber)}</td></tr></table></td></tr>`,
-      button(CORREO_TRACKING_URL, "Seguir mi envío"),
-      block("Pegá ese número en la página de Correo Argentino. Puede tardar hasta 24 h en aparecer.", "16px 32px 0 32px", `font-size:13px;line-height:20px;color:${COLOR.muted};`),
+      button(d.trackingUrl ?? CORREO_TRACKING_URL, "Seguir mi envío"),
+      block(
+        d.trackingUrl
+          ? "Ahí ves el estado de tu envío; se actualiza solo con lo que informa Correo. Los primeros movimientos pueden tardar hasta 24 h."
+          : "Pegá ese número en la página de Correo Argentino. Puede tardar hasta 24 h en aparecer.", "16px 32px 0 32px", `font-size:13px;line-height:20px;color:${COLOR.muted};`),
       helpLine(d.whatsappUrl),
     ].join("\n"),
   });
-  const text = `¡Ya salió, ${d.contactName}!\nDespachamos tu pedido ${d.orderNumber}${d.service ? ` por ${d.service}` : ""}.\n\nSeguimiento: ${d.trackingNumber}\nRastrealo en ${CORREO_TRACKING_URL} (puede tardar hasta 24 h en aparecer).${d.whatsappUrl ? `\nDudas por WhatsApp: ${d.whatsappUrl}` : ""}`;
+  const text = `¡Ya salió, ${d.contactName}!\nDespachamos tu pedido ${d.orderNumber}${d.service ? ` por ${d.service}` : ""}.\n\nSeguimiento: ${d.trackingNumber}\nSeguilo en ${d.trackingUrl ?? CORREO_TRACKING_URL} (puede tardar hasta 24 h en aparecer).${d.whatsappUrl ? `\nDudas por WhatsApp: ${d.whatsappUrl}` : ""}`;
   return { subject, html, text };
 }
 
@@ -345,6 +350,8 @@ export function retractionReceiptEmail(d: RetractionReceiptData): EmailContent {
 }
 
 export interface AwaitingPickupEmailData {
+  /** Página de seguimiento de la tienda; sin ella, la de Correo. */
+  trackingUrl?: string | null;
   orderNumber: string;
   contactName: string;
   trackingNumber: string;
@@ -365,11 +372,11 @@ export function shipmentAwaitingPickupEmail(d: AwaitingPickupEmailData): EmailCo
       title(`¡Hola, ${escapeHtml(d.contactName)}!`),
       paragraph(`Correo Argentino intentó entregarte el pedido <strong>${escapeHtml(d.orderNumber)}</strong> y lo dejó${where} para que lo retires.`),
       paragraph(`Llevá tu DNI y el número de seguimiento <strong>${escapeHtml(d.trackingNumber)}</strong>. Si no se retira a tiempo, Correo lo devuelve.`),
-      button(CORREO_TRACKING_URL, "Ver dónde está"),
+      button(d.trackingUrl ?? CORREO_TRACKING_URL, "Ver dónde está"),
       helpLine(d.whatsappUrl),
     ].join("\n"),
   });
-  const text = `¡Hola, ${d.contactName}! Correo intentó entregarte el pedido ${d.orderNumber} y lo dejó ${d.facility ? `en ${d.facility}` : "en la sucursal"} para que lo retires. Llevá tu DNI y el seguimiento ${d.trackingNumber}. Si no se retira a tiempo, Correo lo devuelve.\nSeguimiento: ${CORREO_TRACKING_URL}${d.whatsappUrl ? `\nDudas por WhatsApp: ${d.whatsappUrl}` : ""}`;
+  const text = `¡Hola, ${d.contactName}! Correo intentó entregarte el pedido ${d.orderNumber} y lo dejó ${d.facility ? `en ${d.facility}` : "en la sucursal"} para que lo retires. Llevá tu DNI y el seguimiento ${d.trackingNumber}. Si no se retira a tiempo, Correo lo devuelve.\nSeguimiento: ${d.trackingUrl ?? CORREO_TRACKING_URL}${d.whatsappUrl ? `\nDudas por WhatsApp: ${d.whatsappUrl}` : ""}`;
   return { subject, html, text };
 }
 

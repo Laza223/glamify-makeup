@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { deriveShipmentStatus } from "@/lib/shipping/tracking-status";
+import { deriveShipmentStatus, shipmentStatusLabel } from "@/lib/shipping/tracking-status";
 import type { TrackingEvent } from "@/lib/shipping/micorreo";
 
 const ev = (event: string, status: string | null, facility: string | null, date: string | null): TrackingEvent => ({ event, status, facility, date });
@@ -48,5 +48,14 @@ describe("deriveShipmentStatus", () => {
 
   it("devolución al remitente → returned", () => {
     expect(deriveShipmentStatus([...real, ev("DEVOLUCIÓN AL REMITENTE", null, "OAM VILLA BALLESTER", "20-05-2026 09:00")]).status).toBe("returned");
+  });
+});
+
+describe("shipmentStatusLabel", () => {
+  it("en palabras de la clienta, con el caso de sucursal", () => {
+    expect(shipmentStatusLabel("dispatched", false)).toBe("Despachado");
+    expect(shipmentStatusLabel("in_transit", false)).toBe("En camino");
+    expect(shipmentStatusLabel("in_transit", true)).toBe("Te espera en la sucursal");
+    expect(shipmentStatusLabel("delivered", true)).toBe("Entregado");
   });
 });

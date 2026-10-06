@@ -105,6 +105,8 @@ describe("upsertShipment · aviso de despacho a la clienta", () => {
     expect(call.subject).toContain("GLM-000123");
     expect(call.html).toContain("CA123456789AR");
     expect(call.html).toContain("Correo Argentino Clásico");
+    // El botón va a la página de seguimiento propia (id interno del pedido, no el número).
+    expect(call.html).toContain("/seguimiento/ord-1");
   });
 
   it("si el pedido ya estaba shipped (corrección de número) NO re-manda el mail", async () => {
