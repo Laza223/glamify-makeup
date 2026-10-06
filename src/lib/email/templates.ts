@@ -1,4 +1,5 @@
 import { formatARS } from "@/lib/money";
+import { appBaseUrl } from "@/lib/seo/url";
 import { CORREO_TRACKING_URL } from "@/lib/shipping/tracking";
 
 /** Escapa HTML para interpolar texto del usuario en cuerpos de email (anti-inyección). */
@@ -39,39 +40,131 @@ export interface EmailContent {
   text: string;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Layout compartido (mismo estilo que el mail de confirmación de Supabase Auth:
+// docs/email-templates/confirm-signup.html). Tablas + estilos inline para que
+// rinda igual en Gmail, Outlook y apps móviles. Sin emojis (veto de diseño).
+// ─────────────────────────────────────────────────────────────────────────────
+
+const COLOR = {
+  page: "#FFF5F9",
+  card: "#FFFFFF",
+  line: "#FFD6E8",
+  text: "#6E0B3F",
+  muted: "#8A4A68",
+  primary: "#FF2E93",
+  link: "#E01E7D",
+  alertBg: "#FDECEF",
+  alertLine: "#F5B5C0",
+} as const;
+const FONT_BODY = "Arial,Helvetica,sans-serif";
+const FONT_TITLE = "Georgia,'Times New Roman',serif";
+
+/** Fila de contenido centrada dentro de la tarjeta. */
+function block(inner: string, padding = "14px 32px 0 32px", extra = ""): string {
+  return `<tr><td align="center" style="padding:${padding};font-family:${FONT_BODY};font-size:16px;line-height:25px;color:${COLOR.text};${extra}">${inner}</td></tr>`;
+}
+/** Título principal (recibe HTML ya escapado). */
+function title(html: string): string {
+  return block(html, "26px 32px 0 32px", `font-family:${FONT_TITLE};font-size:26px;line-height:34px;font-weight:bold;`);
+}
+function paragraph(html: string): string {
+  return block(html);
+}
+function button(href: string, label: string): string {
+  return block(
+    `<a href="${escapeHtml(href)}" style="display:inline-block;background-color:${COLOR.primary};color:#FFFFFF;font-family:${FONT_BODY};font-size:17px;font-weight:bold;line-height:20px;text-decoration:none;padding:16px 36px;border-radius:14px;">${label}</a>`,
+    "26px 32px 0 32px",
+  );
+}
+/** Caja de aviso (para la dueña): fondo rosado suave con borde. */
+function alertBox(html: string): string {
+  return `<tr><td style="padding:14px 32px 0 32px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:${COLOR.alertBg};border:1px solid ${COLOR.alertLine};border-radius:12px;"><tr><td style="padding:12px 16px;font-family:${FONT_BODY};font-size:14px;line-height:21px;color:${COLOR.text};">${html}</td></tr></table></td></tr>`;
+}
+/** Tabla de filas etiqueta/valor, ya con celdas HTML. */
+function table(rows: string): string {
+  return `<tr><td style="padding:18px 32px 0 32px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0">${rows}</table></td></tr>`;
+}
+
 function itemLabel(it: OrderEmailItem): string {
   return it.variantName ? `${it.name} — ${it.variantName}` : it.name;
 }
 function itemsHtml(items: OrderEmailItem[]): string {
-  return items
-    .map((it) => `<tr><td>${itemLabel(it)} × ${it.qty}</td><td style="text-align:right">${formatARS(it.lineTotal)}</td></tr>`)
+  const rows = items
+    .map(
+      (it) =>
+        `<tr><td style="padding:10px 0;border-bottom:1px solid ${COLOR.line};font-family:${FONT_BODY};font-size:15px;line-height:21px;color:${COLOR.text};">${escapeHtml(itemLabel(it))} <span style="color:${COLOR.muted};">× ${it.qty}</span></td><td align="right" style="padding:10px 0 10px 12px;border-bottom:1px solid ${COLOR.line};font-family:${FONT_BODY};font-size:15px;color:${COLOR.text};white-space:nowrap;">${formatARS(it.lineTotal)}</td></tr>`,
+    )
     .join("");
+  return table(rows);
 }
 function itemsText(items: OrderEmailItem[]): string {
   return items.map((it) => `- ${itemLabel(it)} × ${it.qty}: ${formatARS(it.lineTotal)}`).join("\n");
 }
-function totalsBlock(d: OrderEmailData): string {
-  const rows = [
-    ["Subtotal", d.subtotal],
-    ...(d.discountTotal > 0 ? [["Descuento", -d.discountTotal] as const] : []),
-    ["Envío", d.shippingCost],
-    ["Total", d.total],
-  ] as Array<readonly [string, number]>;
-  return rows.map(([k, v]) => `<tr><td>${k}</td><td style="text-align:right">${formatARS(v)}</td></tr>`).join("");
+function totalsHtml(d: OrderEmailData): string {
+  const rows: Array<readonly [string, number, boolean]> = [
+    ["Subtotal", d.subtotal, false],
+    ...(d.discountTotal > 0 ? ([["Descuento", -d.discountTotal, false]] as const) : []),
+    ["Envío", d.shippingCost, false],
+    ["Total", d.total, true],
+  ];
+  const html = rows
+    .map(([k, v, strong]) => {
+      const style = strong
+        ? `padding:12px 0 0 0;font-family:${FONT_BODY};font-size:18px;font-weight:bold;color:${COLOR.primary};`
+        : `padding:4px 0;font-family:${FONT_BODY};font-size:14px;color:${COLOR.muted};`;
+      return `<tr><td style="${style}">${k}</td><td align="right" style="${style}">${formatARS(v)}</td></tr>`;
+    })
+    .join("");
+  return table(html);
 }
+/** "domicilio" / "sucursal" → texto legible. Cualquier otro valor se muestra escapado. */
+function shippingLabel(method: string): string {
+  if (method === "domicilio") return "a domicilio";
+  if (method === "sucursal") return "a sucursal de Correo Argentino";
+  return escapeHtml(method);
+}
+
+/** Envuelve el contenido en la tarjeta con logo, pie y preheader oculto. */
+function layout(opts: { preheader: string; title: string; body: string; footer: string }): string {
+  const logo = `${appBaseUrl()}/images/email-logo.png`;
+  return `<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /><title>${escapeHtml(opts.title)}</title></head>
+<body style="margin:0;padding:0;background-color:${COLOR.page};">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:${COLOR.page};">${escapeHtml(opts.preheader)}</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:${COLOR.page};"><tr><td align="center" style="padding:32px 16px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background-color:${COLOR.card};border-radius:16px;border:1px solid ${COLOR.line};">
+<tr><td align="center" style="padding:32px 32px 8px 32px;"><img src="${escapeHtml(logo)}" width="220" alt="Glamify Makeup" style="display:block;width:220px;max-width:100%;height:auto;border:0;" /></td></tr>
+<tr><td align="center" style="padding:8px 32px 0 32px;"><div style="height:3px;width:56px;background-color:${COLOR.primary};border-radius:3px;line-height:3px;font-size:3px;">&nbsp;</div></td></tr>
+${opts.body}
+<tr><td style="padding:28px 32px 0 32px;"><div style="border-top:1px solid ${COLOR.line};line-height:1px;font-size:1px;">&nbsp;</div></td></tr>
+<tr><td align="center" style="padding:18px 32px 32px 32px;font-family:${FONT_BODY};font-size:12px;line-height:18px;color:${COLOR.muted};">${opts.footer}<br /><br />Glamify Makeup &middot; Luján, Buenos Aires, Argentina &middot; Envíos a todo el país</td></tr>
+</table>
+</td></tr></table>
+</body>
+</html>`;
+}
+
+const FOOTER_CUSTOMER = "Recibís este mensaje por tu compra en glamifymakeup.site.";
+const FOOTER_INTERNAL = "Aviso interno para la dueña de Glamify Makeup.";
 
 /** Email de confirmación a la clienta. */
 export function orderConfirmationEmail(d: OrderEmailData): EmailContent {
   const subject = `¡Gracias por tu compra! Pedido ${d.orderNumber} — Glamify Makeup`;
-  const html = `<div style="font-family:sans-serif;color:#6E0B3F">
-    <h1 style="color:#FF2E93">¡Gracias, ${d.contactName}! 💄</h1>
-    <p>Recibimos tu pedido <strong>${d.orderNumber}</strong>. Te avisamos cuando lo despachemos.</p>
-    <table style="width:100%;border-collapse:collapse">${itemsHtml(d.items)}</table>
-    <hr/>
-    <table style="width:100%;border-collapse:collapse">${totalsBlock(d)}</table>
-    <p>Envío: ${d.shippingMethod}.</p>
-    <p>Cualquier duda, escribinos por WhatsApp.</p>
-  </div>`;
+  const html = layout({
+    preheader: `Recibimos tu pedido ${d.orderNumber}. Te avisamos cuando lo despachemos.`,
+    title: "Gracias por tu compra",
+    footer: FOOTER_CUSTOMER,
+    body: [
+      title(`¡Gracias, ${escapeHtml(d.contactName)}!`),
+      paragraph(`Recibimos tu pedido <strong>${escapeHtml(d.orderNumber)}</strong>. Te avisamos por mail apenas lo despachemos.`),
+      itemsHtml(d.items),
+      totalsHtml(d),
+      paragraph(`Envío ${shippingLabel(d.shippingMethod)}.`),
+      block("Cualquier duda, escribinos por WhatsApp y te ayudamos.", "8px 32px 0 32px", `font-size:14px;color:${COLOR.muted};`),
+    ].join("\n"),
+  });
   const text = `¡Gracias, ${d.contactName}!\nPedido ${d.orderNumber}\n\n${itemsText(d.items)}\n\nSubtotal: ${formatARS(d.subtotal)}\nDescuento: ${formatARS(d.discountTotal)}\nEnvío: ${formatARS(d.shippingCost)}\nTotal: ${formatARS(d.total)}\nEnvío: ${d.shippingMethod}`;
   return { subject, html, text };
 }
@@ -84,37 +177,39 @@ export function newOrderAlertEmail(d: OrderEmailData): EmailContent {
   const notImported = d.micorreoImport != null && !d.micorreoImport.imported;
   const needsReview = oversell || amountMismatch || notImported;
   const subject = needsReview
-    ? `⚠️ Nuevo pedido ${d.orderNumber} — REVISAR`
-    : `🛍️ Nuevo pedido pagado ${d.orderNumber} (${formatARS(d.total)})`;
+    ? `Nuevo pedido ${d.orderNumber} — REVISAR`
+    : `Nuevo pedido pagado ${d.orderNumber} (${formatARS(d.total)})`;
   const oversellHtml = oversell
-    ? `<div style="background:#FEE;padding:8px;border-radius:8px">
-        <strong>Oversell:</strong> sin stock suficiente para:
-        <ul>${d.oversoldLines!.map((l) => `<li>${l.name}</li>`).join("")}</ul>
-        Coordinar con la clienta por WhatsApp.
-      </div>`
+    ? alertBox(
+        `<strong>Oversell:</strong> sin stock suficiente para:<ul style="margin:6px 0 6px 18px;padding:0;">${d.oversoldLines!.map((l) => `<li>${escapeHtml(l.name)}</li>`).join("")}</ul>Coordinar con la clienta por WhatsApp.`,
+      )
     : "";
   const amountHtml = amountMismatch
-    ? `<div style="background:#FEE;padding:8px;border-radius:8px">
-        <strong>Monto:</strong> MP acreditó ${formatARS(d.amountPaid!)} pero el total del pedido es ${formatARS(d.total)}. Revisar antes de despachar.
-      </div>`
+    ? alertBox(
+        `<strong>Monto:</strong> MP acreditó ${formatARS(d.amountPaid!)} pero el total del pedido es ${formatARS(d.total)}. Revisar antes de despachar.`,
+      )
     : "";
   const importHtml = notImported
-    ? `<div style="background:#FEE;padding:8px;border-radius:8px">
-        <strong>MiCorreo:</strong> este envío <strong>NO se cargó solo</strong> (${escapeHtml(d.micorreoImport!.detail)}).
-        Entrá al pedido en el panel y tocá "Reintentar carga en MiCorreo", o cargalo a mano.
-      </div>`
+    ? alertBox(
+        `<strong>MiCorreo:</strong> este envío <strong>NO se cargó solo</strong> (${escapeHtml(d.micorreoImport!.detail)}). Entrá al pedido en el panel y tocá "Reintentar carga en MiCorreo", o cargalo a mano.`,
+      )
     : "";
-  const html = `<div style="font-family:sans-serif;color:#6E0B3F">
-    <h1>Nuevo pedido ${d.orderNumber}</h1>
-    ${oversellHtml}
-    ${amountHtml}
-    ${importHtml}
-    <p>Cliente: ${d.contactName} — ${d.contactEmail}</p>
-    <table style="width:100%;border-collapse:collapse">${itemsHtml(d.items)}</table>
-    <table style="width:100%;border-collapse:collapse">${totalsBlock(d)}</table>
-    <p>Envío: ${d.shippingMethod}.</p>
-  </div>`;
-  const text = `Nuevo pedido ${d.orderNumber}\nCliente: ${d.contactName} (${d.contactEmail})\nTotal: ${formatARS(d.total)}${oversell ? `\n⚠️ OVERSELL: ${d.oversoldLines!.map((l) => l.name).join(", ")}` : ""}${amountMismatch ? `\n⚠️ MONTO: acreditado ${formatARS(d.amountPaid!)} ≠ total ${formatARS(d.total)}` : ""}${notImported ? `\n⚠️ MiCorreo NO cargó solo: ${d.micorreoImport!.detail}` : ""}`;
+  const html = layout({
+    preheader: `${d.orderNumber} · ${formatARS(d.total)} · ${d.contactName}`,
+    title: `Nuevo pedido ${d.orderNumber}`,
+    footer: FOOTER_INTERNAL,
+    body: [
+      title(`Nuevo pedido ${escapeHtml(d.orderNumber)}`),
+      oversellHtml,
+      amountHtml,
+      importHtml,
+      paragraph(`<strong>${escapeHtml(d.contactName)}</strong><br /><a href="mailto:${escapeHtml(d.contactEmail)}" style="color:${COLOR.link};">${escapeHtml(d.contactEmail)}</a>`),
+      itemsHtml(d.items),
+      totalsHtml(d),
+      paragraph(`Envío ${shippingLabel(d.shippingMethod)}.`),
+    ].join("\n"),
+  });
+  const text = `Nuevo pedido ${d.orderNumber}\nCliente: ${d.contactName} (${d.contactEmail})\nTotal: ${formatARS(d.total)}${oversell ? `\nOVERSELL: ${d.oversoldLines!.map((l) => l.name).join(", ")}` : ""}${amountMismatch ? `\nMONTO: acreditado ${formatARS(d.amountPaid!)} ≠ total ${formatARS(d.total)}` : ""}${notImported ? `\nMiCorreo NO cargó solo: ${d.micorreoImport!.detail}` : ""}`;
   return { subject, html, text };
 }
 
@@ -132,20 +227,22 @@ export interface DispatchEmailData {
  * Linkea la página de rastreo de Correo Argentino y muestra el número para pegar.
  */
 export function shipmentDispatchedEmail(d: DispatchEmailData): EmailContent {
-  const subject = `📦 ¡Tu pedido ${d.orderNumber} está en camino! — Glamify Makeup`;
+  const subject = `¡Tu pedido ${d.orderNumber} está en camino! — Glamify Makeup`;
   const svc = d.service ? ` por ${escapeHtml(d.service)}` : "";
-  const html = `<div style="font-family:sans-serif;color:#6E0B3F">
-    <h1 style="color:#FF2E93">¡Ya salió, ${escapeHtml(d.contactName)}! 📦</h1>
-    <p>Despachamos tu pedido <strong>${escapeHtml(d.orderNumber)}</strong>${svc}.</p>
-    <p>Tu número de seguimiento es:</p>
-    <p style="font-size:20px;font-weight:bold;color:#FF2E93">${escapeHtml(d.trackingNumber)}</p>
-    <p>
-      Rastrealo en
-      <a href="${CORREO_TRACKING_URL}" style="color:#FF2E93">Correo Argentino</a>
-      pegando ese número (puede tardar hasta 24 h en aparecer).
-    </p>
-    <p>Cualquier duda, escribinos por WhatsApp. 💕</p>
-  </div>`;
+  const html = layout({
+    preheader: `Tu número de seguimiento es ${d.trackingNumber}.`,
+    title: "Tu pedido está en camino",
+    footer: FOOTER_CUSTOMER,
+    body: [
+      title(`¡Ya salió, ${escapeHtml(d.contactName)}!`),
+      paragraph(`Despachamos tu pedido <strong>${escapeHtml(d.orderNumber)}</strong>${svc}.`),
+      block("Tu número de seguimiento es", "20px 32px 0 32px", `font-size:14px;color:${COLOR.muted};`),
+      `<tr><td align="center" style="padding:8px 32px 0 32px;"><table role="presentation" cellpadding="0" cellspacing="0" style="background-color:${COLOR.page};border:1px solid ${COLOR.line};border-radius:12px;"><tr><td style="padding:12px 22px;font-family:${FONT_BODY};font-size:20px;font-weight:bold;letter-spacing:1px;color:${COLOR.primary};">${escapeHtml(d.trackingNumber)}</td></tr></table></td></tr>`,
+      button(CORREO_TRACKING_URL, "Seguir mi envío"),
+      block("Pegá ese número en la página de Correo Argentino. Puede tardar hasta 24 h en aparecer.", "16px 32px 0 32px", `font-size:13px;line-height:20px;color:${COLOR.muted};`),
+      block("Cualquier duda, escribinos por WhatsApp.", "8px 32px 0 32px", `font-size:14px;color:${COLOR.muted};`),
+    ].join("\n"),
+  });
   const text = `¡Ya salió, ${d.contactName}!\nDespachamos tu pedido ${d.orderNumber}${d.service ? ` por ${d.service}` : ""}.\n\nSeguimiento: ${d.trackingNumber}\nRastrealo en ${CORREO_TRACKING_URL} (puede tardar hasta 24 h en aparecer).`;
   return { subject, html, text };
 }
@@ -159,20 +256,19 @@ export interface AbandonedCartEmailData {
 /** Email de recupero de carrito abandonado (un único recordatorio a 24h). */
 export function abandonedCartEmail(d: AbandonedCartEmailData): EmailContent {
   const hi = d.name ? `${d.name}, ` : "";
-  const subject = "Te quedó algo en el carrito 💄 — Glamify Makeup";
-  const rows = d.items
-    .map((it) => `<tr><td>${itemLabel(it)} × ${it.qty}</td><td style="text-align:right">${formatARS(it.lineTotal)}</td></tr>`)
-    .join("");
-  const html = `<div style="font-family:sans-serif;color:#6E0B3F">
-    <h1 style="color:#FF2E93">${hi}¿lo dejamos para después? 💕</h1>
-    <p>Guardamos tu carrito. Estos productos te están esperando:</p>
-    <table style="width:100%;border-collapse:collapse">${rows}</table>
-    <p style="margin-top:16px">
-      <a href="${d.recoverUrl}" style="background:#FF2E93;color:#fff;padding:12px 20px;border-radius:12px;text-decoration:none;display:inline-block">Volver a mi carrito</a>
-    </p>
-    <p style="font-size:12px;color:#999">Si ya compraste o no te interesa, ignorá este mensaje.</p>
-  </div>`;
-  const text = `${hi}te quedó algo en el carrito:\n\n${d.items.map((it) => `- ${itemLabel(it)} × ${it.qty}: ${formatARS(it.lineTotal)}`).join("\n")}\n\nVolvé a tu carrito: ${d.recoverUrl}`;
+  const subject = "Te quedó algo en el carrito — Glamify Makeup";
+  const html = layout({
+    preheader: "Guardamos tu carrito para que lo termines cuando quieras.",
+    title: "Te quedó algo en el carrito",
+    footer: "Si ya compraste o no te interesa, ignorá este mensaje.",
+    body: [
+      title(`${escapeHtml(hi)}¿lo dejamos para después?`),
+      paragraph("Guardamos tu carrito. Estos productos te están esperando:"),
+      itemsHtml(d.items),
+      button(d.recoverUrl, "Volver a mi carrito"),
+    ].join("\n"),
+  });
+  const text = `${hi}te quedó algo en el carrito:\n\n${itemsText(d.items)}\n\nVolvé a tu carrito: ${d.recoverUrl}`;
   return { subject, html, text };
 }
 
@@ -187,16 +283,23 @@ export interface RetractionEmailData {
 
 /** Alerta a la dueña: nueva solicitud del Botón de Arrepentimiento (Res. 424/2020). */
 export function retractionAlertEmail(d: RetractionEmailData): EmailContent {
-  const subject = `📨 Solicitud de arrepentimiento ${d.ticket}`;
+  const subject = `Solicitud de arrepentimiento ${d.ticket}`;
   const row = (k: string, v?: string | null) =>
-    v ? `<tr><td><strong>${k}</strong></td><td>${escapeHtml(v)}</td></tr>` : "";
-  const html = `<div style="font-family:sans-serif;color:#6E0B3F">
-    <h1 style="color:#FF2E93">Solicitud de arrepentimiento ${d.ticket}</h1>
-    <p>Un/a consumidor/a ejerció el derecho de arrepentimiento (art. 34 Ley 24.240). Contactalo/a para coordinar la devolución y el reintegro.</p>
-    <table style="width:100%;border-collapse:collapse">
-      ${row("Nombre", d.contactName)}${row("Email", d.contactEmail)}${row("Teléfono", d.contactPhone)}${row("Pedido", d.orderNumber)}${row("Motivo", d.reason)}
-    </table>
-  </div>`;
+    v
+      ? `<tr><td valign="top" style="padding:8px 12px 8px 0;border-bottom:1px solid ${COLOR.line};font-family:${FONT_BODY};font-size:14px;font-weight:bold;color:${COLOR.muted};white-space:nowrap;">${k}</td><td style="padding:8px 0;border-bottom:1px solid ${COLOR.line};font-family:${FONT_BODY};font-size:14px;line-height:21px;color:${COLOR.text};">${escapeHtml(v)}</td></tr>`
+      : "";
+  const html = layout({
+    preheader: `${d.ticket} · ${d.contactName}`,
+    title: `Solicitud de arrepentimiento ${d.ticket}`,
+    footer: FOOTER_INTERNAL,
+    body: [
+      title(`Solicitud de arrepentimiento ${escapeHtml(d.ticket)}`),
+      paragraph("Un/a consumidor/a ejerció el derecho de arrepentimiento (art. 34 Ley 24.240). Contactalo/a para coordinar la devolución y el reintegro."),
+      table(
+        [row("Nombre", d.contactName), row("Email", d.contactEmail), row("Teléfono", d.contactPhone), row("Pedido", d.orderNumber), row("Motivo", d.reason)].join(""),
+      ),
+    ].join("\n"),
+  });
   const text = `Solicitud de arrepentimiento ${d.ticket}\nNombre: ${d.contactName}\nEmail: ${d.contactEmail}\nTeléfono: ${d.contactPhone ?? "-"}\nPedido: ${d.orderNumber ?? "-"}\nMotivo: ${d.reason ?? "-"}`;
   return { subject, html, text };
 }
@@ -211,12 +314,17 @@ export interface RetractionReceiptData {
 export function retractionReceiptEmail(d: RetractionReceiptData): EmailContent {
   const name = escapeHtml(d.contactName);
   const subject = `Constancia de arrepentimiento ${d.ticket} — Glamify Makeup`;
-  const html = `<div style="font-family:sans-serif;color:#6E0B3F">
-    <h1 style="color:#FF2E93">Recibimos tu solicitud 💄</h1>
-    <p>Hola ${name}, registramos tu solicitud de arrepentimiento.</p>
-    <p>Constancia: <strong>${escapeHtml(d.ticket)}</strong><br/>Fecha: ${escapeHtml(d.date)}</p>
-    <p>Te vamos a contactar para coordinar la devolución del producto y el reintegro del importe. Guardá este correo como comprobante.</p>
-  </div>`;
+  const html = layout({
+    preheader: `Constancia ${d.ticket}. Guardá este correo como comprobante.`,
+    title: "Constancia de arrepentimiento",
+    footer: "Guardá este correo como comprobante de tu solicitud.",
+    body: [
+      title("Recibimos tu solicitud"),
+      paragraph(`Hola ${name}, registramos tu solicitud de arrepentimiento.`),
+      `<tr><td align="center" style="padding:18px 32px 0 32px;"><table role="presentation" cellpadding="0" cellspacing="0" style="background-color:${COLOR.page};border:1px solid ${COLOR.line};border-radius:12px;"><tr><td align="center" style="padding:14px 28px;font-family:${FONT_BODY};font-size:14px;line-height:22px;color:${COLOR.muted};">Constancia<br /><span style="font-size:20px;font-weight:bold;letter-spacing:1px;color:${COLOR.primary};">${escapeHtml(d.ticket)}</span><br />${escapeHtml(d.date)}</td></tr></table></td></tr>`,
+      paragraph("Te vamos a contactar para coordinar la devolución del producto y el reintegro del importe."),
+    ].join("\n"),
+  });
   const text = `Recibimos tu solicitud de arrepentimiento.\nConstancia: ${d.ticket}\nFecha: ${d.date}\nTe contactaremos para coordinar la devolución y el reintegro. Guardá este correo como comprobante.`;
   return { subject, html, text };
 }
