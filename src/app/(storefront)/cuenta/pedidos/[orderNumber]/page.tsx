@@ -4,6 +4,7 @@ import { requireCustomer } from "@/lib/customer/auth";
 import { prisma } from "@/lib/prisma";
 import { formatARS } from "@/lib/money";
 import { Badge } from "@/components/ui/badge";
+import { RetryPaymentButton } from "@/components/orders/retry-payment-button";
 import { CORREO_TRACKING_URL } from "@/lib/shipping/tracking";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -50,6 +51,12 @@ export default async function PedidoDetallePage({ params }: { params: Promise<{ 
         <div className="flex justify-between font-semibold"><span>Total</span><span className="tabular-nums">{formatARS(Number(order.total))}</span></div>
       </div>
 
+      {order.status === "pending_payment" && (
+        <div className="space-y-2 rounded-2xl border border-border p-4">
+          <p className="text-sm text-muted-foreground">Este pedido todavía no tiene el pago acreditado. Podés pagarlo ahora; si no, se cancela solo a las 24 horas.</p>
+          <RetryPaymentButton orderId={order.id} />
+        </div>
+      )}
       {order.shipment?.trackingNumber && (
         <p className="text-sm text-muted-foreground">
           Seguimiento: <strong>{order.shipment.trackingNumber}</strong>{" "}
