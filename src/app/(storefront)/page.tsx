@@ -55,7 +55,7 @@ export default async function HomePage() {
   const featured = sellable.filter((p) => p.isFeatured);
   const shelf = (featured.length > 0 ? featured : sellable).slice(0, 8);
   const giftHref = whatsappLink(setting?.whatsappNumber, "¡Hola! Quiero armar un ramo o una box de maquillaje para regalar");
-  const brands = topBrands(sellable);
+  const brands = topBrands(sellable, 8);
   const base = appBaseUrl();
   const jsonLd = [buildWebSiteJsonLd(base), buildOrganizationJsonLd(base)];
 

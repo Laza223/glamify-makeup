@@ -30,7 +30,9 @@ function Cartel({ word, tilt, className, children }: { word: string; tilt: numbe
 export function FeriaHero({ brands, showcase, fromPrice }: { brands: string[]; showcase: CatalogProduct[]; fromPrice: number | null }) {
   // Mobile: 3 fotos en el cartel. Desktop: la mesa muestra otros 4, para no repetir la prueba.
   const thumbs = showcase.slice(0, 3);
-  const mesa = showcase.length >= 7 ? showcase.slice(3, 7) : showcase.slice(0, 4);
+  // Con catálogo chico no alcanzan 7 fotos distintas: en desktop el cartel queda sin fotos y la mesa hace de prueba.
+  const distinct = showcase.length >= 7;
+  const mesa = distinct ? showcase.slice(3, 7) : showcase.slice(0, 4);
 
   return (
     <section
@@ -50,7 +52,7 @@ export function FeriaHero({ brands, showcase, fromPrice }: { brands: string[]; s
               </p>
             </Cartel>
             <Cartel word="Bonito." tilt={1} className="ml-4 md:ml-10">
-              <ul className="flex gap-1.5" aria-label="Algunos productos de la tienda">
+              <ul className={cn("flex gap-1.5", !distinct && "md:hidden")} aria-label="Algunos productos de la tienda">
                 {thumbs.map((p) => {
                   const url = productImageUrl(p.images[0]);
                   return url ? (
