@@ -83,7 +83,7 @@ export default async function HomePage() {
               <h2 className="font-display text-2xl md:text-3xl font-normal text-foreground">
                 Los Más Elegidos
               </h2>
-              <p className="text-sm text-muted-foreground">Favoritos virales de nuestra comunidad</p>
+              <p className="text-sm text-muted-foreground">Una selección de lo que hay en la tienda</p>
             </div>
             <Link
               href="/tienda"

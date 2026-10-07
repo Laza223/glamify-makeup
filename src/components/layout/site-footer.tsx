@@ -42,7 +42,7 @@ export function SiteFooter() {
   if (isCheckout) {
     return (
       <footer className="mt-8 border-t border-border/60 py-6 text-center text-xs text-muted-foreground">
-        <p>© {new Date().getFullYear()} Glamify Makeup. Pago 100% seguro procesado por Mercado Pago.</p>
+        <p>© {new Date().getFullYear()} Glamify Makeup. Pagos procesados por Mercado Pago.</p>
       </footer>
     );
   }

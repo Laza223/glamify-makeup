@@ -4,7 +4,7 @@ import { KitBuilder } from "@/components/bundle/kit-builder";
 
 export const metadata: Metadata = {
   title: "Armá tu Kit",
-  description: "Elegí tus esenciales de Labios, Ojos y Rostro y armá tu rutina de maquillaje personalizada con 15% OFF.",
+  description: "Elegí tus esenciales de Labios, Ojos y Rostro y armá tu kit de maquillaje.",
 };
 
 export default async function ArmaTuKitPage() {

@@ -35,8 +35,6 @@ interface SelectedSlot {
   image: string | null;
 }
 
-const KIT_DISCOUNT_PERCENT = 15; // 15% de ahorro al completar los 3 pasos
-
 export function KitBuilder({ labios, ojos, rostro, curatedCombos }: KitBuilderProps) {
   const router = useRouter();
   const { openCart } = useCartUI();
@@ -55,8 +53,6 @@ export function KitBuilder({ labios, ojos, rostro, curatedCombos }: KitBuilderPr
     (selectedOjos?.price ?? 0) +
     (selectedRostro?.price ?? 0);
 
-  const savings = isComplete ? Math.round((rawSubtotal * KIT_DISCOUNT_PERCENT) / 100) : 0;
-  const finalPrice = Math.max(0, rawSubtotal - savings);
 
   const handleSelectProduct = (step: "labios" | "ojos" | "rostro", product: CatalogProduct, variantId?: string) => {
     const activeVariants = product.variants.filter((v) => v.active && v.stock > 0);
@@ -98,8 +94,7 @@ export function KitBuilder({ labios, ojos, rostro, curatedCombos }: KitBuilderPr
         track("add_to_cart", {
           kind: "custom_kit",
           variantIds,
-          total: finalPrice,
-          savings,
+          total: rawSubtotal,
         });
         router.refresh();
         openCart();
@@ -225,7 +220,7 @@ export function KitBuilder({ labios, ojos, rostro, curatedCombos }: KitBuilderPr
           Armá tu Kit Personalizado
         </h1>
         <p className="text-sm md:text-base text-muted-foreground">
-          Elegí 1 favorito para <strong>Labios</strong>, 1 para <strong>Ojos</strong> y 1 para <strong>Piel</strong> y llevate el kit completo con <strong>15% OFF automático</strong>.
+          Elegí 1 favorito para <strong>Labios</strong>, 1 para <strong>Ojos</strong> y 1 para <strong>Piel</strong> y sumá el kit completo al carrito de una.
         </p>
       </header>
 
@@ -407,28 +402,14 @@ export function KitBuilder({ labios, ojos, rostro, curatedCombos }: KitBuilderPr
           {/* Precio y CTA */}
           <div className="flex items-center justify-between sm:justify-end gap-4">
             <div className="text-left sm:text-right">
-              {isComplete ? (
-                <div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs text-muted-foreground line-through tabular-nums">
-                      {formatARS(rawSubtotal)}
-                    </span>
-                    <span className="rounded-md bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold text-emerald-800 uppercase">
-                      Ahorrás {formatARS(savings)}
-                    </span>
-                  </div>
-                  <p className="text-base sm:text-lg font-bold text-foreground tabular-nums">
-                    {formatARS(finalPrice)}
-                  </p>
-                </div>
-              ) : (
-                <div>
-                  <p className="text-xs text-muted-foreground">Elegí los 3 para activar 15% OFF</p>
-                  <p className="text-sm font-bold text-foreground tabular-nums">
-                    {formatARS(rawSubtotal)}
-                  </p>
-                </div>
-              )}
+              <div>
+                <p className="text-xs text-muted-foreground">
+                  {isComplete ? "Total del kit" : `${selectedCount} de 3 elegidos`}
+                </p>
+                <p className="text-base sm:text-lg font-bold text-foreground tabular-nums">
+                  {formatARS(rawSubtotal)}
+                </p>
+              </div>
             </div>
 
             <Button

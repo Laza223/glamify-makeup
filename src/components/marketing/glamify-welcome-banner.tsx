@@ -33,17 +33,14 @@ export function GlamifyWelcomeBanner() {
             </span>
           </span>
           <span className="block font-display text-2xl font-normal leading-tight text-[#161413] sm:text-3xl md:text-4xl lg:text-5xl">
-            a tu nuevo maquillaje favorito.{" "}
-            <span className="inline-block cursor-default select-none transition-transform duration-200 hover:scale-125">
-              💋
-            </span>
+            a tu nuevo maquillaje favorito.
           </span>
         </h1>
 
         {/* Bajada */}
         <p className="mx-auto max-w-lg text-sm leading-relaxed text-muted-foreground sm:text-base">
-          Labios, ojos y piel. Cosméticos esenciales de acabado sedoso con envío
-          a todo el país.
+          Labios, ojos y piel de marcas que ya conocés, con envío a todo el
+          país.
         </p>
 
         {/* Botones de acción */}

@@ -19,7 +19,7 @@ export function PdpAccordions({ description }: PdpAccordionsProps) {
         <div className="mt-3 text-xs leading-relaxed text-muted-foreground sm:text-sm">
           <p className="whitespace-pre-line">
             {description ||
-              "Cosmético de alta calidad y acabado profesional seleccionado especialmente por Glamify Makeup."}
+              "Si tenés dudas sobre este producto, escribinos por WhatsApp."}
           </p>
         </div>
       </details>
@@ -36,11 +36,11 @@ export function PdpAccordions({ description }: PdpAccordionsProps) {
         <div className="mt-3 space-y-2 text-xs leading-relaxed text-muted-foreground sm:text-sm">
           <p>
             <strong>Envío a todo el país:</strong> Envíos a domicilio y a
-            sucursal vía Correo Argentino con seguimiento online en tiempo real.
+            sucursal vía Correo Argentino, con número de seguimiento.
           </p>
           <p>
             <strong>Medios de pago:</strong> Tarjetas de crédito, débito y
-            dinero en cuenta a través de Mercado Pago con protección total.
+            dinero en cuenta a través de Mercado Pago.
           </p>
         </div>
       </details>

@@ -30,8 +30,9 @@ export function buildProductJsonLd(p: ProductLdInput, rating: { average: number;
     "@type": "Product",
     name: p.name,
     image: p.images,
-    brand: { "@type": "Brand", name: p.brand ?? "Glamify Makeup" },
   };
+  // Glamify revende marcas de terceros: sin marca conocida no se declara ninguna.
+  if (p.brand) ld.brand = { "@type": "Brand", name: p.brand };
   if (!p.madeToOrder) {
     ld.offers = {
       "@type": "Offer",
