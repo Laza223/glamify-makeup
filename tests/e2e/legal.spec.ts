@@ -2,12 +2,12 @@ import { test, expect } from "@playwright/test";
 
 test("el footer linkea el botón de arrepentimiento y carga la página", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("contentinfo").getByRole("link", { name: /arrepentimiento/i }).click();
+  await page.getByRole("contentinfo").locator('a[href="/arrepentimiento"]').click();
   await expect(page).toHaveURL(/\/arrepentimiento$/);
   await expect(page.getByRole("heading", { level: 1, name: /arrepentimiento/i })).toBeVisible();
 });
 
-test("el formulario de arrepentimiento devuelve una constancia", async ({ page }) => {
+test("@db-write el formulario de arrepentimiento devuelve una constancia", async ({ page }) => {
   await page.goto("/arrepentimiento");
   await page.getByLabel("Nombre y apellido").fill("Test QA");
   await page.getByLabel("Email").fill("qa@glamify.test");

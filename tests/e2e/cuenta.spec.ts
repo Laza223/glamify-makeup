@@ -5,7 +5,7 @@ const CUSTOMER_PASSWORD = process.env.CUSTOMER_PASSWORD ?? "";
 const PRODUCT_SLUG = "labial-mate-larga-duracion"; // el pedido e2e (GLM-E2E001) compra este producto
 
 test.describe("Cuenta de clienta (DoD M4)", () => {
-  test("registro → pantalla de confirmación", async ({ page }) => {
+  test("@db-write registro → pantalla de confirmación", async ({ page }) => {
     await page.goto("/ingresar");
     await page.getByRole("button", { name: /crear cuenta/i }).click();
     const unique = `nueva_${Date.now()}@example.com`;
@@ -16,7 +16,7 @@ test.describe("Cuenta de clienta (DoD M4)", () => {
     await expect(page.getByText(/revisá tu correo/i)).toBeVisible({ timeout: 15000 });
   });
 
-  test("login → favoritos → reseña sobre producto comprado", async ({ page }) => {
+  test("@db-write login → favoritos → reseña sobre producto comprado", async ({ page }) => {
     test.skip(!CUSTOMER_EMAIL || !CUSTOMER_PASSWORD, "Falta CUSTOMER_EMAIL/PASSWORD seedeados");
 
     // Login
