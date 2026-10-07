@@ -20,7 +20,7 @@ function Cartel({ word, tilt, className, children }: { word: string; tilt: numbe
       )}
       style={{ transform: `rotate(${tilt}deg)` }}
     >
-      <p className="shrink-0 font-display text-[34px] font-semibold leading-none text-foreground md:text-[52px]">{word}</p>
+      <p className="shrink-0 font-display text-[34px] font-semibold leading-none text-foreground md:text-[52px] lg:text-[60px]">{word}</p>
       <div className="min-w-0 text-right">{children}</div>
     </div>
   );
@@ -38,8 +38,8 @@ export function FeriaHero({ brands, showcase, fromPrice }: { brands: string[]; s
       <h1 id="hero-title" className="sr-only">
         Glamify Makeup: bueno, bonito y barato
       </h1>
-      <div className="grid items-center gap-8 [&>*]:min-w-0 md:grid-cols-2 lg:gap-14">
-        <div className="max-w-[520px]">
+      <div className="grid items-center gap-8 [&>*]:min-w-0 md:grid-cols-2 lg:grid-cols-[minmax(0,600px)_minmax(0,500px)] lg:justify-center lg:gap-16">
+        <div className="max-w-[600px]">
           <div className="space-y-3 md:space-y-4">
             <Cartel word="Bueno." tilt={-1.5}>
               <p className="text-[15px] font-medium leading-snug text-foreground md:text-[17px]">
@@ -80,7 +80,7 @@ export function FeriaHero({ brands, showcase, fromPrice }: { brands: string[]; s
         </div>
 
         {/* La mesa: producto real con su etiqueta de precio real. Solo desktop. */}
-        <ul className="ml-auto hidden w-full max-w-[500px] grid-cols-2 gap-x-5 gap-y-6 pb-6 pt-3 md:grid" aria-label="En la mesa hoy">
+        <ul className="ml-auto hidden w-full max-w-[500px] lg:ml-0 grid-cols-2 gap-x-5 gap-y-6 pb-6 pt-3 md:grid" aria-label="En la mesa hoy">
           {thumbs.map((p, i) => {
             const url = productImageUrl(p.images[0]);
             return (
