@@ -36,7 +36,20 @@ export function CouponInput({ applied }: { applied: string | null }) {
   return (
     <div>
       <div className="flex gap-2">
-        <Input value={code} onChange={(e) => setCode(e.target.value)} placeholder="Cupón" aria-label="Código de cupón" className="uppercase" />
+        <Input
+          value={code}
+          onChange={(e) => setCode(e.target.value)}
+          // Está dentro del <form> del checkout: sin esto, Enter (o "Ir" en el celular) enviaba el pago sin el cupón.
+          onKeyDown={(e) => {
+            if (e.key !== "Enter") return;
+            e.preventDefault();
+            if (code.trim() && !pending) apply();
+          }}
+          enterKeyHint="done"
+          placeholder="Cupón"
+          aria-label="Código de cupón"
+          className="uppercase"
+        />
         <Button type="button" variant="outline" onClick={apply} disabled={pending || !code.trim()}>Aplicar</Button>
       </div>
       {error && <p className="mt-1 text-xs text-destructive">{error}</p>}

@@ -1,7 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { createHmac } from "node:crypto";
-import { createCheckout } from "../src/lib/orders/checkout-service";
+import { createCheckout, defaultCheckoutDeps } from "../src/lib/orders/checkout-service";
 import { processWebhook } from "../src/lib/orders/webhook-service";
 import { getShippingZonesForQuote, getFreeShippingThreshold } from "../src/lib/orders/checkout-data";
 import { quoteShipping } from "../src/lib/shipping/index";
@@ -44,6 +44,7 @@ async function main(): Promise<void> {
     },
     {
       db: prisma as any,
+      getVariantStock: defaultCheckoutDeps(APP_URL).getVariantStock,
       nextOrderSeq: async (tx: any) => Number((await tx.$queryRawUnsafe("SELECT nextval('order_number_seq') AS seq"))[0].seq),
       createPreference: async () => ({ id: "pref-sim", init_point: "sim", sandbox_init_point: "sim" }),
       quoteShipping: (i) => quoteShipping(i, { getZones: getShippingZonesForQuote, getThreshold: getFreeShippingThreshold }),

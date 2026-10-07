@@ -31,6 +31,7 @@ function makeDeps(opts: { coupon?: CouponRow | null; reserveCount?: number } = {
       $transaction: vi.fn(async (fn: any) => fn(tx)),
     } as any,
     nextOrderSeq: vi.fn(async () => 1),
+    getVariantStock: vi.fn(async (ids: string[]) => new Map(ids.map((id) => [id, 99]))),
     createPreference: vi.fn(async () => ({ id: "pref-1", init_point: "https://mp/ip", sandbox_init_point: "https://mp/sbx" })),
     quoteShipping,
     appUrl: "https://app.test",

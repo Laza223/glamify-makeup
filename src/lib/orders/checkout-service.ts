@@ -11,6 +11,7 @@ import { quoteShipping as realQuoteShipping, type ShippingQuote } from "@/lib/sh
 import { orderWeightGr } from "@/lib/shipping/quote";
 import { getShippingZonesForQuote, getFreeShippingThreshold } from "@/lib/orders/checkout-data";
 import type { CartLine } from "@/lib/cart/types";
+import { computeStockDecrements, checkAvailability } from "@/lib/orders/stock";
 
 export interface CheckoutLineInput {
   line: CartLine;
@@ -74,6 +75,8 @@ export interface CheckoutDb {
 export interface CreateCheckoutDeps {
   db: CheckoutDb;
   nextOrderSeq: (tx: PrismaTransactionClient) => Promise<number>;
+  /** Stock actual por variante. Se chequea antes de crear el pedido para no cobrar algo que no hay. */
+  getVariantStock: (variantIds: string[]) => Promise<Map<string, number>>;
   createPreference: typeof realCreatePreference;
   quoteShipping: (input: Parameters<typeof realQuoteShipping>[0]) => Promise<ShippingQuote>;
   appUrl: string;
@@ -97,6 +100,10 @@ export function defaultCheckoutDeps(appUrl: string): CreateCheckoutDeps {
   return {
     db: prisma as unknown as CheckoutDb,
     nextOrderSeq: defaultNextOrderSeq,
+    getVariantStock: async (ids) => {
+      const rows = await prisma.productVariant.findMany({ where: { id: { in: ids } }, select: { id: true, stock: true } });
+      return new Map(rows.map((r) => [r.id, r.stock]));
+    },
     createPreference: realCreatePreference,
     quoteShipping: (input) => realQuoteShipping(input, { getZones: getShippingZonesForQuote, getThreshold: getFreeShippingThreshold }),
     appUrl,
@@ -108,6 +115,18 @@ export async function createCheckout(input: CreateCheckoutInput, deps: CreateChe
   if (input.lines.length === 0) throw new Error("El carrito está vacío.");
   const now = deps.now ?? new Date();
   const cartLines = input.lines.map((l) => l.line);
+
+  // Stock antes de cobrar: el webhook lo descuenta al acreditarse el pago, y un faltante descubierto ahí ya está
+  // cobrado. No reserva (dos compras simultáneas del último ítem siguen resolviéndose en el webhook).
+  const decrements = computeStockDecrements(cartLines);
+  const { shortages } = checkAvailability(decrements, await deps.getVariantStock([...decrements.keys()]));
+  if (shortages.length > 0) {
+    const short = new Set(shortages.map((s) => s.variantId));
+    const touches = (l: CartLine) => (l.kind === "variant" ? [l.refId] : (l.components ?? []).map((c) => c.variantId));
+    const names = input.lines.filter((l) => touches(l.line).some((id) => short.has(id))).map((l) => l.title);
+    throw new Error(`No hay stock suficiente de ${names.join(", ")}. Actualizá tu carrito y probá de nuevo.`);
+  }
+
   const subtotal = cartSubtotal(cartLines);
   // El server decide si el pedido es digital (solo gift cards): nunca se confía en el cliente.
   const digitalOnly = isDigitalOnly(cartLines);
