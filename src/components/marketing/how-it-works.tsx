@@ -1,5 +1,4 @@
-import Link from "next/link";
-import { Heart, CreditCard, PackageCheck, Truck, RotateCcw, ArrowRight } from "lucide-react";
+import { Heart, CreditCard, PackageCheck, Truck } from "lucide-react";
 import { formatPrice } from "@/lib/money";
 
 /**
@@ -53,22 +52,6 @@ export function HowItWorks({ threshold, brands }: { threshold: number; brands: s
         ))}
       </ol>
 
-      <div className="flex flex-col gap-3 rounded-[18px] bg-secondary px-5 py-4 sm:flex-row sm:items-center sm:justify-between md:px-6">
-        <p className="flex items-start gap-3 text-[15px] leading-relaxed text-foreground">
-          <RotateCcw className="mt-0.5 size-5 shrink-0 text-primary" aria-hidden />
-          <span>
-            <strong className="font-bold">Tenés 10 días para arrepentirte.</strong> Y si algo llega fallado o equivocado, el
-            cambio va por nuestra cuenta.
-          </span>
-        </p>
-        <Link
-          href="/envios-y-pagos"
-          className="group/more inline-flex min-h-11 shrink-0 items-center gap-1.5 self-start rounded-[10px] text-[15px] font-semibold text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:self-auto"
-        >
-          Envíos y pagos
-          <ArrowRight className="size-4 transition-transform group-hover/more:translate-x-1" aria-hidden />
-        </Link>
-      </div>
     </section>
   );
 }

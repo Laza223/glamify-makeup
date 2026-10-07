@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Lock, ShieldCheck } from "lucide-react";
+import { Lock } from "lucide-react";
 import { getCartView } from "@/lib/cart/cart-view";
 import { round2, formatARS } from "@/lib/money";
 import { productImageUrl } from "@/lib/images";
@@ -63,11 +63,6 @@ export async function CartContents() {
         <span className="inline-flex items-center gap-1">
           <Lock className="size-3 text-emerald-600" />
           <span>Pagás con Mercado Pago</span>
-        </span>
-        <span>•</span>
-        <span className="inline-flex items-center gap-1">
-          <ShieldCheck className="size-3 text-primary" />
-          <span>10 días para arrepentirte</span>
         </span>
       </div>
     </div>
