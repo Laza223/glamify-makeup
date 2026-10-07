@@ -34,7 +34,8 @@ function dateLabel(d: Date | null): string {
 }
 
 export default async function CuponesPage() {
-  const coupons = await prisma.coupon.findMany({ orderBy: { code: "asc" } });
+  // Las gift cards (cupones con pedido de origen) se ven en cada pedido, no acá.
+  const coupons = await prisma.coupon.findMany({ where: { sourceOrderId: null }, orderBy: { code: "asc" } });
 
   return (
     <div className="stagger space-y-6">
@@ -51,6 +52,8 @@ export default async function CuponesPage() {
           </Button>
         }
       />
+
+      <p className="-mt-3 text-sm text-muted-foreground">Las gift cards emitidas se ven en cada pedido.</p>
 
       {coupons.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border bg-card/60 p-12 text-center">

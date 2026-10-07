@@ -16,6 +16,8 @@ export interface CartLine {
   /** Metadata para cupones scope product/category (solo variantes; null en combos). */
   productId?: string | null;
   categoryId?: string | null;
+  /** Gift Card digital: no pesa, no cuenta para el envío gratis ni recibe descuentos de cupones. */
+  isGiftCard: boolean;
   /** Solo combos: componentes para descuento de stock. */
   components?: Array<{ variantId: string; qty: number }>;
 }

@@ -4,7 +4,7 @@ import { cartToCheckoutLines } from "@/lib/cart/cart-service";
 const cart = {
   items: [
     { id: "ci1", qty: 2, unitPriceSnapshot: "3200", comboId: null, variantId: "v1",
-      variant: { id: "v1", name: "Rojo Pasión", sku: "LAB-0001", priceOverride: null, weightGrOverride: null, product: { id: "p1", name: "Labial Mate", basePrice: "3200", weightGr: 25, categoryId: "c1" } },
+      variant: { id: "v1", name: "Rojo Pasión", sku: "LAB-0001", priceOverride: null, weightGrOverride: null, product: { id: "p1", name: "Labial Mate", basePrice: "3200", weightGr: 25, categoryId: "c1", category: { slug: "labios" }, categories: [] } },
       combo: null },
     { id: "ci2", qty: 1, unitPriceSnapshot: "4990", comboId: "combo1", variantId: null,
       variant: null,

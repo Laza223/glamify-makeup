@@ -21,6 +21,7 @@ interface ShipmentOrderRow {
   orderNumber: string;
   contactName: string;
   contactEmail: string;
+  shippingMethod: string;
   shippingCost: Money;
 }
 
@@ -41,6 +42,8 @@ export interface ShipmentsDeps {
 export function defaultShipmentsDeps(): ShipmentsDeps {
   return { db: prisma as unknown as ShipmentsDb, sendEmail: realSendEmail, getWhatsappUrl: storeWhatsappUrl };
 }
+
+const DIGITAL_ORDER_NO_SHIPPING = "Los pedidos digitales no llevan envío.";
 
 /** Pedidos en los que tiene sentido cargar el seguimiento (ya pagados). */
 const TRACKING_ALLOWED_STATUSES: OrderStatus[] = ["paid", "preparing", "shipped", "delivered"];
@@ -63,6 +66,7 @@ export async function upsertShipment(
   if (!trackingNumber) throw new Error("Cargá el número de seguimiento.");
   const order = await deps.db.order.findUnique({ where: { id: orderId } });
   if (!order) throw new Error("El pedido no existe.");
+  if (order.shippingMethod === "digital") throw new Error(DIGITAL_ORDER_NO_SHIPPING);
   if (!TRACKING_ALLOWED_STATUSES.includes(order.status)) {
     throw new Error("El pedido todavía no está pagado.");
   }
@@ -181,6 +185,7 @@ export async function retryMicorreoImport(
 ): Promise<{ imported: boolean; detail: string }> {
   const order = await deps.db.order.findUnique({ where: { id: orderId }, include: { shipment: true } });
   if (!order) return { imported: false, detail: "El pedido no existe." };
+  if (order.shippingMethod === "digital") throw new Error(DIGITAL_ORDER_NO_SHIPPING);
   if (!RETRY_ALLOWED_STATUSES.includes(order.status)) {
     return { imported: false, detail: "El pedido todavía no está pagado." };
   }

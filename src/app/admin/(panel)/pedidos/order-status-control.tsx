@@ -53,33 +53,47 @@ const ALL: OrderStatus[] = [
 export function OrderStatusControl({
   orderId,
   status,
+  hasGiftCard = false,
 }: {
   orderId: string;
   status: OrderStatus;
+  /** El pedido tiene líneas gift card: no se puede marcar pagado a mano (los códigos los emite el webhook). */
+  hasGiftCard?: boolean;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   // Próximos estados válidos, excluyendo cancelled (tiene su propio flujo con confirmación).
-  const nextStates = ALL.filter((s) => s !== "cancelled" && canTransition(status, s));
+  const nextStates = ALL.filter(
+    (s) => s !== "cancelled" && canTransition(status, s) && !(hasGiftCard && status === "pending_payment" && s === "paid"),
+  );
   const canCancel = canTransition(status, "cancelled");
 
   const change = (to: OrderStatus) => {
     setError(null);
+    setNotice(null);
     startTransition(async () => {
       const r = await changeOrderStatusAction(orderId, to);
       if (!r.ok) setError(r.error ?? "No se pudo cambiar el estado.");
-      else router.refresh();
+      else {
+        setNotice(r.warning ?? null);
+        router.refresh();
+      }
     });
   };
 
   const cancel = () => {
     setError(null);
+    setNotice(null);
     startTransition(async () => {
       const r = await cancelOrderAction(orderId);
       if (!r.ok) setError(r.error ?? "No se pudo cancelar.");
-      else router.refresh();
+      else {
+        setNotice(r.warning ?? null);
+        router.refresh();
+      }
     });
   };
 
@@ -116,6 +130,12 @@ export function OrderStatusControl({
           />
         ) : null}
       </div>
+      {notice ? (
+        <p className="flex items-center gap-1.5 text-sm font-medium text-foreground">
+          <AlertCircle className="size-4 shrink-0 text-primary" aria-hidden />
+          {notice}
+        </p>
+      ) : null}
       {error ? (
         <p className="flex items-center gap-1.5 text-sm font-medium text-destructive">
           <AlertCircle className="size-4 shrink-0" aria-hidden />

@@ -16,7 +16,7 @@ import {
   getCouponCodeFromCookie,
   setCouponCodeCookie,
 } from "@/lib/cart/cart-cookie";
-import { cartSubtotal } from "@/lib/cart/totals";
+import { isDigitalOnly, physicalSubtotal } from "@/lib/cart/totals";
 import { validateCoupon, applyCoupon } from "@/lib/coupons/apply";
 import { toNumber } from "@/lib/catalog/pricing";
 import { prisma } from "@/lib/prisma";
@@ -188,7 +188,7 @@ export async function applyCouponAction(code: string): Promise<ActionResult> {
   if (!coupon) return { ok: false, error: "Cupón inexistente." };
   const cartId = await getCartIdFromCookie();
   const { lines } = await loadCart(cartId);
-  const subtotal = cartSubtotal(lines);
+  const subtotal = physicalSubtotal(lines); // las gift cards no cuentan para el mínimo de un cupón
   const customer = await getCustomer();
   let customerRedemptions = 0;
   if (customer && coupon.perCustomerLimit != null) {
@@ -248,7 +248,8 @@ export async function quoteShippingAction(input: {
   const cartId = await getCartIdFromCookie();
   const { lines } = await loadCart(cartId);
   if (lines.length === 0) return { ok: false, error: "El carrito está vacío." };
-  const subtotal = cartSubtotal(lines);
+  if (isDigitalOnly(lines)) return { ok: true, cost: 0, free: false, source: "none" };
+  const subtotal = physicalSubtotal(lines); // las gift cards no cuentan para el envío gratis
   const quote = await quoteShipping(
     {
       cp: input.cp,

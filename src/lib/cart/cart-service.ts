@@ -3,13 +3,18 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getEffectivePrice, toNumber } from "@/lib/catalog/pricing";
 import { isProductMadeToOrder } from "@/lib/catalog/made-to-order";
+import { isProductGiftCard } from "@/lib/catalog/gift-card";
 import type { CartLine } from "@/lib/cart/types";
+
+/** Tope de unidades por línea gift card (cada unidad emite un cupón/código). */
+export const MAX_GIFT_CARDS_PER_LINE = 10;
+export const MAX_GIFT_CARDS_ERROR = "Máximo 10 gift cards por pedido.";
 
 /** Include estándar para cargar un carrito con todo lo necesario para calcular líneas. */
 export const CART_INCLUDE = {
   items: {
     include: {
-      variant: { include: { product: { include: { category: true } } } },
+      variant: { include: { product: { include: { category: true, categories: { select: { category: { select: { slug: true } } } } } } } },
       combo: { include: { items: { include: { variant: { include: { product: true } } } } } },
     },
   },
@@ -29,7 +34,7 @@ export function cartItemToCartLine(item: CartItemWithRefs): CartLine {
     return {
       id: item.id, kind: "combo", refId: item.combo.id,
       unitPrice: toNumber(item.combo.comboPrice), qty: item.qty,
-      weightGr, productId: null, categoryId: null, components,
+      weightGr, productId: null, categoryId: null, isGiftCard: false, components,
     };
   }
   const v = item.variant!;
@@ -38,6 +43,7 @@ export function cartItemToCartLine(item: CartItemWithRefs): CartLine {
     unitPrice: getEffectivePrice(v.product, v), qty: item.qty,
     weightGr: v.weightGrOverride ?? v.product.weightGr,
     productId: v.product.id, categoryId: v.product.categoryId,
+    isGiftCard: isProductGiftCard(v.product),
   };
 }
 
@@ -79,6 +85,9 @@ export async function addItem(input: AddItemInput): Promise<void> {
     if (isProductMadeToOrder(variant.product)) throw new Error("Este producto se arma por WhatsApp.");
     const unit = getEffectivePrice(variant.product, variant);
     const existing = await prisma.cartItem.findFirst({ where: { cartId: input.cartId, variantId: input.variantId } });
+    if (isProductGiftCard(variant.product) && (existing?.qty ?? 0) + qty > MAX_GIFT_CARDS_PER_LINE) {
+      throw new Error(MAX_GIFT_CARDS_ERROR);
+    }
     if (existing) await prisma.cartItem.update({ where: { id: existing.id }, data: { qty: existing.qty + qty } });
     else await prisma.cartItem.create({ data: { cartId: input.cartId, variantId: input.variantId, qty, unitPriceSnapshot: unit } });
     return;
@@ -98,6 +107,14 @@ export async function addItem(input: AddItemInput): Promise<void> {
  *  pertenece a ese carrito no matchea (evita que una clienta toque el carrito de otra por id). */
 export async function updateItem(cartId: string, itemId: string, qty: number): Promise<void> {
   if (qty <= 0) { await removeItem(cartId, itemId); return; }
+  if (qty > MAX_GIFT_CARDS_PER_LINE) {
+    // Solo las gift cards tienen tope: se consulta únicamente cuando la cantidad lo supera.
+    const item = await prisma.cartItem.findFirst({
+      where: { id: itemId, cartId },
+      include: { variant: { include: { product: { include: { category: true, categories: { select: { category: { select: { slug: true } } } } } } } } },
+    });
+    if (item?.variant && isProductGiftCard(item.variant.product)) throw new Error(MAX_GIFT_CARDS_ERROR);
+  }
   const res = await prisma.cartItem.updateMany({ where: { id: itemId, cartId }, data: { qty: Math.floor(qty) } });
   if (res.count === 0) throw new Error("Esa línea no pertenece a este carrito.");
 }

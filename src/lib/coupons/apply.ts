@@ -48,6 +48,7 @@ export interface CouponResult {
 }
 
 function matchesScope(line: CartLine, scope: ApplicableCoupon["scope"], scopeId: string | null): boolean {
+  if (line.isGiftCard) return false; // ningún cupón descuenta gift cards
   if (scope === "all") return true;
   if (line.kind === "combo") return false; // combos solo aplican a scope=all
   if (scope === "category") return line.categoryId === scopeId;

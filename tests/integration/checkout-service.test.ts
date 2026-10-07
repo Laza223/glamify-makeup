@@ -3,7 +3,7 @@ import { createCheckout, type CreateCheckoutDeps, type CheckoutLineInput } from 
 import type { CartLine } from "@/lib/cart/types";
 
 const cartLine = (over: Partial<CartLine> = {}): CartLine => ({
-  id: "ci1", kind: "variant", refId: "v1", unitPrice: 3200, qty: 2, weightGr: 25, productId: "p1", categoryId: "c1", ...over,
+  id: "ci1", kind: "variant", refId: "v1", unitPrice: 3200, qty: 2, weightGr: 25, productId: "p1", categoryId: "c1", isGiftCard: false, ...over,
 });
 const checkoutLine = (over: Partial<CheckoutLineInput> = {}): CheckoutLineInput => ({
   line: cartLine(), productNameSnapshot: "Labial Mate", variantNameSnapshot: "Rojo Pasión", skuSnapshot: "LAB-0001", title: "Labial Mate — Rojo Pasión", ...over,

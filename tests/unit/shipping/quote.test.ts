@@ -3,7 +3,7 @@ import { orderWeightGr, matchZone, isFreeShipping, methodFactor, type Zone } fro
 import type { CartLine } from "@/lib/cart/types";
 
 const line = (over: Partial<CartLine> = {}): CartLine => ({
-  id: "l1", kind: "variant", refId: "v1", unitPrice: 1000, qty: 1, weightGr: 50, ...over,
+  id: "l1", kind: "variant", refId: "v1", unitPrice: 1000, qty: 1, weightGr: 50, isGiftCard: false, ...over,
 });
 
 describe("orderWeightGr", () => {
@@ -58,5 +58,14 @@ describe("methodFactor", () => {
   it("sucursal es más barata que domicilio", () => {
     expect(methodFactor("domicilio")).toBe(1);
     expect(methodFactor("sucursal")).toBeLessThan(1);
+  });
+});
+
+describe("orderWeightGr con gift cards", () => {
+  it("ignora las líneas gift card en el peso", () => {
+    expect(orderWeightGr([line({ weightGr: 25, qty: 2 }), line({ id: "g", weightGr: 500, qty: 3, isGiftCard: true })])).toBe(50);
+  });
+  it("si todas son gift cards → 0 (no hay paquete)", () => {
+    expect(orderWeightGr([line({ id: "g", weightGr: 0, qty: 2, isGiftCard: true })])).toBe(0);
   });
 });

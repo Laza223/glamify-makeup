@@ -10,7 +10,7 @@ import { selectOrderBump } from "@/lib/catalog/recommend";
 export const metadata: Metadata = { title: "Checkout" };
 
 export default async function CheckoutPage() {
-  const { cart, count, subtotal, coupon } = await getCartView();
+  const { cart, count, subtotal, coupon, digitalOnly } = await getCartView();
   if (!cart || count === 0) redirect("/carrito");
 
   const customer = await getCustomer();
@@ -23,6 +23,7 @@ export default async function CheckoutPage() {
       {bump && <div className="mb-6"><OrderBump offer={bump} /></div>}
       <CheckoutForm
         subtotal={subtotal}
+        digitalOnly={digitalOnly}
         discount={coupon?.discount ?? 0}
         couponCode={coupon?.code ?? null}
         couponFreeShipping={coupon?.freeShipping ?? false}

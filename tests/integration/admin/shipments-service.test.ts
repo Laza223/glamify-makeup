@@ -11,7 +11,7 @@ const baseInput: ShipmentInput = { trackingNumber: "CA123456789AR" };
 
 type Existing = { id: string; status: string; trackingNumber?: string | null; service?: string | null } | null;
 
-function makeDeps(over: { orderStatus?: string; existingShipment?: Existing } = {}) {
+function makeDeps(over: { orderStatus?: string; existingShipment?: Existing; shippingMethod?: string } = {}) {
   const tx = {
     shipment: {
       findUnique: vi.fn(async () => over.existingShipment ?? null),
@@ -30,6 +30,7 @@ function makeDeps(over: { orderStatus?: string; existingShipment?: Existing } = 
           orderNumber: "GLM-000123",
           contactName: "Ana",
           contactEmail: "ana@example.com",
+          shippingMethod: over.shippingMethod ?? "domicilio",
           shippingCost: 2500,
         })),
       },
@@ -92,6 +93,15 @@ describe("upsertShipment (sólo número de seguimiento)", () => {
       db: { order: { findUnique: vi.fn(async () => null) }, $transaction: vi.fn(async (fn) => fn({} as never)) } as never,
     };
     await expect(upsertShipment("ord-x", baseInput, deps)).rejects.toThrow(/no existe/i);
+  });
+});
+
+describe("pedidos digitales (gift card)", () => {
+  it("upsertShipment rechaza cargar seguimiento y no toca nada", async () => {
+    const { deps, tx } = makeDeps({ shippingMethod: "digital", orderStatus: "delivered" });
+    await expect(upsertShipment("ord-1", baseInput, deps)).rejects.toThrow("Los pedidos digitales no llevan envío.");
+    expect(tx.shipment.create).not.toHaveBeenCalled();
+    expect(tx.order.updateMany).not.toHaveBeenCalled();
   });
 });
 
@@ -206,5 +216,19 @@ describe("retryMicorreoImport", () => {
     const r = await retryMicorreoImport("ord-1", deps);
     expect(r.imported).toBe(true);
     expect(autoImport).not.toHaveBeenCalled();
+  });
+});
+
+describe("retryMicorreoImport · pedido digital", () => {
+  it("rechaza con 'Los pedidos digitales no llevan envío.' sin llamar a la API ni crear Shipment", async () => {
+    const shipmentUpsert = vi.fn(async () => ({}));
+    const autoImport = vi.fn();
+    const deps: RetryImportDeps = {
+      db: { order: { findUnique: vi.fn(async () => ({ status: "delivered", shippingMethod: "digital", shipment: null })) }, shipment: { upsert: shipmentUpsert } } as never,
+      autoImport: autoImport as never,
+    };
+    await expect(retryMicorreoImport("ord-1", deps)).rejects.toThrow("Los pedidos digitales no llevan envío.");
+    expect(autoImport).not.toHaveBeenCalled();
+    expect(shipmentUpsert).not.toHaveBeenCalled();
   });
 });

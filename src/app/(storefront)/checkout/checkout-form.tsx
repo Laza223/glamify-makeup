@@ -19,6 +19,8 @@ interface Props {
   discount: number;
   couponCode: string | null;
   couponFreeShipping: boolean;
+  /** Calculado en el server: el carrito tiene solo gift cards (sin dirección ni envío). */
+  digitalOnly?: boolean;
   items: ItemView[];
   defaultName?: string;
   defaultEmail?: string;
@@ -26,7 +28,7 @@ interface Props {
 
 type Method = "domicilio" | "sucursal";
 
-export function CheckoutForm({ subtotal, discount, couponCode, couponFreeShipping, items, defaultName = "", defaultEmail = "" }: Props) {
+export function CheckoutForm({ subtotal, discount, couponCode, couponFreeShipping, digitalOnly = false, items, defaultName = "", defaultEmail = "" }: Props) {
   const [name, setName] = useState(defaultName);
   const [email, setEmail] = useState(defaultEmail);
   const [phone, setPhone] = useState("");
@@ -50,7 +52,7 @@ export function CheckoutForm({ subtotal, discount, couponCode, couponFreeShippin
   const [submitting, startSubmit] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  const shippingCost = couponFreeShipping ? 0 : shipping?.free ? 0 : shipping?.cost ?? null;
+  const shippingCost = digitalOnly || couponFreeShipping ? 0 : shipping?.free ? 0 : shipping?.cost ?? null;
   const total = round2(subtotal - discount + (shippingCost ?? 0));
 
   useEffect(() => {
@@ -84,11 +86,13 @@ export function CheckoutForm({ subtotal, discount, couponCode, couponFreeShippin
     if (!name.trim()) return "Ingresá tu nombre.";
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return "Email inválido.";
     if (!phone.trim()) return "Ingresá un teléfono.";
-    if (!/^\d{4}$/.test(cp)) return "Código postal inválido (4 dígitos).";
-    if (!city.trim()) return "Ingresá tu localidad.";
-    if (method === "domicilio" && (!street.trim() || !number.trim())) return "Completá calle y número.";
-    if (method === "sucursal" && !agencyCode) return "Elegí una sucursal de Correo.";
-    if (shippingCost == null) return "Calculá el envío con tu código postal.";
+    if (!digitalOnly) {
+      if (!/^\d{4}$/.test(cp)) return "Código postal inválido (4 dígitos).";
+      if (!city.trim()) return "Ingresá tu localidad.";
+      if (method === "domicilio" && (!street.trim() || !number.trim())) return "Completá calle y número.";
+      if (method === "sucursal" && !agencyCode) return "Elegí una sucursal de Correo.";
+      if (shippingCost == null) return "Calculá el envío con tu código postal.";
+    }
     if (!acceptedTerms) return "Tenés que aceptar los Términos y Condiciones.";
     return null;
   };
@@ -122,6 +126,11 @@ export function CheckoutForm({ subtotal, discount, couponCode, couponFreeShippin
           <Input value={phone} onChange={(e) => setPhone(e.target.value)} type="tel" inputMode="tel" placeholder="Teléfono" autoComplete="tel" aria-label="Teléfono" />
         </fieldset>
 
+        {digitalOnly ? (
+          <p className="rounded-xl border border-border bg-secondary/60 p-4 text-sm text-muted-foreground">
+            Las gift cards llegan por mail: no hace falta dirección.
+          </p>
+        ) : (
         <fieldset className="space-y-3">
           <legend className="mb-1 font-display text-lg">Entrega</legend>
           <RadioGroup value={method} onValueChange={(v) => { setMethod(v as Method); resetDestino(); }} className="grid grid-cols-2 gap-2">
@@ -169,6 +178,7 @@ export function CheckoutForm({ subtotal, discount, couponCode, couponFreeShippin
           <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Notas para la entrega (opcional)" aria-label="Notas" />
           {shipping && <p className="text-sm font-medium text-muted-foreground">Envío: {shipping.free ? <span className="text-emerald-600 font-semibold">Gratis</span> : formatARS(shippingCost ?? 0)}</p>}
         </fieldset>
+        )}
       </div>
 
       <aside className="space-y-4 rounded-2xl border border-border p-5 lg:sticky lg:top-20 lg:self-start">

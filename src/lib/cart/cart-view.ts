@@ -1,7 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { loadCurrentCart, type CartWithItems } from "@/lib/cart/cart-service";
-import { cartSubtotal, cartItemCount } from "@/lib/cart/totals";
+import { cartSubtotal, cartItemCount, physicalSubtotal, isDigitalOnly } from "@/lib/cart/totals";
 import { getCouponCodeFromCookie } from "@/lib/cart/cart-cookie";
 import { getFreeShippingThreshold } from "@/lib/orders/checkout-data";
 import { prisma } from "@/lib/prisma";
@@ -18,6 +18,10 @@ export interface CartView {
   lines: CartLine[];
   count: number;
   subtotal: number;
+  /** Subtotal sin gift cards: base del envío gratis y de los cupones. */
+  physicalSubtotal: number;
+  /** El carrito tiene solo gift cards: no hay envío ni dirección. */
+  digitalOnly: boolean;
   threshold: number;
   coupon: CartCouponPreview | null;
 }
@@ -40,11 +44,11 @@ export const getCartView = cache(async (): Promise<CartView> => {
         value: Number(row.value),
         minSubtotal: row.minSubtotal != null ? Number(row.minSubtotal) : null,
       };
-      if (validateCoupon(plain, { subtotal, now: new Date() }).ok) {
+      if (validateCoupon(plain, { subtotal: physicalSubtotal(lines), now: new Date() }).ok) {
         const res = applyCoupon(plain, lines);
         coupon = { code, discount: res.discount, freeShipping: res.freeShipping };
       }
     }
   }
-  return { cart, lines, count: cartItemCount(lines), subtotal, threshold, coupon };
+  return { cart, lines, count: cartItemCount(lines), subtotal, physicalSubtotal: physicalSubtotal(lines), digitalOnly: isDigitalOnly(lines), threshold, coupon };
 });

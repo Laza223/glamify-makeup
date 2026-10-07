@@ -2,9 +2,14 @@ import type { CartLine } from "@/lib/cart/types";
 
 export const DEFAULT_WEIGHT_GR = 50;
 
-/** Peso total del pedido en gramos (default sensato si falta; maquillaje liviano). Nunca 0. */
+/**
+ * Peso total del pedido en gramos (default sensato si falta; maquillaje liviano). Ignora gift cards.
+ * Nunca 0 salvo que TODAS las líneas sean gift cards (pedido digital: no hay paquete).
+ */
 export function orderWeightGr(lines: CartLine[]): number {
-  const total = lines.reduce((acc, l) => acc + (l.weightGr > 0 ? l.weightGr : DEFAULT_WEIGHT_GR) * l.qty, 0);
+  const physical = lines.filter((l) => !l.isGiftCard);
+  if (physical.length === 0 && lines.length > 0) return 0;
+  const total = physical.reduce((acc, l) => acc + (l.weightGr > 0 ? l.weightGr : DEFAULT_WEIGHT_GR) * l.qty, 0);
   return total > 0 ? total : DEFAULT_WEIGHT_GR;
 }
 

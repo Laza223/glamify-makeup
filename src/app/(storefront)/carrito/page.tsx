@@ -18,7 +18,7 @@ import { selectOrderBump } from "@/lib/catalog/recommend";
 export const metadata: Metadata = { title: "Tu carrito" };
 
 export default async function CarritoPage() {
-  const { cart, subtotal, count, threshold, coupon } = await getCartView();
+  const { cart, subtotal, physicalSubtotal, digitalOnly, count, threshold, coupon } = await getCartView();
 
   if (!cart || count === 0) {
     return (
@@ -45,7 +45,7 @@ export default async function CarritoPage() {
       <h1 className="mb-6 font-display text-2xl font-bold">Tu carrito ({count})</h1>
       <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
         <div className="space-y-4">
-          <FreeShippingBar subtotal={subtotal} threshold={threshold} />
+          {!digitalOnly && <FreeShippingBar subtotal={physicalSubtotal} threshold={threshold} />}
           <div className="divide-y divide-border rounded-2xl border border-border px-4">
             {cart.items.map((item) => (
               <CartLineItem
@@ -66,7 +66,7 @@ export default async function CarritoPage() {
           {bump && <OrderBump offer={bump} />}
           <CouponInput applied={coupon?.code ?? null} />
           <Separator />
-          <CartSummary subtotal={subtotal} discount={discount} shippingCost={null} total={total} freeShipping={coupon?.freeShipping} />
+          <CartSummary subtotal={subtotal} discount={discount} shippingCost={digitalOnly ? 0 : null} total={total} freeShipping={coupon?.freeShipping} />
           <p className="text-xs text-muted-foreground">El envío se calcula en el checkout según tu código postal.</p>
           <Button asChild size="lg" className="w-full"><Link href="/checkout">Iniciar compra</Link></Button>
         </aside>

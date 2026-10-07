@@ -2,8 +2,8 @@ import { describe, it, expect } from "vitest";
 import { computeStockDecrements, checkAvailability } from "@/lib/orders/stock";
 import type { CartLine } from "@/lib/cart/types";
 
-const v = (refId: string, qty: number): CartLine => ({ id: refId, kind: "variant", refId, unitPrice: 1000, qty, weightGr: 25 });
-const combo = (qty: number, components: Array<{ variantId: string; qty: number }>): CartLine => ({ id: "combo1", kind: "combo", refId: "combo1", unitPrice: 4990, qty, weightGr: 47, components });
+const v = (refId: string, qty: number): CartLine => ({ id: refId, kind: "variant", refId, unitPrice: 1000, qty, weightGr: 25, isGiftCard: false });
+const combo = (qty: number, components: Array<{ variantId: string; qty: number }>): CartLine => ({ id: "combo1", kind: "combo", refId: "combo1", unitPrice: 4990, qty, weightGr: 47, isGiftCard: false, components });
 
 describe("computeStockDecrements", () => {
   it("acumula variantes directas", () => {

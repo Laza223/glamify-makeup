@@ -18,6 +18,56 @@ vi.mock("@/lib/prisma", () => ({ prisma: { cartItem, productVariant } }));
 
 import { addItem, updateItem, removeItem } from "@/lib/cart/cart-service";
 
+describe("tope de gift cards por línea", () => {
+  const giftVariant = (slug = "gift-cards") => ({
+    id: "gv1", active: true, priceOverride: 20000,
+    product: { basePrice: 20000, category: { slug }, categories: [] },
+  });
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("addItem rechaza pasar de 10 unidades de una gift card", async () => {
+    productVariant.findUnique.mockResolvedValue(giftVariant());
+    cartItem.findFirst.mockResolvedValue(null);
+    await expect(addItem({ cartId: "c1", variantId: "gv1", qty: 11 })).rejects.toThrow("Máximo 10 gift cards por pedido.");
+    expect(cartItem.create).not.toHaveBeenCalled();
+  });
+
+  it("addItem sobre una línea existente suma y también respeta el tope", async () => {
+    productVariant.findUnique.mockResolvedValue(giftVariant());
+    cartItem.findFirst.mockResolvedValue({ id: "ci1", qty: 9 });
+    await expect(addItem({ cartId: "c1", variantId: "gv1", qty: 2 })).rejects.toThrow("Máximo 10 gift cards por pedido.");
+    expect(cartItem.update).not.toHaveBeenCalled();
+    await addItem({ cartId: "c1", variantId: "gv1", qty: 1 });
+    expect(cartItem.update).toHaveBeenCalledWith({ where: { id: "ci1" }, data: { qty: 10 } });
+  });
+
+  it("addItem no limita productos comunes", async () => {
+    productVariant.findUnique.mockResolvedValue(giftVariant("labios"));
+    cartItem.findFirst.mockResolvedValue(null);
+    await addItem({ cartId: "c1", variantId: "gv1", qty: 25 });
+    expect(cartItem.create).toHaveBeenCalled();
+  });
+
+  it("updateItem rechaza más de 10 si la línea es gift card, y deja pasar si es un producto común", async () => {
+    cartItem.findFirst.mockResolvedValue({ id: "ci1", variant: giftVariant() });
+    await expect(updateItem("c1", "ci1", 11)).rejects.toThrow("Máximo 10 gift cards por pedido.");
+    expect(cartItem.updateMany).not.toHaveBeenCalled();
+
+    cartItem.findFirst.mockResolvedValue({ id: "ci2", variant: giftVariant("labios") });
+    cartItem.updateMany.mockResolvedValue({ count: 1 });
+    await updateItem("c1", "ci2", 11);
+    expect(cartItem.updateMany).toHaveBeenCalledWith({ where: { id: "ci2", cartId: "c1" }, data: { qty: 11 } });
+  });
+
+  it("updateItem hasta 10 no consulta nada extra", async () => {
+    cartItem.updateMany.mockResolvedValue({ count: 1 });
+    await updateItem("c1", "ci1", 10);
+    expect(cartItem.findFirst).not.toHaveBeenCalled();
+  });
+});
+
 describe("updateItem / removeItem — scopeados a cartId (evita IDOR entre carritos)", () => {
   beforeEach(() => {
     vi.clearAllMocks();

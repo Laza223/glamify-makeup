@@ -82,7 +82,15 @@ export default function TerminosPage() {
         <Link href="/privacidad">Política de Privacidad</Link>.
       </p>
 
-      <h2>11. Jurisdicción</h2>
+      <h2>11. Gift Cards</h2>
+      <p>
+        Las Gift Cards son digitales: se envían por mail con un código al acreditarse el pago. Cada código es de un
+        solo uso, vence a los 6 meses de la compra y descuenta únicamente productos: no cubre el envío ni se acumula
+        con otras gift cards. Si la compra es menor al monto, el saldo no se conserva. No se canjean por dinero. El
+        reembolso de una gift card solo procede si todavía no se usó; al reembolsarla, el código se anula.
+      </p>
+
+      <h2>12. Jurisdicción</h2>
       <p>
         Ante cualquier controversia se aplica la legislación de la República Argentina y serán competentes los{" "}
         {businessInfo.jurisdiction}, sin perjuicio de los derechos que la normativa de consumo reconoce a la parte

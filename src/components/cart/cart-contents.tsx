@@ -16,7 +16,7 @@ import { selectOrderBump } from "@/lib/catalog/recommend";
 
 /** Contenido del carrito para el drawer (server component, se refresca con router.refresh). */
 export async function CartContents() {
-  const { cart, subtotal, count, threshold, coupon } = await getCartView();
+  const { cart, subtotal, physicalSubtotal, digitalOnly, count, threshold, coupon } = await getCartView();
   if (!cart || count === 0) return <EmptyCart />;
 
   const discount = coupon?.discount ?? 0;
@@ -27,7 +27,7 @@ export async function CartContents() {
 
   return (
     <div className="flex h-full flex-col gap-4">
-      <FreeShippingBar subtotal={subtotal} threshold={threshold} />
+      {!digitalOnly && <FreeShippingBar subtotal={physicalSubtotal} threshold={threshold} />}
       <div className="flex-1 divide-y divide-border">
         {cart.items.map((item) => (
           <CartLineItem
@@ -46,7 +46,7 @@ export async function CartContents() {
       {bump && <OrderBump offer={bump} />}
       <Separator />
       <CouponInput applied={coupon?.code ?? null} />
-      <CartSummary subtotal={subtotal} discount={discount} shippingCost={null} total={total} freeShipping={coupon?.freeShipping} />
+      <CartSummary subtotal={subtotal} discount={discount} shippingCost={digitalOnly ? 0 : null} total={total} freeShipping={coupon?.freeShipping} />
       
       <div className="grid gap-2 pt-2">
         <Button asChild size="lg" className="w-full rounded-2xl bg-[#161413] text-white hover:bg-neutral-800 py-6 text-sm font-semibold shadow-soft hover:shadow-soft-lg transition-all">

@@ -36,6 +36,11 @@ export default async function GraciasPage({ searchParams }: { searchParams: Prom
             Pedido <strong className="text-foreground">{order.orderNumber}</strong>
             {!paid && " — apenas se acredite te llega el email de confirmación."}
           </p>
+          {paid && order.shippingMethod === "digital" && (
+            <p className="mt-2 text-sm text-muted-foreground">
+              Te mandamos la gift card por mail en unos minutos (revisá spam).
+            </p>
+          )}
           {order.status === "pending_payment" && (
             <div className="mx-auto mt-5 max-w-sm space-y-2">
               <p className="text-sm text-muted-foreground">

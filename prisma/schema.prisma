@@ -49,6 +49,7 @@ enum ShipmentCarrier {
 enum ShippingMethod {
   domicilio
   sucursal
+  digital // pedido solo de gift cards: sin dirección ni envío
 }
 
 enum ShippingZoneMatchType {
@@ -321,6 +322,7 @@ model Order {
   total           Decimal        @db.Decimal(12, 2)
   couponId        String?        @db.Uuid
   coupon          Coupon?        @relation(fields: [couponId], references: [id])
+  issuedGiftCards Coupon[]       @relation("IssuedGiftCards")
   status          OrderStatus    @default(pending_payment)
   items           OrderItem[]
   payments        Payment[]
@@ -346,6 +348,7 @@ model OrderItem {
   unitPriceSnapshot   Decimal         @db.Decimal(12, 2)
   qty                 Int
   lineTotal           Decimal         @db.Decimal(12, 2)
+  isGiftCard          Boolean         @default(false) // snapshot: la línea emite un cupón de un solo uso al pagarse
 
   @@index([orderId])
 }
@@ -414,6 +417,10 @@ model Coupon {
   active           Boolean            @default(true)
   orders           Order[]
   redemptions      CouponRedemption[]
+  sourceOrderId    String?            @db.Uuid // != null → gift card emitida por ese pedido
+  sourceOrder      Order?             @relation("IssuedGiftCards", fields: [sourceOrderId], references: [id], onDelete: SetNull)
+
+  @@index([sourceOrderId])
 }
 
 model CouponRedemption {

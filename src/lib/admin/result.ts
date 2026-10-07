@@ -7,4 +7,6 @@ export interface AdminResult {
   ok: boolean;
   error?: string;
   id?: string;
+  /** Aviso no bloqueante para mostrar tras una acción exitosa. */
+  warning?: string;
 }

@@ -17,6 +17,7 @@ import {
   RotateCcw,
   CircleCheck,
   CircleX,
+  Gift,
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
@@ -30,6 +31,8 @@ import { STATUS_LABELS } from "@/lib/admin/orders/service";
 import { OrderStatusControl } from "../order-status-control";
 import { ShipmentForm, type ShipmentDefaults } from "../shipment-form";
 import { MicorreoPanel } from "../micorreo-panel";
+import { ResendGiftCardButton } from "../resend-gift-card-button";
+import { giftCardStatus, formatGiftCardDate, GIFT_CARD_STATUS_LABELS } from "@/lib/coupons/gift-card";
 import { DEFAULT_ITEM_CM } from "@/lib/shipping/micorreo";
 import type { OrderStatus, ShipmentStatus } from "@prisma/client";
 
@@ -125,6 +128,12 @@ export default async function PedidoDetallePage({
     },
   });
   if (!order) notFound();
+  // Gift cards que emitió este pedido (cupones con `sourceOrderId`).
+  const giftCards = await prisma.coupon.findMany({ where: { sourceOrderId: order.id }, orderBy: { code: "asc" } });
+  const now = new Date();
+  const isDigital = order.shippingMethod === "digital";
+  const usedGiftCards = giftCards.filter((c) => giftCardStatus(c, now) === "used").length;
+  const orderClosed = order.status === "refunded" || order.status === "cancelled";
 
   const addr = (order.shippingAddress ?? {}) as AddressSnapshot;
   const shipmentDefaults: ShipmentDefaults = {
@@ -172,7 +181,7 @@ export default async function PedidoDetallePage({
               {STATUS_LABELS[order.status]}
             </Badge>
           </div>
-          <OrderStatusControl orderId={order.id} status={order.status} />
+          <OrderStatusControl orderId={order.id} status={order.status} hasGiftCard={order.items.some((it) => it.isGiftCard)} />
         </div>
       </section>
 
@@ -243,6 +252,11 @@ export default async function PedidoDetallePage({
           {/* Entrega */}
           <section className="rounded-2xl border border-border/70 bg-card shadow-soft">
             <SectionHead icon={MapPin} title="Entrega" />
+            {isDigital ? (
+              <div className="p-5">
+                <p className="text-sm text-foreground">Pedido digital (gift card): no requiere envío.</p>
+              </div>
+            ) : (
             <div className="p-5">
               <p className="text-sm text-foreground">
                 Método:{" "}
@@ -272,6 +286,7 @@ export default async function PedidoDetallePage({
                 </p>
               )}
             </div>
+            )}
           </section>
 
           {/* Pagos */}
@@ -319,8 +334,43 @@ export default async function PedidoDetallePage({
         </div>
       </div>
 
+      {/* Gift cards emitidas por este pedido */}
+      {giftCards.length > 0 ? (
+        <section className="rounded-2xl border border-border/70 bg-card shadow-soft">
+          <SectionHead
+            icon={Gift}
+            title="Gift cards emitidas"
+            help="Se emiten al acreditarse el pago. Si el pedido se reembolsa o cancela, se anulan las que no se usaron."
+          />
+          <div className="space-y-4 p-5">
+            {usedGiftCards > 0 ? (
+              <p className="rounded-xl border border-border bg-surface-alt/60 px-4 py-3 text-sm font-medium text-foreground">
+                {orderClosed
+                  ? `Este pedido se ${order.status === "refunded" ? "reembolsó" : "canceló"} pero ${usedGiftCards} gift card(s) ya se habían usado.`
+                  : "Hay gift cards ya usadas: reembolsar este pedido no las anula."}
+              </p>
+            ) : null}
+            <ul className="divide-y divide-border/70">
+              {giftCards.map((c) => (
+                <li key={c.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5 text-sm first:pt-0">
+                  <span className="font-mono font-semibold tracking-wide text-foreground">{c.code}</span>
+                  <span className="tabular-nums text-muted-foreground">{formatARS(toNumber(c.value))}</span>
+                  <span className="text-muted-foreground">
+                    {c.validTo ? `Vence ${formatGiftCardDate(c.validTo)}` : "Sin vencimiento"}
+                  </span>
+                  <Badge variant={giftCardStatus(c, now) === "unused" ? "success" : "muted"}>
+                    {GIFT_CARD_STATUS_LABELS[giftCardStatus(c, now)]}
+                  </Badge>
+                </li>
+              ))}
+            </ul>
+            <ResendGiftCardButton orderId={order.id} />
+          </div>
+        </section>
+      ) : null}
+
       {/* Instrucciones MiCorreo (qué hacer con este pedido) */}
-      {showMicorreo ? (
+      {showMicorreo && !isDigital ? (
         <MicorreoPanel
           orderId={order.id}
           orderNumber={order.orderNumber}
@@ -340,7 +390,8 @@ export default async function PedidoDetallePage({
         />
       ) : null}
 
-      {/* Envío y seguimiento */}
+      {/* Envío y seguimiento (un pedido digital no tiene envío) */}
+      {!isDigital ? (
       <section className="rounded-2xl border border-border/70 bg-card shadow-soft">
         <SectionHead
           icon={Truck}
@@ -351,6 +402,7 @@ export default async function PedidoDetallePage({
           <ShipmentForm orderId={order.id} defaults={shipmentDefaults} />
         </div>
       </section>
+      ) : null}
     </div>
   );
 }
