@@ -5,9 +5,9 @@ Plan aprobado: `~/.claude/plans/pasted-content-id-8b37-buenas-como-generic-melod
 | Fase | Qué | Estado |
 |---|---|---|
 | 0a | Hotfixes en prod: claims engañosos (#31), tono de la barra fija (#32), funnel de analytics (#33) | ✅ mergeados 2026-10-07 |
-| 0b | Preparación: rama + PR draft, preview seguro, Impeccable, gobierno, E2E | 🟡 en curso |
+| 0b | Preparación: rama + PR draft (#34), preview seguro, Impeccable, gobierno, E2E de solo lectura | ✅ 2026-10-07 |
 | 1 | `PRODUCT.md` (`impeccable init`) | ✅ 2026-10-07 |
-| 2 | Línea de base (critique, audit, Lighthouse, funnel) | ⬜ |
+| 2 | Línea de base: critique + detector + Lighthouse ✅ (`linea-de-base.md`) · audit /20 y funnel PostHog pendientes | 🟡 |
 | 3 | Mundo visual: home + chrome global | ⬜ |
 | 4 | Rollout por superficie → Release 1 (compra + 404) → Release 2 | ⬜ |
 | 5 | Pasadas transversales | ⬜ |
@@ -24,6 +24,9 @@ Plan aprobado: `~/.claude/plans/pasted-content-id-8b37-buenas-como-generic-melod
 
 | Fecha | Agente | Finalidad | Costo aprox. | Resultado |
 |---|---|---|---|---|
+| 2026-10-07 | sonnet-implementer | E2E de solo lectura (@db-write, proyectos 390/1440, axe en 13 rutas) | ~143k tok | 11 archivos; 41/41 tras ajustar fixme → exclusión de solo color-contrast |
+| 2026-10-07 | general-purpose ×3 (A) | Critique baseline home / producto / checkout | ~195k + 167k + 185k tok | 19/32 · 19/36 · 21/40; 2 bugs reales en checkout |
+| 2026-10-07 | general-purpose (B) | Detector CLI + overlay en prod | ~129k tok | CLI 1, overlay 11/5/2; exit code del .cmd no confiable |
 
 ## Pendientes de la clienta (REQUIERE INPUT)
 
