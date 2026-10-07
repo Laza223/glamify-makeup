@@ -17,6 +17,9 @@ export interface MergeCartDb {
     update: (args: { where: { id: string }; data: Record<string, unknown> }) => Promise<unknown>;
     delete: (args: { where: { id: string } }) => Promise<unknown>;
   };
+  order: {
+    updateMany: (args: { where: { cartId: string; status: "pending_payment" }; data: { cartId: string } }) => Promise<unknown>;
+  };
 }
 
 export interface MergeCartInput {
@@ -73,6 +76,8 @@ export async function mergeGuestCartIntoCustomer(
       }
     }
     await db.cart.update({ where: { id: previous.id }, data: { status: "abandoned" } });
+    // Un pedido pendiente del cart viejo sigue a sus items: al pagarse cierra el canónico y un reintento lo cancela.
+    await db.order.updateMany({ where: { cartId: previous.id, status: "pending_payment" }, data: { cartId: cookieActive.id } });
   }
 
   return { canonicalCartId: cookieActive.id };

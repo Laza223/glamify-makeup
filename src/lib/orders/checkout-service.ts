@@ -111,6 +111,25 @@ export function defaultCheckoutDeps(appUrl: string): CreateCheckoutDeps {
   };
 }
 
+/** Un pago que MP está procesando o ya aprobó puede acreditarse: cancelar ese pedido cobraría dos veces. */
+const PAYMENT_IN_FLIGHT = new Set(["in_process", "approved"]);
+
+async function supersedePendingOrders(db: CheckoutDb, cartId: string): Promise<void> {
+  await db.$transaction(async (tx) => {
+    const previous = await tx.order.findMany({
+      where: { cartId, status: "pending_payment" },
+      select: { id: true, payments: { select: { status: true } } },
+    });
+    if (previous.some((o) => o.payments.some((p) => PAYMENT_IN_FLIGHT.has(p.status)))) {
+      throw new Error("Tu pago anterior se está procesando en Mercado Pago. Esperá el email de confirmación antes de volver a pagar.");
+    }
+    for (const prev of previous) {
+      const res = await tx.order.updateMany({ where: { id: prev.id, status: "pending_payment" }, data: { status: "cancelled" } });
+      if (res.count === 1) await releaseGiftCardReservation(tx, prev.id);
+    }
+  });
+}
+
 export async function createCheckout(input: CreateCheckoutInput, deps: CreateCheckoutDeps): Promise<CreateCheckoutResult> {
   if (input.lines.length === 0) throw new Error("El carrito está vacío.");
   const now = deps.now ?? new Date();
@@ -135,6 +154,12 @@ export async function createCheckout(input: CreateCheckoutInput, deps: CreateChe
     const addressError = validateShippingAddress(input.shippingMethod, input.address);
     if (addressError) throw new Error(addressError);
   }
+
+  // --- Pedido pendiente anterior del mismo carrito ---
+  // El carrito sigue activo hasta que se aprueba el pago. Si la clienta vuelve de MP sin pagar y
+  // reintenta, el pedido pendiente anterior se cancela (misma guarda que el expiry job) y libera su
+  // gift card ANTES de validar el cupón: si no, la misma gift card figura usada y el descuento se pierde.
+  if (input.cartId) await supersedePendingOrders(deps.db, input.cartId);
 
   // --- Cupón (revalidado en server) --- Un pedido digital ignora cualquier cupón (no hay a qué descontarle).
   let discount = 0;
@@ -181,16 +206,6 @@ export async function createCheckout(input: CreateCheckoutInput, deps: CreateChe
 
   // --- Persistencia (tx) ---
   const order = await deps.db.$transaction(async (tx) => {
-    // El carrito sigue activo hasta que se aprueba el pago. Si la clienta vuelve de MP sin pagar y
-    // reintenta, el pedido pendiente anterior de este carrito se cancela (misma guarda que el expiry
-    // job) y libera su gift card ANTES de reservarla de nuevo: un solo pedido pendiente por carrito.
-    if (input.cartId) {
-      const previous = await tx.order.findMany({ where: { cartId: input.cartId, status: "pending_payment" }, select: { id: true } });
-      for (const prev of previous) {
-        const res = await tx.order.updateMany({ where: { id: prev.id, status: "pending_payment" }, data: { status: "cancelled" } });
-        if (res.count === 1) await releaseGiftCardReservation(tx, prev.id);
-      }
-    }
     if (giftCardCoupon) {
       // Reserva atómica: dos pedidos que compiten por la misma gift card → solo uno obtiene count 1.
       // El webhook NO la vuelve a incrementar; se libera si el pedido se cancela sin pagarse.

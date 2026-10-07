@@ -122,9 +122,10 @@ describe("createCheckout — gift cards", () => {
         coupon: { updateMany: vi.fn(async () => ({ count: 1 })) },
         cart: { update: vi.fn(async () => ({})) },
       };
-      // 1ª tx = creación del pedido; 2ª = rollback.
+      // 1ª tx = pedidos pendientes previos del carrito (ninguno); 2ª = creación del pedido; 3ª = rollback.
       (made.deps.db.$transaction as unknown) = vi
         .fn()
+        .mockImplementationOnce(async (fn: (t: unknown) => unknown) => fn(made.tx))
         .mockImplementationOnce(async (fn: (t: unknown) => unknown) => fn(made.tx))
         .mockImplementationOnce(async (fn: (t: unknown) => unknown) => fn(rollbackTx));
       return { ...made, rollbackTx };

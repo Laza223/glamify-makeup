@@ -21,6 +21,13 @@ function makeDb() {
 }
 
 describe("runAbandonedCartJob", () => {
+  it("excluye carritos con un pedido pendiente de pago (la clienta está pagando, no abandonó)", async () => {
+    const { db } = makeDb();
+    await runAbandonedCartJob({ db, sendEmail: vi.fn(async () => ({ id: "e1", logged: false })), now: new Date("2026-06-06T12:00:00Z"), appUrl: "http://localhost:3000" });
+    const args = (db.cart.findMany as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(args.where).toMatchObject({ status: "active", orders: { none: { status: "pending_payment" } } });
+  });
+
   it("envía el email y estampa abandonedEmailSentAt", async () => {
     const { db, update } = makeDb();
     const sendEmail = vi.fn(async () => ({ id: "e1", logged: false }));

@@ -10,6 +10,7 @@ function makeDb(over: Partial<Record<string, unknown>> = {}) {
       update: vi.fn(async () => ({})),
     },
     cartItem: { findMany: vi.fn(async () => []), update: vi.fn(async () => ({})), delete: vi.fn(async () => ({})) },
+    order: { updateMany: vi.fn(async () => ({ count: 0 })) },
     ...over,
   } as unknown as MergeCartDb;
 }
@@ -84,6 +85,8 @@ describe("mergeGuestCartIntoCustomer", () => {
     expect(db.cartItem.delete).toHaveBeenCalledWith({ where: { id: "pi1" } });
     // cart previo abandonado
     expect(db.cart.update).toHaveBeenCalledWith({ where: { id: "prev" }, data: { status: "abandoned" } });
+    // su pedido pendiente sigue al carrito canónico: al pagarse cierra ESE carrito y un reintento lo cancela
+    expect(db.order.updateMany).toHaveBeenCalledWith({ where: { cartId: "prev", status: "pending_payment" }, data: { cartId: "cookie" } });
   });
 
   it("cookie ya asignada a otra clienta → no la roba; devuelve cart propio si existe", async () => {
