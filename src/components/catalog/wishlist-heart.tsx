@@ -31,7 +31,7 @@ export function WishlistHeart({ productId, initial = false, className }: { produ
       disabled={pending}
       aria-pressed={active}
       aria-label={active ? "Quitar de favoritos" : "Agregar a favoritos"}
-      className={cn("grid size-9 place-items-center rounded-full border border-border bg-background/80 backdrop-blur transition", className)}
+      className={cn("grid size-11 place-items-center rounded-full bg-white/90 text-foreground shadow-[0_2px_6px_-2px_rgb(0_0_0/0.18)] transition hover:bg-white", className)}
     >
       <Heart className={cn("size-5", active ? "fill-primary text-primary" : "text-muted-foreground")} aria-hidden />
     </button>

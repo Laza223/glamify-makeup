@@ -11,7 +11,7 @@ export default async function AdminPanelLayout({
   const admin = await requireAdmin();
 
   return (
-    <div className="admin-surface flex min-h-screen flex-col md:flex-row">
+    <div data-surface="admin" className="admin-surface flex min-h-screen flex-col md:flex-row">
       <AdminSidebar
         email={admin.email}
         logout={

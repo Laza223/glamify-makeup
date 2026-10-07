@@ -4,6 +4,49 @@
 
 @layer base {
   :root {
+    /* === Glamify — Cartel de feria (rediseño 2026-10, ADR 0003) === */
+    --background: 0 0% 100%; /* blanco */
+    --foreground: 0 0% 10%; /* marcador #1A1A1A */
+
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 10%;
+
+    --primary: 330 81% 48%; /* tinta rosa #E0177A (blanco encima 4,59:1) */
+    --primary-hover: 328 100% 39%; /* #C8006A */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 334 100% 91%; /* cartulina rosa #FFD3E6 */
+    --secondary-foreground: 0 0% 10%;
+
+    --accent: 326 100% 36%; /* rosa para texto sobre cartulina #B80068 */
+    --accent-foreground: 0 0% 100%;
+
+    --muted: 336 100% 97%; /* #FFF0F6 */
+    --muted-foreground: 330 10% 39%; /* #6E5A64: 6,35:1 en blanco, 4,75:1 en cartulina */
+
+    --destructive: 0 72% 42%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 150 61% 30%; /* #1E7A4C */
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 28 80% 16%;
+
+    --border: 333 54% 89%; /* #F2D3E1 */
+    --input: 331 20% 58%; /* #A97F93: borde de control 3,42:1 */
+    --ring: 330 81% 48%;
+
+    --surface-alt: 330 100% 98%; /* #FFF7FB */
+
+    --radius: 0.875rem;
+    --ff-sans: var(--font-figtree);
+    --ff-display: var(--font-shantell);
+  }
+
+  /* Admin: conserva el sistema anterior (ADR 0003). El storefront nunca depende de :has(). */
+  :root:has([data-surface="admin"]) {
     /* === Glamify Makeup — Warm Editorial Luxury Tokens === */
     --background: 35 40% 98%; /* #FBF9F6 Warm Alabaster */
     --foreground: 24 8% 8%; /* #161413 Deep Espresso */
@@ -41,6 +84,8 @@
     --surface-alt: 330 20% 98%;
 
     --radius: 0.75rem;
+    --ff-sans: var(--font-nunito);
+    --ff-display: var(--font-playfair);
   }
 }
 

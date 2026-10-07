@@ -13,7 +13,7 @@ export function Logo({ size = "md", className, showSubtitle = true }: LogoProps)
       <div className="relative inline-flex items-center">
         <span
           className={cn(
-            "font-display tracking-[0.16em] font-bold text-foreground transition-colors",
+            "font-logo tracking-[0.16em] font-bold text-foreground transition-colors",
             size === "sm" && "text-xl md:text-2xl",
             size === "md" && "text-2xl md:text-3xl",
             size === "lg" && "text-3xl md:text-4xl",
@@ -41,7 +41,7 @@ export function Logo({ size = "md", className, showSubtitle = true }: LogoProps)
       {showSubtitle && (
         <span
           className={cn(
-            "font-sans font-bold tracking-[0.38em] uppercase text-primary transition-colors pl-[0.38em]",
+            "font-[family-name:var(--font-nunito)] font-bold tracking-[0.38em] uppercase text-primary transition-colors pl-[0.38em]",
             size === "sm" && "text-[8px] mt-0.5",
             size === "md" && "text-[10px] mt-1",
             size === "lg" && "text-xs mt-1.5",

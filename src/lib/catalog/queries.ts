@@ -115,3 +115,13 @@ export async function getNewestProducts(limit = 8): Promise<CatalogProduct[]> {
   });
   return rows.map(toCatalogProduct);
 }
+
+/** Todos los productos activos, recientes primero (catálogo chico: la home calcula precio piso y vidriera). */
+export async function getActiveProducts(): Promise<CatalogProduct[]> {
+  const rows = await prisma.product.findMany({
+    where: { active: true, deletedAt: null },
+    include: PRODUCT_INCLUDE,
+    orderBy: { createdAt: "desc" },
+  });
+  return rows.map(toCatalogProduct);
+}
