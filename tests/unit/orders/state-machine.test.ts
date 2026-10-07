@@ -15,6 +15,13 @@ describe("canTransition", () => {
     expect(canTransition("pending_payment", "cancelled")).toBe(true);
     expect(canTransition("paid", "refunded")).toBe(true);
   });
+  it("reembolso después de enviar (arrepentimiento / devolución)", () => {
+    expect(canTransition("preparing", "refunded")).toBe(true);
+    expect(canTransition("shipped", "refunded")).toBe(true);
+    expect(canTransition("delivered", "refunded")).toBe(true);
+    expect(canTransition("refunded", "delivered")).toBe(false);
+    expect(canTransition("cancelled", "refunded")).toBe(false);
+  });
   it("rechaza saltos inválidos", () => {
     expect(canTransition("pending_payment", "shipped")).toBe(false);
     expect(canTransition("delivered", "paid")).toBe(false);
