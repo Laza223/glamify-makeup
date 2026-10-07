@@ -4,8 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { ShoppingBag, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { formatARS } from "@/lib/money";
+import { formatPrice } from "@/lib/money";
 import { productImageUrl } from "@/lib/images";
 import { useCartUI } from "@/components/cart/cart-provider";
 import { addToCartAction } from "@/app/(storefront)/actions";
@@ -70,15 +69,15 @@ export function MobileStickyBuyBar({
 
   return (
     <div
-      className={`fixed bottom-14 left-0 right-0 z-20 border-t border-border/80 bg-white/95 backdrop-blur-md p-3 shadow-soft-lg transition-transform duration-300 md:hidden ${
+      className={`fixed bottom-14 left-0 right-0 z-20 border-t border-border bg-white/95 px-4 py-3 shadow-[0_-8px_24px_-12px_rgb(0_0_0/0.18)] backdrop-blur-md transition-transform duration-300 md:hidden ${
         visible ? "translate-y-0 opacity-100" : "translate-y-full opacity-0 pointer-events-none"
       }`}
     >
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="relative size-11 shrink-0 overflow-hidden rounded-xl bg-secondary border border-border/60">
+          <div className="relative size-12 shrink-0 overflow-hidden rounded-xl bg-muted">
             {imgUrl ? (
-              <Image src={imgUrl} alt={productName} fill className="object-cover" />
+              <Image src={imgUrl} alt="" fill sizes="48px" className="object-cover" />
             ) : (
               <div className="grid h-full w-full place-items-center text-xs font-bold text-muted-foreground">
                 G
@@ -86,29 +85,25 @@ export function MobileStickyBuyBar({
             )}
           </div>
           <div className="min-w-0">
-            <h4 className="truncate text-xs font-bold text-foreground">{productName}</h4>
-            <p className="text-xs font-bold text-foreground">
-              {formatARS(price)}
+            <p className="truncate text-[14px] font-semibold text-foreground">{productName}</p>
+            <p className="text-[16px] font-bold tabular-nums text-foreground">
+              {formatPrice(price)}
               {activeVariant && (
-                <span className="ml-1.5 font-normal text-muted-foreground">({activeVariant.name})</span>
+                <span className="ml-1.5 text-[14px] font-normal text-muted-foreground">{activeVariant.name}</span>
               )}
             </p>
           </div>
         </div>
 
-        <Button
-          size="sm"
+        <button
+          type="button"
           onClick={handleQuickAdd}
           disabled={pending || outOfStock}
-          className="shrink-0 rounded-xl px-4 py-2 bg-[#161413] text-white text-xs font-bold"
+          className="inline-flex h-11 shrink-0 items-center gap-2 rounded-2xl bg-foreground px-5 text-[15px] font-semibold text-white transition active:scale-[0.97] disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          {pending ? (
-            <Loader2 className="size-4 animate-spin" />
-          ) : (
-            <ShoppingBag className="size-3.5" />
-          )}
-          <span>{outOfStock ? "Agotado" : "Comprar"}</span>
-        </Button>
+          {pending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <ShoppingBag className="size-4" aria-hidden />}
+          <span>{outOfStock ? "Sin stock" : "Agregar"}</span>
+        </button>
       </div>
     </div>
   );

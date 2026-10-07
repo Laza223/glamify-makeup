@@ -59,7 +59,7 @@ const config: Config = {
         "2xl": "1rem", // cards ~16px (blueprint 02 §4)
       },
       fontFamily: {
-        // --ff-* los resuelve globals.css: storefront (Figtree/Shantell) vs admin (Nunito/Playfair).
+        // --ff-* los resuelve globals.css (storefront y admin usan Nunito Sans + Playfair Display).
         sans: ["var(--ff-sans)", "system-ui", "sans-serif"],
         display: ["var(--ff-display)", "system-ui", "sans-serif"],
         // El logo actual es fijo (marca): siempre Playfair.

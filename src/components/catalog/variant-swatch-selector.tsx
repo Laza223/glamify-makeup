@@ -75,22 +75,17 @@ export function VariantSwatchSelector({
 
   return (
     <div>
-      <div className="mb-2 flex items-center justify-between">
-        <span className="text-sm font-medium">
-          Tono: <span className="text-muted-foreground">{selected?.name}</span>
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <span className="text-[16px] font-bold text-foreground">
+          Tono: <span className="font-normal text-muted-foreground">{selected?.name}</span>
         </span>
-        {selected && (
-          <StockBadge state={getStockState(selected)} stock={selected.stock} />
-        )}
+        {selected && <StockBadge state={getStockState(selected)} stock={selected.stock} />}
       </div>
-      <div
-        className="flex flex-wrap gap-2"
-        role="radiogroup"
-        aria-label="Elegí un tono"
-      >
+      <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Elegí un tono">
         {variants.map((v, i) => {
           const out = v.stock <= 0;
           const isSelected = v.id === selected?.id;
+          const hex = v.swatchHex;
           return (
             <button
               key={v.id}
@@ -101,32 +96,32 @@ export function VariantSwatchSelector({
               role="radio"
               aria-checked={isSelected}
               aria-label={`${v.name}${out ? " (sin stock)" : ""}`}
+              title={v.name}
               disabled={out}
               // Roving tabindex: un único tab-stop (el tono seleccionado); el resto se alcanza con flechas.
               tabIndex={isSelected && !out ? 0 : -1}
               onClick={() => select(v)}
               onKeyDown={(e) => onKeyDown(e, i)}
               className={cn(
-                "shadow-xs relative flex size-11 items-center justify-center rounded-full border-2 bg-white transition active:scale-[0.97]",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
-                isSelected
-                  ? "border-primary ring-1 ring-primary"
-                  : "border-border/80 text-foreground/80 hover:border-neutral-400",
-                out && "cursor-not-allowed bg-neutral-100 opacity-40",
+                "relative transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 active:scale-95",
+                // Con color cargado: círculo del tono. Sin color: píldora con el nombre.
+                hex
+                  ? cn(
+                      "size-11 rounded-full border border-black/10 ring-offset-2",
+                      isSelected ? "ring-2 ring-foreground" : "hover:ring-2 hover:ring-border",
+                    )
+                  : cn(
+                      "inline-flex min-h-11 items-center rounded-full border px-4 text-[15px] font-semibold",
+                      isSelected ? "border-foreground bg-foreground text-white" : "border-border bg-white text-foreground hover:border-foreground",
+                    ),
+                out && "cursor-not-allowed opacity-40",
               )}
+              style={hex ? { backgroundColor: hex } : undefined}
             >
-              {isSelected ? (
-                <Check className="size-5 stroke-[3] text-primary" aria-hidden />
+              {hex ? (
+                isSelected && <Check className="mx-auto size-5 stroke-[3] text-white mix-blend-difference" aria-hidden />
               ) : (
-                <span className="text-xs font-semibold text-foreground/80">
-                  {v.name.replace(/^tono\s*/i, "").trim() || v.name.charAt(0)}
-                </span>
-              )}
-              {out && (
-                <span
-                  className="absolute inset-x-0 top-1/2 h-0.5 -rotate-45 bg-foreground/60"
-                  aria-hidden
-                />
+                <span className={cn(out && "line-through")}>{v.name}</span>
               )}
             </button>
           );

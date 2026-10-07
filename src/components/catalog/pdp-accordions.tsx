@@ -1,46 +1,37 @@
-import { Sparkles, Truck, ChevronDown } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 
 interface PdpAccordionsProps {
   description?: string | null;
 }
 
+const SUMMARY =
+  "flex min-h-12 cursor-pointer select-none list-none items-center justify-between text-[16px] font-bold text-foreground [&::-webkit-details-marker]:hidden";
+
 export function PdpAccordions({ description }: PdpAccordionsProps) {
   return (
-    <div className="divide-y divide-border/80 border-y border-border/80 text-sm">
-      {/* 1. Descripción */}
-      <details className="group py-3.5" open>
-        <summary className="flex cursor-pointer select-none list-none items-center justify-between font-sans text-sm font-semibold text-foreground">
-          <span className="flex items-center gap-2">
-            <Sparkles className="size-4 text-primary" />
-            <span>Descripción</span>
-          </span>
-          <ChevronDown className="size-4 text-muted-foreground transition-transform duration-200 group-open:rotate-180" />
+    <div className="divide-y divide-border border-y border-border">
+      <details className="group py-1" open>
+        <summary className={SUMMARY}>
+          Descripción
+          <ChevronDown className="size-5 text-muted-foreground transition-transform duration-300 group-open:rotate-180" aria-hidden />
         </summary>
-        <div className="mt-3 text-xs leading-relaxed text-muted-foreground sm:text-sm">
-          <p className="whitespace-pre-line">
-            {description ||
-              "Si tenés dudas sobre este producto, escribinos por WhatsApp."}
-          </p>
-        </div>
+        <p className="whitespace-pre-line pb-4 text-[16px] leading-relaxed text-muted-foreground">
+          {description || "¿Tenés dudas sobre este producto? Escribinos por WhatsApp y te contamos todo."}
+        </p>
       </details>
-
-      {/* 2. Envíos y Medios de Pago */}
-      <details className="group py-3.5">
-        <summary className="flex cursor-pointer select-none list-none items-center justify-between font-sans text-sm font-semibold text-foreground">
-          <span className="flex items-center gap-2">
-            <Truck className="size-4 text-primary" />
-            <span>Envíos & Medios de Pago</span>
-          </span>
-          <ChevronDown className="size-4 text-muted-foreground transition-transform duration-200 group-open:rotate-180" />
+      <details className="group py-1">
+        <summary className={SUMMARY}>
+          Envíos y medios de pago
+          <ChevronDown className="size-5 text-muted-foreground transition-transform duration-300 group-open:rotate-180" aria-hidden />
         </summary>
-        <div className="mt-3 space-y-2 text-xs leading-relaxed text-muted-foreground sm:text-sm">
+        <div className="space-y-2 pb-4 text-[16px] leading-relaxed text-muted-foreground">
           <p>
-            <strong>Envío a todo el país:</strong> Envíos a domicilio y a
-            sucursal vía Correo Argentino, con número de seguimiento.
+            <strong className="text-foreground">Envío a todo el país:</strong> a domicilio o a sucursal con Correo
+            Argentino, con número de seguimiento.
           </p>
           <p>
-            <strong>Medios de pago:</strong> Tarjetas de crédito, débito y
-            dinero en cuenta a través de Mercado Pago.
+            <strong className="text-foreground">Medios de pago:</strong> tarjeta de crédito, débito o dinero en cuenta con
+            Mercado Pago.
           </p>
         </div>
       </details>

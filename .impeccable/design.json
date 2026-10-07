@@ -1,292 +1,47 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-07T15:13:36.438Z",
+  "generatedAt": "2026-10-07T00:00:00.000Z",
   "title": "Design System: Glamify Makeup",
   "extensions": {
     "colorMeta": {
-      "tinta-rosa": {
-        "role": "primary",
-        "displayName": "Tinta Rosa",
-        "canonical": "#E0177A",
-        "tonalRamp": [
-          "#450726",
-          "#7D0D45",
-          "#B41363",
-          "#E71D82",
-          "#ED54A1",
-          "#F38CBF",
-          "#F8BAD9",
-          "#FDE8F2"
-        ]
-      },
-      "tinta-rosa-hover": {
-        "role": "primary",
-        "displayName": "Tinta Rosa Profunda",
-        "canonical": "#C7006A",
-        "tonalRamp": [
-          "#4D0029",
-          "#8A0049",
-          "#C7006A",
-          "#FF058A",
-          "#FF42A7",
-          "#FF80C3",
-          "#FFB3DB",
-          "#FFE5F3"
-        ]
-      },
-      "rosa-texto": {
-        "role": "primary",
-        "displayName": "Rosa de Texto",
-        "canonical": "#B80068",
-        "tonalRamp": [
-          "#4D002B",
-          "#8A004E",
-          "#C70071",
-          "#FF0593",
-          "#FF42AD",
-          "#FF80C8",
-          "#FFB3DE",
-          "#FFE5F4"
-        ]
-      },
-      "cartulina": {
-        "role": "secondary",
-        "displayName": "Cartulina",
-        "canonical": "#FFD3E6",
-        "tonalRamp": [
-          "#4D0021",
-          "#8A003C",
-          "#C70056",
-          "#FF0571",
-          "#FF4294",
-          "#FF80B7",
-          "#FFB3D4",
-          "#FFE5F1"
-        ]
-      },
-      "background": {
-        "role": "neutral",
-        "displayName": "Blanco",
-        "canonical": "#FFFFFF",
-        "tonalRamp": [
-          "#262626",
-          "#454545",
-          "#636363",
-          "#828282",
-          "#A1A1A1",
-          "#BFBFBF",
-          "#D9D9D9",
-          "#F2F2F2"
-        ]
-      },
-      "marker": {
-        "role": "neutral",
-        "displayName": "Marcador",
-        "canonical": "#1A1A1A",
-        "tonalRamp": [
-          "#262626",
-          "#454545",
-          "#636363",
-          "#828282",
-          "#A1A1A1",
-          "#BFBFBF",
-          "#D9D9D9",
-          "#F2F2F2"
-        ]
-      },
-      "rosa-suave": {
-        "role": "neutral",
-        "displayName": "Rosa Suave",
-        "canonical": "#FFF0F6",
-        "tonalRamp": [
-          "#4D001F",
-          "#8A0037",
-          "#C70050",
-          "#FF0569",
-          "#FF428E",
-          "#FF80B3",
-          "#FFB3D1",
-          "#FFE5F0"
-        ]
-      },
-      "surface-alt": {
-        "role": "neutral",
-        "displayName": "Rosa Papel",
-        "canonical": "#FFF7FB",
-        "tonalRamp": [
-          "#4D0026",
-          "#8A0045",
-          "#C70063",
-          "#FF0582",
-          "#FF42A1",
-          "#FF80BF",
-          "#FFB3D9",
-          "#FFE5F2"
-        ]
-      },
-      "muted-text": {
-        "role": "neutral",
-        "displayName": "Gris Malva",
-        "canonical": "#6E5A64",
-        "tonalRamp": [
-          "#2A2226",
-          "#4C3E45",
-          "#6D5A63",
-          "#8F7682",
-          "#AA97A1",
-          "#C6B9BF",
-          "#DDD5D9",
-          "#F4F1F2"
-        ]
-      },
-      "border-rosado": {
-        "role": "neutral",
-        "displayName": "Borde Rosado",
-        "canonical": "#F2D3E1",
-        "tonalRamp": [
-          "#3B1224",
-          "#6A2041",
-          "#992E5E",
-          "#C63F7B",
-          "#D46E9C",
-          "#E29DBC",
-          "#EDC4D7",
-          "#F9EBF2"
-        ]
-      },
-      "control-border": {
-        "role": "neutral",
-        "displayName": "Borde de Control",
-        "canonical": "#A97F93",
-        "tonalRamp": [
-          "#2E1F26",
-          "#533744",
-          "#775063",
-          "#9B6981",
-          "#B48EA0",
-          "#CCB3BF",
-          "#E0D1D8",
-          "#F5F0F2"
-        ]
-      },
-      "success": {
-        "role": "state",
-        "displayName": "Éxito",
-        "canonical": "#1E7A4C",
-        "tonalRamp": [
-          "#0F3E26",
-          "#1B6F45",
-          "#27A063",
-          "#36CE82",
-          "#67DAA1",
-          "#98E6BF",
-          "#C1F0D9",
-          "#EAFAF2"
-        ]
-      },
-      "error": {
-        "role": "state",
-        "displayName": "Error",
-        "canonical": "#B81E1E",
-        "tonalRamp": [
-          "#420B0B",
-          "#761313",
-          "#AB1C1C",
-          "#DC2828",
-          "#E55D5D",
-          "#ED9191",
-          "#F4BDBD",
-          "#FBE9E9"
-        ]
-      }
+      "primary": { "role": "primary", "displayName": "Rosa Glamify", "canonical": "#E6007A", "tonalRamp": ["#3D0020", "#660035", "#8F004A", "#B80062", "#E6007A", "#FF4FA3", "#FF9CCB", "#FFE0EF"] },
+      "primary-hover": { "role": "primary", "displayName": "Rosa profundo", "canonical": "#C20067", "tonalRamp": ["#3D0020", "#660035", "#8F004A", "#C20067", "#E6007A", "#FF4FA3", "#FF9CCB", "#FFE0EF"] },
+      "pink-on-black": { "role": "primary", "displayName": "Rosa sobre negro", "canonical": "#FF4FA3", "tonalRamp": ["#3D0020", "#660035", "#B80062", "#E6007A", "#FF4FA3", "#FF7BB8", "#FF9CCB", "#FFE0EF"] },
+      "ink": { "role": "neutral", "displayName": "Negro cálido", "canonical": "#161413", "tonalRamp": ["#161413", "#2E2B2A", "#474442", "#615E5C", "#7C7977", "#A09D9B", "#CFCDCC", "#F1F0F0"] },
+      "white": { "role": "neutral", "displayName": "Blanco", "canonical": "#FFFFFF", "tonalRamp": ["#E6E6E6", "#EEEEEE", "#F2F2F2", "#F6F6F6", "#F9F9F9", "#FBFBFB", "#FDFDFD", "#FFFFFF"] },
+      "porcelain": { "role": "neutral", "displayName": "Porcelana", "canonical": "#FBF6F8", "tonalRamp": ["#E3DCDF", "#EAE2E5", "#EFE8EB", "#F3EDEF", "#F6F1F3", "#FAF5F7", "#FBF6F8", "#FDFBFC"] },
+      "photo-ground": { "role": "neutral", "displayName": "Fondo de foto", "canonical": "#F7F4F5", "tonalRamp": ["#DEDADB", "#E5E1E2", "#EBE7E8", "#EFEBEC", "#F2EFF0", "#F5F2F3", "#F7F4F5", "#FBFAFA"] },
+      "hairline": { "role": "neutral", "displayName": "Hilo", "canonical": "#ECE6E9", "tonalRamp": ["#A59FA2", "#B7B1B4", "#C8C2C5", "#D7D1D4", "#E1DBDE", "#E8E2E5", "#ECE6E9", "#F5F2F3"] },
+      "control-border": { "role": "neutral", "displayName": "Borde de control", "canonical": "#8C8689", "tonalRamp": ["#2E2B2C", "#474446", "#5F5B5D", "#767274", "#8C8689", "#A9A4A6", "#C7C3C5", "#E6E4E5"] },
+      "muted-text": { "role": "neutral", "displayName": "Texto atenuado", "canonical": "#666666", "tonalRamp": ["#1F1F1F", "#333333", "#4A4A4A", "#666666", "#808080", "#9E9E9E", "#C4C4C4", "#EBEBEB"] }
     },
     "typographyMeta": {
-      "cartel": {
-        "displayName": "Cartel",
-        "purpose": "Bueno./Bonito./Barato. del hero, mismo tamaño las tres. Shantell Sans."
-      },
-      "headline": {
-        "displayName": "Headline",
-        "purpose": "Títulos de sección y placas de marca. Shantell Sans."
-      },
-      "title": {
-        "displayName": "Title",
-        "purpose": "Nombre de producto en la tarjeta. Figtree."
-      },
-      "body": {
-        "displayName": "Body",
-        "purpose": "Texto corrido, mínimo 16px. Figtree."
-      },
-      "price": {
-        "displayName": "Price",
-        "purpose": "Precio en etiqueta colgante, cifras tabulares. Figtree."
-      },
-      "label": {
-        "displayName": "Label",
-        "purpose": "Anuncio, rótulos de categoría y navegación. Figtree."
-      }
+      "display": { "displayName": "Display", "purpose": "Título del bloque de regalos; una palabra acento en itálica real." },
+      "display-accent": { "displayName": "Palabra acento", "purpose": "La palabra en itálica 500 y rosa dentro de un título Playfair: la voz del ¡Hola!." },
+      "headline": { "displayName": "Headline", "purpose": "Títulos de sección del storefront (SectionTitle)." },
+      "title": { "displayName": "Title", "purpose": "Títulos de paso y precios." },
+      "body": { "displayName": "Body", "purpose": "Párrafos de lectura, 16px mínimo." },
+      "ui": { "displayName": "UI", "purpose": "Botones, chips, nombres de producto, navegación." },
+      "label": { "displayName": "Label", "purpose": "Solo la marca detectada en la tarjeta de producto." }
     },
     "shadows": [
-      {
-        "name": "placa",
-        "value": "0 6px 16px -6px hsl(326 100% 36% / 0.3)",
-        "purpose": "Carteles y placas de marca: offset suave, nunca bloque duro."
-      },
-      {
-        "name": "etiqueta",
-        "value": "0 2px 6px -2px rgb(110 10 60 / 0.35)",
-        "purpose": "Etiqueta de precio colgante."
-      },
-      {
-        "name": "menu",
-        "value": "0 8px 24px -12px rgb(110 10 60 / 0.25)",
-        "purpose": "Submenú de categorías."
-      },
-      {
-        "name": "boton-mas",
-        "value": "0 3px 8px -3px rgb(224 23 122 / 0.6)",
-        "purpose": "Botón + circular de agregar."
-      },
-      {
-        "name": "control-flotante",
-        "value": "0 2px 6px -2px rgb(0 0 0 / 0.18)",
-        "purpose": "Corazón de favoritos sobre la foto."
-      }
+      { "name": "on-photo", "value": "0 2px 6px -2px rgb(0 0 0 / 0.18)", "purpose": "Corazón de favoritos flotando sobre la foto." },
+      { "name": "quick-add", "value": "0 3px 8px -3px rgb(224 23 122 / 0.6)", "purpose": "Botón + cerrado sobre la foto." },
+      { "name": "menu", "value": "0 8px 24px -12px rgb(110 10 60 / 0.25)", "purpose": "Submenú desplegable de categorías." },
+      { "name": "gift-card-fan", "value": "0 18px 40px -12px rgb(0 0 0 / 0.6)", "purpose": "Fotos del abanico sobre el bloque negro de regalos." }
     ],
     "motion": [
-      {
-        "name": "tag-swing",
-        "value": "0.9s cubic-bezier(0.22, 1, 0.36, 1) both; rotate -3deg, -14deg, 5deg, -6deg, -2deg, -3deg; origin 14px 6px",
-        "purpose": "Firma: la etiqueta de precio se balancea una vez desde su agujero al agregar."
-      },
-      {
-        "name": "count-bump",
-        "value": "0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both; scale 1, 1.35, 0.92, 1",
-        "purpose": "Firma: el contador del carrito rebota con masa al sumar."
-      },
-      {
-        "name": "reduced-motion",
-        "value": "animation-duration and transition-duration 0.01ms under prefers-reduced-motion: reduce",
-        "purpose": "Mata ambas firmas."
-      }
+      { "name": "ease-out-soft", "value": "cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "Entradas y apariciones." },
+      { "name": "ease-spring", "value": "cubic-bezier(0.34, 1.56, 0.64, 1)", "purpose": "Latido del corazón y rebote del contador del carrito." },
+      { "name": "heart-pop", "value": "0.4s", "purpose": "Corazón: solo cuando ella lo marca." },
+      { "name": "count-bump", "value": "0.45s", "purpose": "Contador del carrito al sumar." },
+      { "name": "marquee", "value": "40s linear infinite", "purpose": "Tira de marcas; pausa con hover o foco." },
+      { "name": "reveal", "value": "scroll-driven, entry 0% a 35%", "purpose": "Aparición de secciones de estantería; reveal-scale en el bloque de regalos." }
     ],
     "breakpoints": [
-      {
-        "name": "sm",
-        "value": "640px"
-      },
-      {
-        "name": "md",
-        "value": "768px"
-      },
-      {
-        "name": "lg",
-        "value": "1024px"
-      },
-      {
-        "name": "2xl",
-        "value": "1440px (container max)"
-      }
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" },
+      { "name": "2xl", "value": "1440px" }
     ]
   },
   "components": [
@@ -294,137 +49,105 @@
       "name": "Primary Button",
       "kind": "button",
       "refersTo": "button-primary",
-      "description": "CTA único de la vista, p. ej. Ver la tienda.",
-      "html": "<button class=\"ds-btn-primary\">Ver la tienda</button>",
-      "css": ".ds-btn-primary{display:inline-flex;align-items:center;justify-content:center;height:48px;padding:0 32px;border:0;border-radius:14px;background:#E0177A;color:#fff;font:600 16px Figtree,system-ui,sans-serif;cursor:pointer;transition:background-color .2s}.ds-btn-primary:hover{background:#C7006A}.ds-btn-primary:focus-visible{outline:none;box-shadow:0 0 0 2px #fff,0 0 0 4px #E0177A;}"
+      "description": "CTA principal: negro, esquinas de 16px, 48px de alto.",
+      "html": "<button class=\"ds-btn-primary\">Explorar catálogo</button>",
+      "css": ".ds-btn-primary { height: 48px; padding: 0 28px; border: 0; border-radius: 16px; background: #161413; color: #fff; font-family: 'Nunito Sans', system-ui, sans-serif; font-size: 15px; font-weight: 600; cursor: pointer; transition: background 0.2s, transform 0.2s; } .ds-btn-primary:hover { background: rgb(22 20 19 / 0.85); } .ds-btn-primary:active { transform: scale(0.98); } .ds-btn-primary:focus-visible { outline: 2px solid #E6007A; outline-offset: 2px; }"
     },
     {
-      "name": "Cartel",
-      "kind": "custom",
-      "refersTo": "cartel",
-      "description": "Placa blanca inclinada de la triple B con su prueba real.",
-      "html": "<div class=\"ds-cartel\"><p class=\"ds-cartel-word\">Barato.</p><p class=\"ds-cartel-proof\">desde<span>$4.500</span></p></div>",
-      "css": ".ds-cartel{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-radius:14px;background:#fff;box-shadow:0 6px 16px -6px rgba(184,0,104,.3);transform:rotate(-.75deg);width:320px}.ds-cartel-word{margin:0;font:600 34px/1 'Shantell Sans',system-ui,sans-serif;letter-spacing:-.025em;color:#1A1A1A}.ds-cartel-proof{margin:0;text-align:right;font:500 15px/1.3 Figtree,system-ui,sans-serif;color:#6E5A64}.ds-cartel-proof span{display:block;color:#1A1A1A;font-variant-numeric:tabular-nums}"
-    },
-    {
-      "name": "Hanging Tag",
-      "kind": "custom",
-      "refersTo": "hanging-tag",
-      "description": "Etiqueta de precio colgante con agujero e hilo; reposa a -3°.",
-      "html": "<span class=\"ds-tag-wrap\"><span class=\"ds-tag-nail\"></span><span class=\"ds-tag-thread\"></span><span class=\"ds-tag\"><span class=\"ds-tag-hole\"></span>$12.900</span></span>",
-      "css": ".ds-tag-wrap{display:inline-flex;flex-direction:column;align-items:flex-start;margin-left:12px}.ds-tag-nail{width:5px;height:5px;margin-left:11px;border-radius:50%;background:rgba(26,26,26,.7)}.ds-tag-thread{width:1px;height:10px;margin:-1px 0 0 13px;background:rgba(26,26,26,.6)}.ds-tag{position:relative;display:inline-flex;align-items:center;padding:4px 10px 4px 24px;border-radius:6px;background:#fff;color:#1A1A1A;font:700 15px/1.25 Figtree,system-ui,sans-serif;font-variant-numeric:tabular-nums;transform:rotate(-3deg);transform-origin:14px 6px;box-shadow:0 2px 6px -2px rgba(110,10,60,.35)}.ds-tag-hole{position:absolute;left:8px;top:50%;width:8px;height:8px;margin-top:-4px;border-radius:50%;border:1px solid rgba(26,26,26,.5);background:#FFF0F6}"
+      "name": "Button On Black",
+      "kind": "button",
+      "refersTo": "button-on-black",
+      "description": "CTA rosa sobre el bloque negro de regalos.",
+      "html": "<div class=\"ds-on-black\"><button class=\"ds-btn-pink\">Armar mi regalo</button></div>",
+      "css": ".ds-on-black { background: #161413; padding: 24px; border-radius: 24px; } .ds-btn-pink { height: 48px; padding: 0 28px; border: 0; border-radius: 16px; background: #E6007A; color: #fff; font-family: 'Nunito Sans', system-ui, sans-serif; font-size: 15px; font-weight: 600; cursor: pointer; transition: background 0.2s; } .ds-btn-pink:hover { background: #C20067; } .ds-btn-pink:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }"
     },
     {
       "name": "Quick Add",
-      "kind": "button",
+      "kind": "custom",
       "refersTo": "quick-add",
-      "description": "Botón + circular de 44 px sobre la foto del producto.",
-      "html": "<button class=\"ds-quick-add\" aria-label=\"Agregar al carrito\"><svg viewBox=\"0 0 24 24\" width=\"20\" height=\"20\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\" aria-hidden=\"true\"><path d=\"M12 5v14M5 12h14\"/></svg></button>",
-      "css": ".ds-quick-add{display:grid;place-items:center;width:44px;height:44px;border:0;border-radius:9999px;background:#E0177A;color:#fff;cursor:pointer;box-shadow:0 3px 8px -3px rgba(224,23,122,.6);transition:background-color .2s,transform .15s}.ds-quick-add:hover{background:#C7006A}.ds-quick-add:active{transform:scale(.95)}.ds-quick-add:focus-visible{outline:none;box-shadow:0 0 0 2px #fff,0 0 0 4px #E0177A;}"
+      "description": "Botón + circular rosa que se abre en stepper en la tarjeta de producto.",
+      "html": "<button class=\"ds-plus\" aria-label=\"Agregar al carrito\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\"><path d=\"M12 5v14M5 12h14\"/></svg></button>",
+      "css": ".ds-plus { display: grid; place-items: center; width: 44px; height: 44px; border: 0; border-radius: 9999px; background: #E6007A; color: #fff; box-shadow: 0 3px 8px -3px rgb(224 23 122 / 0.6); cursor: pointer; transition: background 0.2s, transform 0.2s; } .ds-plus:hover { background: #C20067; } .ds-plus:active { transform: scale(0.95); } .ds-plus:focus-visible { outline: 2px solid #E6007A; outline-offset: 1px; }"
     },
     {
-      "name": "Brand Plate",
+      "name": "Category Chip",
       "kind": "chip",
-      "refersTo": "brand-plate",
-      "description": "Placa de cartulina por marca, inclinada, lleva a sus productos.",
-      "html": "<a class=\"ds-brand\" href=\"#\">TEI</a>",
-      "css": ".ds-brand{display:inline-flex;align-items:center;min-height:48px;padding:0 20px;border-radius:14px;background:#FFD3E6;color:#1A1A1A;text-decoration:none;font:600 22px 'Shantell Sans',system-ui,sans-serif;transform:rotate(-1.5deg);box-shadow:0 6px 16px -8px rgba(184,0,104,.35);transition:background-color .2s,color .2s}.ds-brand:hover{background:#E0177A;color:#fff}.ds-brand:focus-visible{outline:none;box-shadow:0 0 0 2px #fff,0 0 0 4px #E0177A;}"
+      "refersTo": "chip-off",
+      "description": "Chip de categoría: blanco con borde fino; el activo va en negro.",
+      "html": "<div class=\"ds-chips\"><a class=\"ds-chip ds-chip-on\" href=\"#\">Todo</a><a class=\"ds-chip\" href=\"#\">Labios</a></div>",
+      "css": ".ds-chips { display: flex; gap: 8px; } .ds-chip { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 20px; border: 1px solid #ECE6E9; border-radius: 9999px; background: #fff; color: #161413; font-family: 'Nunito Sans', system-ui, sans-serif; font-size: 15px; font-weight: 600; text-decoration: none; transition: border-color 0.2s, color 0.2s; } .ds-chip:hover { border-color: #E6007A; color: #C20067; } .ds-chip-on, .ds-chip-on:hover { border-color: #161413; background: #161413; color: #fff; } .ds-chip:focus-visible { outline: 2px solid #E6007A; outline-offset: 2px; }"
     },
     {
       "name": "Search Field",
       "kind": "input",
       "refersTo": "search-field",
-      "description": "Búsqueda en píldora de 44 px.",
-      "html": "<input class=\"ds-search\" type=\"search\" placeholder=\"Buscar productos\" />",
-      "css": ".ds-search{height:44px;width:260px;padding:0 16px;border:1px solid #A97F93;border-radius:9999px;background:#fff;color:#1A1A1A;font:400 16px Figtree,system-ui,sans-serif}.ds-search::placeholder{color:#6E5A64}.ds-search:focus-visible{border-color:#E0177A;outline:none;box-shadow:0 0 0 2px rgba(224,23,122,.3)}"
+      "description": "Búsqueda en píldora de 44px con borde de control.",
+      "html": "<label class=\"ds-search\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><circle cx=\"11\" cy=\"11\" r=\"7\"/><path d=\"m20 20-3.5-3.5\"/></svg><input type=\"search\" placeholder=\"Buscar productos\"></label>",
+      "css": ".ds-search { position: relative; display: block; width: 240px; color: #666; } .ds-search svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); } .ds-search input { box-sizing: border-box; width: 100%; height: 44px; padding: 0 16px 0 40px; border: 1px solid #8C8689; border-radius: 9999px; background: #fff; color: #161413; font-family: 'Nunito Sans', system-ui, sans-serif; font-size: 16px; } .ds-search input::placeholder { color: #666; } .ds-search input:focus-visible { outline: 2px solid rgb(230 0 122 / 0.3); border-color: #E6007A; }"
+    },
+    {
+      "name": "Product Card",
+      "kind": "card",
+      "refersTo": "quick-add",
+      "description": "Foto 4:5 radio 14, marca, nombre, precio; corazón y + sobre la foto.",
+      "html": "<article class=\"ds-card\"><div class=\"ds-card-photo\"><span class=\"ds-card-initial\">L</span></div><p class=\"ds-card-brand\">TEI</p><h3 class=\"ds-card-name\">Labial líquido mate</h3><p class=\"ds-card-price\">$6.500</p></article>",
+      "css": ".ds-card { width: 200px; font-family: 'Nunito Sans', system-ui, sans-serif; } .ds-card-photo { display: grid; place-items: center; aspect-ratio: 4 / 5; border-radius: 14px; background: #F7F4F5; } .ds-card-initial { font-family: 'Playfair Display', Georgia, serif; font-style: italic; font-size: 48px; color: rgb(230 0 122 / 0.5); } .ds-card-brand { margin: 12px 0 4px; font-size: 13px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #C20067; } .ds-card-name { margin: 0; font-size: 15px; font-weight: 600; line-height: 1.375; color: #161413; } .ds-card-price { margin: 4px 0 0; font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; color: #161413; }"
+    },
+    {
+      "name": "Section Title",
+      "kind": "custom",
+      "refersTo": "headline",
+      "description": "Título Playfair con una palabra acento en itálica rosa.",
+      "html": "<h2 class=\"ds-title\">Encontrá tu <em>must</em></h2>",
+      "css": ".ds-title { margin: 0; font-family: 'Playfair Display', Georgia, serif; font-size: 42px; font-weight: 400; line-height: 1.25; letter-spacing: -0.025em; color: #161413; } .ds-title em { font-style: italic; font-weight: 500; color: #E6007A; }"
     },
     {
       "name": "Announcement Bar",
       "kind": "nav",
       "refersTo": "announcement-bar",
-      "description": "Anuncio fijo de una línea con el umbral real de envío gratis.",
-      "html": "<p class=\"ds-announce\">Envío gratis desde $47.500</p>",
-      "css": ".ds-announce{margin:0;padding:6px 16px;background:#E0177A;color:#fff;text-align:center;font:600 13px/20px Figtree,system-ui,sans-serif}"
-    },
-    {
-      "name": "Category Pill",
-      "kind": "nav",
-      "refersTo": "category-nav",
-      "description": "Pill de categoría del header (md+); activa sobre cartulina.",
-      "html": "<a class=\"ds-pill\" href=\"#\">Labios</a><a class=\"ds-pill ds-pill-active\" href=\"#\">Ojos</a>",
-      "css": ".ds-pill{display:inline-flex;align-items:center;height:36px;padding:0 12px;border-radius:9999px;color:#1A1A1A;text-decoration:none;font:500 15px Figtree,system-ui,sans-serif;transition:background-color .2s,color .2s}.ds-pill:hover{background:#FFF0F6;color:#E0177A}.ds-pill-active{background:#FFD3E6;font-weight:600}.ds-pill:focus-visible{outline:none;box-shadow:0 0 0 2px #fff,0 0 0 4px #E0177A;}"
+      "description": "Barra negra de una línea con el umbral real de envío gratis.",
+      "html": "<p class=\"ds-announce\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#FF4FA3\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2\"/><path d=\"M15 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.62L16.5 10H14\"/><circle cx=\"17\" cy=\"18\" r=\"2\"/><circle cx=\"7\" cy=\"18\" r=\"2\"/></svg><span>Envío gratis desde $47.500</span></p>",
+      "css": ".ds-announce { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 0; padding: 6px 16px; background: #161413; color: #fff; font-family: 'Nunito Sans', system-ui, sans-serif; font-size: 13px; font-weight: 600; line-height: 20px; }"
     }
   ],
   "narrative": {
-    "northStar": "El cartel de feria",
-    "overview": "Glamify es el puesto prolijo de una feria de emprendedoras: carteles de cartulina escritos a mano con cuidado y etiquetas de precio colgantes sobre producto real. El sistema rechaza la plantilla boutique-lujo (serif, negro, destellos) y también la mesa de liquidación. Todo se apoya sobre blanco; la cartulina rosa es el campo que ocupa regiones enteras (hero, footer, banda de regalo); sobre ella se apoyan placas planas, ligeramente inclinadas, con una sombra suave desplazada hacia abajo. El precio nunca flota: cuelga de una etiqueta con agujero e hilo.\n\nLa voz visual es de papelería hecha con cuidado, no de arte de feria improvisado: una sola letra de marcador legible (Shantell Sans) reservada a carteles y títulos, y una sans prolija (Figtree) para todo lo que se lee o se toca. El rosa es tinta y cartulina, nunca brillo. No hay texturas de papel, cinta ni resplandor fingido: la materialidad es de plano + sombra suave + inclinación.\n\nLa triple B (\"Bueno, Bonito, Barato\") es la columna del mensaje y tiene su regla de forma: las tres palabras van al mismo tamaño y \"Barato.\" nunca va sin su prueba, el precio real. Sin vocabulario de oferta.",
+    "northStar": "Editorial glam",
+    "overview": "Glamify es una tienda de maquillaje con la estructura que cualquiera entiende (anuncio, header, hero, marcas, categorías, productos, regalos, cómo comprar, footer) y una voz propia en dos lugares: la tipografía y el copy. La voz tipográfica es Playfair Display con exactamente una palabra en itálica rosa, la misma que usa el \"¡Hola!\" del hero. La voz del copy es girly rioplatense, con voseo y sin humo.\n\nEl sistema es blanco, negro y un solo rosa. Las fotos reales de producto hacen el trabajo visual; el resto se queda quieto y limpio para que las fotos y los precios se lean. El mundo anterior (\"Cartel de feria\") fue rechazado por la dueña y no sobrevive en ningún lado.",
     "keyCharacteristics": [
-      "Blanco como base, cartulina rosa `#FFD3E6` como campo de región, tinta rosa para acción.",
-      "Placas planas de radio 14 px, inclinadas entre -1,5° y +1,5°, con sombra de offset suave.",
-      "Precio siempre en etiqueta colgante, Figtree con cifras tabulares.",
-      "Shantell Sans solo en carteles y títulos; Figtree en todo lo demás.",
-      "Fotos reales de producto como prueba; ninguna ilustración ni imagen generada.",
-      "Solo light mode; íconos Lucide; sin emojis."
+      "Un solo rosa (#E6007A), blanco y negro; sin pastel.",
+      "Playfair con una palabra acento en itálica real, Nunito Sans para todo lo demás.",
+      "Fotos reales en radio 14; categorías en círculo.",
+      "Negro para peso: CTAs principales, barra de anuncio, bloque de regalos.",
+      "Movimiento corto, siempre ligado a una acción o a un scroll, y anulado con prefers-reduced-motion.",
+      "Íconos Lucide, sin emojis."
     ],
     "rules": [
-      {
-        "name": "The Cartulina Is a Field Rule",
-        "body": "La cartulina cubre una región entera o no aparece; no se usa como acento suelto ni como texto. Cada pantalla tiene a lo sumo un campo de cartulina grande.",
-        "section": "colors"
-      },
-      {
-        "name": "The No Offer Vocabulary Rule",
-        "body": "Ni rojo, ni estrellas, ni \"OFERTA\", ni tachados salvo un `compareAtPrice` real. El rosa no señala descuento: señala acción.",
-        "section": "colors"
-      },
-      {
-        "name": "The Pink-For-Text Rule",
-        "body": "Texto rosa sobre blanco o cartulina usa Rosa de Texto (#B80068); Tinta Rosa solo como relleno con blanco encima.",
-        "section": "colors"
-      },
-      {
-        "name": "The Marker Is For Carteles Rule",
-        "body": "Shantell Sans solo en carteles y títulos (h1–h4 lo heredan por base). Botones, precios, navegación y cuerpo van en Figtree.",
-        "section": "typography"
-      },
-      {
-        "name": "The Tabular Price Rule",
-        "body": "Todo precio es Figtree con cifras tabulares, nunca en Shantell.",
-        "section": "typography"
-      },
-      {
-        "name": "The Triple-B Equal Size Rule",
-        "body": "\"Bueno.\", \"Bonito.\" y \"Barato.\" van al mismo tamaño y peso. \"Barato.\" nunca va solo ni más grande, y siempre lleva su prueba: el precio real (\"desde $X\" calculado de la base).",
-        "section": "typography"
-      },
-      {
-        "name": "The Soft Offset Rule",
-        "body": "Sombra con offset suave y spread negativo; sin bloque duro, sin blur de neón.",
-        "section": "elevation"
-      },
-      {
-        "name": "The No Fake Material Rule",
-        "body": "Sin textura de papel, cinta adhesiva, grano ni brillo simulado. La cartulina es color plano.",
-        "section": "elevation"
-      }
+      { "name": "The One Pink Rule", "body": "Hay un solo rosa de relleno (#E6007A). El rosa de texto chico es su versión profunda (#C20067) y el claro (#FF4FA3) existe solo sobre negro. Ningún rosa pastel, ningún degradé rosa para fondos de sección.", "section": "colors" },
+      { "name": "The Black For Weight Rule", "body": "Lo que tiene que pesar (CTA principal, barra de anuncio, chip activo, bloque de regalos) va en #161413. El rosa acompaña, no carga el peso.", "section": "colors" },
+      { "name": "The Porcelain Not Pastel Rule", "body": "La superficie suave es porcelana (#FBF6F8). Si una superficie se ve rosada a simple vista, está mal.", "section": "colors" },
+      { "name": "The Italic Accent Word Rule", "body": "Un título Playfair lleva exactamente una palabra (o una frase corta) en itálica real, peso 500, en rosa (#E6007A sobre blanco, #FF4FA3 sobre negro). Ni dos acentos en un título ni itálica fingida.", "section": "typography" },
+      { "name": "The Body Floor Rule", "body": "El cuerpo de lectura es 16px o más. El texto de UI de apoyo existe en 15, 14, 13 y 12px; no bajar de ahí.", "section": "typography" },
+      { "name": "The Targets Rule", "body": "Nada interactivo mide menos de 44px de alto o de ancho, aunque el ícono sea de 16px.", "section": "layout" },
+      { "name": "The Policies Stay Home Rule", "body": "Las políticas de cambio, arrepentimiento y devoluciones viven solo en sus páginas. No son argumento de venta en la home ni en el carrito.", "section": "layout" },
+      { "name": "The Flat At Rest Rule", "body": "Las superficies no llevan sombra en reposo; las sombras del vocabulario son excepciones nombradas.", "section": "elevation" },
+      { "name": "The Real Photos Only Rule", "body": "Solo fotos reales del catálogo o de la dueña. Nunca generar ni ilustrar productos, packaging, logos ni marcas.", "section": "shapes" }
     ],
     "dos": [
-      "**Do** poner el precio en una etiqueta colgante, Figtree 15/700 tabular, con el dato real de la base.",
-      "**Do** usar el mismo tamaño para Bueno., Bonito. y Barato., y acompañar \"Barato.\" con el \"desde $X\" real.",
-      "**Do** usar fotos reales de producto como prueba; mostrar el umbral de envío gratis y el plazo salidos de `Setting`.",
-      "**Do** mantener radio 14 px en placas, fotos y botones; inclinar placas entre -1,5° y +1,5°; usar la sombra de offset suave.",
-      "**Do** usar Rosa de Texto (#B80068) para texto rosa y Tinta Rosa (#E0177A) solo como relleno con blanco encima.",
-      "**Do** mantener targets ≥ 44 px, cuerpo ≥ 16 px, íconos Lucide y respetar `prefers-reduced-motion`.",
-      "**Do** dejar que los dos gestos de movimiento (balanceo de etiqueta, rebote del contador) sean los únicos con personalidad."
+      "Do usar #E6007A para rellenos, #C20067 para texto rosa chico y #FF4FA3 solo sobre negro.",
+      "Do poner exactamente una palabra acento en itálica rosa en cada título Playfair.",
+      "Do usar fotos reales con radio 14 y categorías en círculo.",
+      "Do mantener los targets en 44px o más y el cuerpo en 16px o más.",
+      "Do escribir copy girly rioplatense con voseo, con datos reales (umbral de envío, plazo de hasta 3 días hábiles).",
+      "Do usar íconos Lucide y respetar prefers-reduced-motion en todo movimiento nuevo."
     ],
     "donts": [
-      "**Don't** usar rojo, estrellas, \"OFERTA\", insignias de descuento o tachados sin un `compareAtPrice` real.",
-      "**Don't** hacer \"Barato.\" más grande o aislado que \"Bueno.\" y \"Bonito.\".",
-      "**Don't** usar Shantell Sans en precios, botones, navegación ni cuerpo.",
-      "**Don't** agregar textura de papel, cinta, brillos, destellos ni sombra dura de bloque.",
-      "**Don't** usar dark mode ni emojis como íconos.",
-      "**Don't** generar ni ilustrar productos, packaging o marcas: solo fotos reales o placeholders neutros.",
-      "**Don't** usar la cartulina como texto ni como acento suelto fuera de una región."
+      "Don't usar rosas pastel, cartulina, etiquetas colgadas, letra de marcador ni nada del mundo \"Cartel de feria\".",
+      "Don't agregar dark mode ni emojis como íconos.",
+      "Don't inventar urgencia, stock, \"más vendidos\", \"viral\", \"exclusivo\" ni testimonios.",
+      "Don't mencionar cambios, devoluciones o arrepentimiento fuera de sus páginas legales.",
+      "Don't ilustrar ni generar productos, packaging, logos o marcas.",
+      "Don't sumar una tercera tipografía ni una segunda palabra acento por título.",
+      "Don't reutilizar como regla de superficies nuevas lo que quedó heredado (ver abajo)."
     ]
   }
 }
