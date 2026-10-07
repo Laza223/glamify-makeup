@@ -13,7 +13,7 @@ interface FakeDbOpts {
 function makeFakeDb(opts: FakeDbOpts = {}) {
   const state = {
     order: {
-      id: "ord-1", orderNumber: "GLM-000009", status: "pending_payment", couponId: "co-1", customerId: opts.customerId ?? null,
+      id: "ord-1", orderNumber: "GLM-000009", status: "pending_payment", couponId: "co-1", customerId: opts.customerId ?? null, cartId: "cart-1",
       contactName: "Ana", contactEmail: "ana@example.com",
       contactPhone: "1144556677", shippingMethod: "domicilio", shippingAddress: { cp: "1900", province: "Buenos Aires", street: "Calle 50", number: "123", city: "La Plata" }, weightGr: 100,
       subtotal: 6400, shippingCost: 2500, discountTotal: 640, total: 8260,
@@ -28,6 +28,7 @@ function makeFakeDb(opts: FakeDbOpts = {}) {
     couponPerCustomerLimit: opts.couponPerCustomerLimit ?? null,
     redemptions: new Map<string, number>(Object.entries(opts.redemptions ?? {})),
     shipments: [] as any[],
+    cartStatus: "active",
   };
   const db: any = {
     order: {
@@ -105,6 +106,12 @@ function makeFakeDb(opts: FakeDbOpts = {}) {
         return s;
       }),
     },
+    cart: {
+      updateMany: vi.fn(async ({ where, data }: any) => {
+        if (where.id === state.order.cartId && state.cartStatus === where.status) { state.cartStatus = data.status; return { count: 1 }; }
+        return { count: 0 };
+      }),
+    },
     $transaction: vi.fn(async (fn: any) => fn(db)),
   };
   return { db, state };
@@ -124,6 +131,39 @@ function makeDeps(over: Partial<ProcessWebhookDeps> = {}): ProcessWebhookDeps {
     ...over,
   };
 }
+
+describe("processWebhook — carrito del pedido", () => {
+  it("approved que gana la transición → el carrito del pedido pasa a ordered (con guarda status active)", async () => {
+    const { db, state } = makeFakeDb();
+    await processWebhook({ dataId: "mp-pay-1", xSignature: "ok", xRequestId: "r" }, makeDeps({ db }));
+    expect(db.cart.updateMany).toHaveBeenCalledWith({ where: { id: "cart-1", status: "active" }, data: { status: "ordered" } });
+    expect(state.cartStatus).toBe("ordered");
+  });
+
+  it("approved repetido (idempotente) → no vuelve a tocar el carrito", async () => {
+    const { db } = makeFakeDb();
+    const deps = makeDeps({ db });
+    await processWebhook({ dataId: "mp-pay-1", xSignature: "ok", xRequestId: "r" }, deps);
+    await processWebhook({ dataId: "mp-pay-1", xSignature: "ok", xRequestId: "r" }, deps);
+    expect(db.cart.updateMany).toHaveBeenCalledTimes(1);
+  });
+
+  it("pago rechazado → el carrito sigue activo para reintentar", async () => {
+    const { db, state } = makeFakeDb();
+    const deps = makeDeps({ db, getPayment: vi.fn(async () => ({ id: "mp-pay-1", status: "rejected", external_reference: "ord-1", transaction_amount: 8260 })) });
+    await processWebhook({ dataId: "mp-pay-1", xSignature: "ok", xRequestId: "r" }, deps);
+    expect(db.cart.updateMany).not.toHaveBeenCalled();
+    expect(state.cartStatus).toBe("active");
+  });
+
+  it("pedido sin carrito vinculado (anterior a cartId) → paga igual sin tocar carritos", async () => {
+    const { db, state } = makeFakeDb();
+    state.order.cartId = null;
+    await processWebhook({ dataId: "mp-pay-1", xSignature: "ok", xRequestId: "r" }, makeDeps({ db }));
+    expect(state.order.status).toBe("paid");
+    expect(db.cart.updateMany).not.toHaveBeenCalled();
+  });
+});
 
 describe("processWebhook", () => {
   it("firma inválida → 401, sin efectos", async () => {

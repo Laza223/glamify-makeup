@@ -18,7 +18,7 @@ const giftCardCoupon = (over: Partial<CouponRow> = {}): CouponRow => ({
 
 function makeDeps(opts: { coupon?: CouponRow | null; reserveCount?: number } = {}) {
   const tx = {
-    order: { create: vi.fn(async ({ data }: any) => ({ id: "ord-1", ...data, payments: [{ id: "pay-1" }] })) },
+    order: { findMany: vi.fn(async () => []), create: vi.fn(async ({ data }: any) => ({ id: "ord-1", ...data, payments: [{ id: "pay-1" }] })) },
     payment: { update: vi.fn(async () => ({})) },
     cart: { update: vi.fn(async () => ({})) },
     coupon: { updateMany: vi.fn(async () => ({ count: opts.reserveCount ?? 1 })) },
@@ -130,7 +130,7 @@ describe("createCheckout — gift cards", () => {
       return { ...made, rollbackTx };
     }
 
-    it("cancela el pedido (con precondición pending_payment), libera la gift card, reactiva el carrito y relanza el error", async () => {
+    it("cancela el pedido (con precondición pending_payment), libera la gift card, no toca el carrito (nunca dejó de estar activo) y relanza el error", async () => {
       const { deps, rollbackTx } = withFailingPreference({ coupon: giftCardCoupon() });
       await expect(createCheckout({ ...base, lines: [physical], couponCode: "GIFT-AAAA-BBBB", cartId: "cart-1" }, deps)).rejects.toThrow("MP caído");
       expect(rollbackTx.order.updateMany).toHaveBeenCalledWith({ where: { id: "ord-1", status: "pending_payment" }, data: { status: "cancelled" } });
@@ -138,7 +138,7 @@ describe("createCheckout — gift cards", () => {
         where: { sourceOrderId: { not: null }, orders: { some: { id: "ord-1" } }, usedCount: { gt: 0 } },
         data: { usedCount: { decrement: 1 } },
       });
-      expect(rollbackTx.cart.update).toHaveBeenCalledWith({ where: { id: "cart-1" }, data: { status: "active" } });
+      expect(rollbackTx.cart.update).not.toHaveBeenCalled();
     });
 
     it("si el pedido ya no estaba pending_payment (count 0) no libera ni toca el carrito", async () => {

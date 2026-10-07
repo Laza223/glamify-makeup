@@ -13,7 +13,7 @@ function makeDeps(redemptions: number): { deps: CreateCheckoutDeps; createOrder:
     })) },
     couponRedemption: { findUnique: vi.fn(async () => (redemptions > 0 ? { redeemedCount: redemptions } : null)) },
     $transaction: vi.fn(async (fn: (tx: unknown) => Promise<unknown>) => fn({
-      order: { create: createOrder },
+      order: { findMany: vi.fn(async () => []), create: createOrder },
       cart: { update: vi.fn(async () => ({})) },
       payment: { update: vi.fn(async () => ({})) },
     })),

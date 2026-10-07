@@ -43,6 +43,8 @@ export interface WebhookOrderItem {
 export interface WebhookOrder {
   id: string;
   customerId: string | null;
+  /** Carrito de origen (null en pedidos anteriores al vínculo): se marca `ordered` al pagarse. */
+  cartId: string | null;
   orderNumber: string;
   status: OrderStatus;
   couponId: string | null;
@@ -199,6 +201,9 @@ export async function processWebhook(input: ProcessWebhookInput, deps: ProcessWe
 
     // Efectos de una sola vez: SOLO si este webhook ganó la transición a paid.
     if (wonPaidTransition) {
+      // El carrito recién se cierra con el pago aprobado (hasta acá la clienta podía reintentar).
+      // Guarda status active: un carrito ya fusionado/abandonado no se toca.
+      if (order.cartId) await tx.cart.updateMany({ where: { id: order.cartId, status: "active" }, data: { status: "ordered" } });
       const lines = order.items.map(orderItemToLine);
       const decrements = computeStockDecrements(lines);
       // Update atómico CON precondición de stock real (stock >= qty) por variante — a diferencia

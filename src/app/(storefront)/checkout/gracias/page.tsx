@@ -43,7 +43,9 @@ export default async function GraciasPage({ searchParams }: { searchParams: Prom
             ? "¡Recibimos tu pago!"
             : view === "closed"
               ? "Este pedido se canceló"
-              : "Estamos confirmando tu pago"}
+              : view === "retry"
+                ? "Tu pago no se completó"
+                : "Estamos confirmando tu pago"}
       </h1>
       {waiting && <AutoRefresh />}
 
@@ -62,7 +64,7 @@ export default async function GraciasPage({ searchParams }: { searchParams: Prom
           {view === "retry" && (
             <div className="mx-auto mt-5 max-w-sm space-y-2">
               <p className="text-sm text-muted-foreground">
-                Si el pago no se completó (por ejemplo, no tenías saldo), podés volver a intentarlo. Si ya pagaste, esperá unos minutos.
+                Podés volver a intentarlo (por ejemplo, con otra tarjeta). Tu carrito sigue guardado. Si ya pagaste, esperá unos minutos.
               </p>
               <div className="flex justify-center"><RetryPaymentButton orderId={order.id} /></div>
             </div>
