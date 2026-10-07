@@ -4,9 +4,11 @@ const TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
   pending_payment: ["paid", "cancelled"],
   // paid → shipped directo: cargar el seguimiento no exige marcar "preparando" antes.
   paid: ["preparing", "shipped", "refunded", "cancelled"],
-  preparing: ["shipped", "cancelled"],
-  shipped: ["delivered"],
-  delivered: [],
+  // → refunded después de enviar: arrepentimiento o devolución (la dueña reembolsa en MP).
+  // No repone stock: lo suma ella cuando el producto vuelve en condiciones.
+  preparing: ["shipped", "refunded", "cancelled"],
+  shipped: ["delivered", "refunded"],
+  delivered: ["refunded"],
   cancelled: [],
   refunded: [],
 };
