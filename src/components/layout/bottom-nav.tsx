@@ -38,7 +38,7 @@ export function BottomNav({ cartCount = 0 }: { cartCount?: number }) {
   return (
     <nav
       aria-label="Navegación principal"
-      className="fixed inset-x-0 bottom-0 z-30 border-t border-border/80 bg-white/95 backdrop-blur-md md:hidden"
+      className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-white pb-[env(safe-area-inset-bottom)] md:hidden"
     >
       <ul className="grid grid-cols-5">
         {ITEMS.map((item) => {
@@ -52,19 +52,15 @@ export function BottomNav({ cartCount = 0 }: { cartCount?: number }) {
           const content = (
             <span
               className={cn(
-                "relative flex h-14 flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition-colors",
-                active ? "font-bold text-primary" : "text-muted-foreground",
+                "relative flex h-14 flex-col items-center justify-center gap-0.5 text-xs font-medium transition-colors",
+                active ? "font-semibold text-foreground" : "text-muted-foreground",
               )}
             >
-              <Icon
-                className={cn(
-                  "size-5 transition-transform",
-                  active && "scale-110",
-                )}
-                aria-hidden
-              />
+              <span className={cn("grid h-7 w-12 place-items-center rounded-full transition-colors", active && "bg-secondary text-accent")}>
+                <Icon className="size-5" aria-hidden />
+              </span>
               {isCart && effectiveCount > 0 && (
-                <span className="shadow-xs absolute right-1/4 top-1.5 grid min-w-4 place-items-center rounded-full bg-primary px-1 text-[10px] font-bold tabular-nums text-white">
+                <span className="absolute right-[22%] top-1 grid min-w-[18px] place-items-center rounded-full bg-primary px-1 text-[11px] font-bold leading-[18px] tabular-nums text-primary-foreground">
                   {effectiveCount}
                 </span>
               )}

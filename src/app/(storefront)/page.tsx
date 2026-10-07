@@ -1,101 +1,154 @@
 import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 import { ProductGrid } from "@/components/catalog/product-grid";
 import { ProductImage } from "@/components/catalog/product-image";
-import { ValueProps } from "@/components/marketing/value-props";
-import { GlamifyWelcomeBanner } from "@/components/marketing/glamify-welcome-banner";
-import { GiftSection } from "@/components/marketing/gift-section";
-import { getCategoryTree, getFeaturedProducts, getNewestProducts } from "@/lib/catalog/queries";
+import { FeriaHero } from "@/components/marketing/feria-hero";
+import { getActiveProducts, getCategoryTree } from "@/lib/catalog/queries";
 import { filterVisibleInNav } from "@/lib/catalog/categories";
+import { isSellableNow, lowestSellablePrice } from "@/lib/catalog/showcase";
+import { detectBrand } from "@/lib/catalog/brand";
+import { getFreeShippingThreshold } from "@/lib/orders/checkout-data";
+import { prisma } from "@/lib/prisma";
+import { whatsappLink } from "@/lib/whatsapp";
+import { formatPrice } from "@/lib/money";
 import { buildWebSiteJsonLd, buildOrganizationJsonLd, serializeJsonLd } from "@/lib/seo/jsonld";
 import { appBaseUrl } from "@/lib/seo/url";
-import { ArrowRight } from "lucide-react";
-import { CategoryChipsNav } from "@/components/catalog/category-chips-nav";
+import type { CatalogProduct } from "@/lib/catalog/types";
+
+/** Las 3 marcas con más productos a la venta hoy (dato real del catálogo, no una lista fija). */
+function topBrands(products: CatalogProduct[], n = 3): string[] {
+  const counts = new Map<string, number>();
+  for (const p of products) {
+    const b = detectBrand(p.name);
+    if (b) counts.set(b, (counts.get(b) ?? 0) + 1);
+  }
+  return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, n).map(([b]) => b);
+}
+
+function SectionHead({ id, title, href, linkLabel }: { id: string; title: string; href: string; linkLabel: string }) {
+  return (
+    <div className="flex items-end justify-between gap-4">
+      <h2 id={id} className="text-[28px] font-semibold leading-tight md:text-[36px]">
+        {title}
+      </h2>
+      <Link
+        href={href}
+        className="inline-flex min-h-11 shrink-0 items-center gap-1 rounded-[10px] text-[15px] font-semibold text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        {linkLabel}
+        <ArrowRight className="size-4" aria-hidden />
+      </Link>
+    </div>
+  );
+}
 
 export default async function HomePage() {
-  const [treeRaw, featuredRaw] = await Promise.all([getCategoryTree(), getFeaturedProducts(8)]);
+  const [treeRaw, products, threshold, setting] = await Promise.all([
+    getCategoryTree(),
+    getActiveProducts(),
+    getFreeShippingThreshold(),
+    prisma.setting.findUnique({ where: { id: "default" }, select: { whatsappNumber: true } }),
+  ]);
   const tree = filterVisibleInNav(treeRaw);
-  const featured = featuredRaw.length > 0 ? featuredRaw : await getNewestProducts(8);
+  const sellable = products.filter(isSellableNow);
+  const withPhoto = sellable.filter((p) => p.images.length > 0);
+  const featured = sellable.filter((p) => p.isFeatured);
+  const shelf = (featured.length > 0 ? featured : sellable).slice(0, 8);
+  const giftHref = whatsappLink(setting?.whatsappNumber, "¡Hola! Quiero armar un ramo o una box de maquillaje para regalar");
   const base = appBaseUrl();
   const jsonLd = [buildWebSiteJsonLd(base), buildOrganizationJsonLd(base)];
 
   return (
-    <div className="space-y-16 pb-12">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }} />
+    <div className="pb-12 [&>section+section]:mt-14 md:[&>section+section]:mt-20">
 
-      {/* Banner Editorial Glamify con botones de acción */}
-      <GlamifyWelcomeBanner />
+      <FeriaHero brands={topBrands(sellable)} showcase={withPhoto} fromPrice={lowestSellablePrice(products)} />
 
-      {/* Chips de navegación rápida de categorías en mobile */}
-      <div className="md:hidden -mt-10">
-        <CategoryChipsNav categories={tree} />
-      </div>
-
-      {/* Sección Especial Regalos: Regalá beauty, regalá Glamify */}
-      <GiftSection />
-
-      {/* Propuestas de Valor / Pilares de Confianza */}
-      <ValueProps />
-
-      {/* Categorías Destacadas */}
-      <section className="space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2 border-b border-border/60 pb-3">
-          <div>
-            <h2 className="font-display text-2xl md:text-3xl font-normal text-foreground">
-              Comprar por Categoría
-            </h2>
-            <p className="text-sm text-muted-foreground">Encontrá el producto ideal según tu rutina</p>
-          </div>
-          <Link
-            href="/tienda"
-            className="text-xs font-bold uppercase tracking-widest text-primary hover:underline inline-flex items-center gap-1"
-          >
-            <span>Ver todo el catálogo</span>
-            <ArrowRight className="size-3.5" />
-          </Link>
-        </div>
-
-        <ul className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-5 gap-4">
+      <section aria-labelledby="categorias" className="!mt-4 md:!mt-6">
+        <h2 id="categorias" className="sr-only">
+          Categorías
+        </h2>
+        <ul className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] md:mx-0 md:grid md:grid-cols-5 md:gap-4 md:overflow-visible md:px-0 lg:grid-cols-10">
           {tree.map((cat) => (
-            <li key={cat.id}>
+            <li key={cat.id} className="w-[84px] shrink-0 md:w-auto">
               <Link
                 href={`/tienda/${cat.slug}`}
-                className="group block overflow-hidden rounded-2xl border border-border/80 bg-white shadow-soft transition-all duration-300 hover:shadow-soft-lg hover:border-neutral-300/80 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="group block rounded-[14px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
-                <div className="overflow-hidden aspect-square bg-secondary">
-                  <ProductImage src={cat.image} alt={cat.name} fallbackLabel={cat.name} className="rounded-none h-full w-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                </div>
-                <div className="p-3.5 bg-white text-center border-t border-border/40">
-                  <span className="block text-sm font-semibold tracking-wide text-foreground group-hover:text-primary transition-colors">
-                    {cat.name}
-                  </span>
-                </div>
+                <span className="block aspect-square overflow-hidden rounded-[14px] bg-muted">
+                  <ProductImage
+                    src={cat.image}
+                    alt=""
+                    fallbackLabel={cat.name}
+                    sizes="(min-width: 1024px) 120px, 84px"
+                    className="size-full rounded-none object-cover transition-transform duration-500 group-hover:scale-[1.04]"
+                  />
+                </span>
+                <span className="mt-1.5 block text-center text-[13px] font-medium leading-tight text-foreground group-hover:text-accent">
+                  {cat.name}
+                </span>
               </Link>
             </li>
           ))}
         </ul>
       </section>
 
-      {/* Héroes de catálogo / Destacados */}
-      {featured.length > 0 && (
-        <section className="space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2 border-b border-border/60 pb-3">
-            <div>
-              <h2 className="font-display text-2xl md:text-3xl font-normal text-foreground">
-                Los Más Elegidos
-              </h2>
-              <p className="text-sm text-muted-foreground">Una selección de lo que hay en la tienda</p>
-            </div>
-            <Link
-              href="/tienda"
-              className="text-xs font-bold uppercase tracking-widest text-primary hover:underline inline-flex items-center gap-1"
-            >
-              <span>Ver todos</span>
-              <ArrowRight className="size-3.5" />
-            </Link>
-          </div>
-          <ProductGrid products={featured} />
+      {shelf.length > 0 && (
+        <section aria-labelledby="destacados" className="space-y-6">
+          <SectionHead
+            id="destacados"
+            title={featured.length > 0 ? "Destacados" : "Lo nuevo"}
+            href="/tienda"
+            linkLabel="Ver todo"
+          />
+          <ProductGrid products={shelf} />
         </section>
       )}
+
+      {giftHref && (
+        <section
+          aria-labelledby="regalos"
+          className="grid gap-5 rounded-[14px] bg-secondary px-5 py-7 md:grid-cols-[1fr_auto] md:items-center md:px-10 md:py-9"
+        >
+          <div className="space-y-2">
+            <h2 id="regalos" className="text-[28px] font-semibold leading-tight md:text-[34px]">
+              ¿Es para regalar?
+            </h2>
+            <p className="max-w-[52ch] text-[16px] text-foreground">
+              Armamos ramos y boxes de maquillaje a medida, con lo que le guste y el presupuesto que tengas. Lo charlamos por
+              WhatsApp.
+            </p>
+          </div>
+          <a
+            href={giftHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex h-12 items-center justify-center rounded-[14px] bg-primary px-7 text-[16px] font-semibold text-primary-foreground transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-secondary"
+          >
+            Armar un regalo
+          </a>
+        </section>
+      )}
+
+      <section aria-labelledby="como-compras" className="space-y-6">
+        <h2 id="como-compras" className="text-[28px] font-semibold leading-tight md:text-[36px]">
+          Cómo comprás
+        </h2>
+        <dl className="grid gap-x-10 gap-y-5 sm:grid-cols-2">
+          {[
+            { t: "Envío a todo el país", d: `Con Correo Argentino, a tu casa o a la sucursal. Gratis desde ${formatPrice(threshold)}.` },
+            { t: "Despacho rápido", d: "Preparamos tu pedido en Luján y lo despachamos en hasta 3 días hábiles." },
+            { t: "Pagás con Mercado Pago", d: "Con tarjeta o dinero en cuenta, en un solo paso." },
+            { t: "10 días para arrepentirte", d: "Y si algo llega fallado o equivocado, el cambio corre por nuestra cuenta." },
+          ].map((item) => (
+            <div key={item.t} className="border-t-2 border-secondary pt-3">
+              <dt className="text-[17px] font-semibold text-foreground">{item.t}</dt>
+              <dd className="mt-1 text-[16px] text-muted-foreground">{item.d}</dd>
+            </div>
+          ))}
+        </dl>
+      </section>
+
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }} />
     </div>
   );
 }

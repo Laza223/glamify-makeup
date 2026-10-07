@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { formatARS, parseDecimal, round2 } from "@/lib/money";
+import { formatARS, formatPrice, parseDecimal, round2 } from "@/lib/money";
 
 describe("formatARS", () => {
   it("formatea con separador de miles y 2 decimales (es-AR, espacio normalizado)", () => {
@@ -50,5 +50,15 @@ describe("round2", () => {
   });
   it("rechaza no-finitos", () => {
     expect(() => round2("abc")).toThrow();
+  });
+});
+
+describe("formatPrice (precios de vidriera)", () => {
+  it("omite los centavos cuando son cero", () => {
+    expect(formatPrice(3125)).toBe("$ 3.125");
+    expect(formatPrice("47500.00")).toBe("$ 47.500");
+  });
+  it("conserva los centavos cuando existen", () => {
+    expect(formatPrice(10.5)).toBe("$ 10,50");
   });
 });

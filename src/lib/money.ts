@@ -26,3 +26,9 @@ export function formatARS(value: number | string): string {
   // lo normalizamos a un espacio normal para un output determinístico.
   return ARS.format(parseDecimal(value)).replace(/[  ]/g, " ");
 }
+
+/** Precio de vidriera: igual que formatARS pero sin ",00" cuando no hay centavos ("$ 3.125"). */
+export function formatPrice(value: number | string): string {
+  const s = formatARS(value);
+  return s.endsWith(",00") ? s.slice(0, -3) : s;
+}

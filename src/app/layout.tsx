@@ -1,22 +1,37 @@
 import { Suspense } from "react";
 import type { Metadata, Viewport } from "next";
-import { Playfair_Display, Nunito_Sans } from "next/font/google";
+import { Playfair_Display, Nunito_Sans, Figtree, Shantell_Sans } from "next/font/google";
 import { appBaseUrl } from "@/lib/seo/url";
 import { NavigationProgress } from "@/components/layout/navigation-progress";
 import "./globals.css";
 
+// Storefront (ADR 0003): Figtree para UI y cuerpo, Shantell Sans (marcador) para carteles y títulos.
+const figtree = Figtree({
+  subsets: ["latin"],
+  variable: "--font-figtree",
+  display: "swap",
+});
+
+const shantell = Shantell_Sans({
+  subsets: ["latin"],
+  variable: "--font-shantell",
+  display: "swap",
+});
+
+// Logo (siempre) y admin (sistema anterior). Sin preload: el storefront solo usa Playfair en el logo.
 const playfair = Playfair_Display({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
-  variable: "--font-display",
+  variable: "--font-playfair",
   display: "swap",
 });
 
 const nunito = Nunito_Sans({
   subsets: ["latin"],
   weight: ["300", "400", "500", "600", "700"],
-  variable: "--font-sans",
+  variable: "--font-nunito",
   display: "swap",
+  preload: false,
 });
 
 const DESCRIPTION =
@@ -53,7 +68,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#FF2E93",
+  themeColor: "#E0177A",
   width: "device-width",
   initialScale: 1,
 };
@@ -62,7 +77,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="es-AR" className={`${playfair.variable} ${nunito.variable}`}>
+    <html lang="es-AR" className={`${figtree.variable} ${shantell.variable} ${playfair.variable} ${nunito.variable}`}>
       <body>
         <Suspense fallback={null}>
           <NavigationProgress />

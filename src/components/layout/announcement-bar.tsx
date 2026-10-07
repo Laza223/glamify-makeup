@@ -1,47 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { Truck, CreditCard } from "lucide-react";
+import { formatPrice } from "@/lib/money";
 
-const MESSAGES = [
-  {
-    icon: Truck,
-    text: "Envío gratis a todo el país superando el monto mínimo",
-  },
-  {
-    icon: CreditCard,
-    text: "Pagá con tarjeta o dinero en cuenta de Mercado Pago",
-  },
-];
-
-export function AnnouncementBar() {
+/** Anuncio fijo de una línea (sin rotar): el umbral de envío gratis viene de Setting, nunca escrito a mano. */
+export function AnnouncementBar({ freeShippingThreshold }: { freeShippingThreshold: number }) {
   const pathname = usePathname();
-  const [index, setIndex] = useState(0);
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setIndex((prev) => (prev + 1) % MESSAGES.length);
-    }, 4500);
-    return () => clearInterval(timer);
-  }, []);
-
   if (pathname.startsWith("/checkout")) return null;
 
-  const current = MESSAGES[index];
-  const Icon = current.icon;
-
   return (
-    <div className="relative select-none overflow-hidden border-b border-white/10 bg-[#161413] px-4 py-2 text-center text-[#FBF9F6]">
-      <div className="container flex min-h-[20px] items-center justify-center">
-        <div
-          key={index}
-          className="inline-flex animate-fade-up items-center justify-center gap-2 text-xs font-medium tracking-wide md:text-sm"
-        >
-          <Icon className="size-3.5 shrink-0 text-primary" aria-hidden="true" />
-          <span>{current.text}</span>
-        </div>
-      </div>
-    </div>
+    <p className="bg-primary px-4 py-1.5 text-center text-[13px] font-semibold leading-5 text-primary-foreground">
+      Envío gratis desde {formatPrice(freeShippingThreshold)}
+      <span className="hidden sm:inline"> · Despachamos en hasta 3 días hábiles</span>
+    </p>
   );
 }

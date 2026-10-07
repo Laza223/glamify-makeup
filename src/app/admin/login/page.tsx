@@ -10,7 +10,7 @@ export default async function AdminLoginPage() {
   if (admin) redirect("/admin");
 
   return (
-    <main className="admin-surface flex min-h-screen items-center justify-center px-4 py-12">
+    <main data-surface="admin" className="admin-surface flex min-h-screen items-center justify-center px-4 py-12">
       <div className="stagger w-full max-w-sm space-y-6">
         {/* Lockup de marca */}
         <div className="flex flex-col items-center gap-3 text-center">

@@ -94,13 +94,13 @@ export function CardQuickStepper({
       role="group"
       aria-label="Agregar al carrito"
     >
-      {/* Contenedor animado estilo PedidosYa */}
+      {/* Contenedor animado: botón + que se abre en stepper, targets de 44 px */}
       <div
         className={cn(
           "relative flex items-center overflow-hidden transition-all duration-300 ease-out",
           isExpanded
-            ? "h-9 w-[102px] justify-between rounded-full border-2 border-primary bg-white px-1 shadow-sm shadow-pink-500/15"
-            : "h-9 w-9 justify-center rounded-full bg-primary text-white shadow-md shadow-pink-500/25 hover:scale-105 hover:bg-[#E01E7D] active:scale-95",
+            ? "h-11 w-[128px] justify-between rounded-full border-2 border-primary bg-white"
+            : "h-11 w-11 justify-center rounded-full bg-primary text-primary-foreground shadow-[0_3px_8px_-3px_rgb(224_23_122/0.6)] hover:bg-primary-hover active:scale-95",
         )}
       >
         {/* ESTADO NO EXPANDIDO (Qty = 0): Botón circular [+] */}
@@ -115,7 +115,7 @@ export function CardQuickStepper({
             {pending ? (
               <Loader2 className="size-4 animate-spin" />
             ) : (
-              <Plus className="size-4.5 stroke-[2.5]" aria-hidden />
+              <Plus className="size-5 stroke-[2.5]" aria-hidden />
             )}
           </button>
         )}
@@ -131,14 +131,14 @@ export function CardQuickStepper({
               aria-label={
                 currentQty === 1 ? "Eliminar del carrito" : "Restar una unidad"
               }
-              className="grid size-7 place-items-center rounded-full text-primary transition-all hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary active:scale-90"
+              className="grid h-full w-10 place-items-center rounded-full text-accent transition-colors hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary active:scale-90"
             >
               <Minus className="size-3.5 stroke-[2.5]" aria-hidden />
             </button>
 
             {/* Número central con microanimación de pop */}
             <span
-              className="flex min-w-[22px] select-none items-center justify-center text-center text-xs font-extrabold tabular-nums text-foreground"
+              className="flex min-w-[22px] select-none items-center justify-center text-center text-[15px] font-bold tabular-nums text-foreground"
               aria-live="polite"
             >
               {pending ? (
@@ -160,7 +160,7 @@ export function CardQuickStepper({
               disabled={pending || !canIncrement}
               aria-label="Sumar una unidad"
               className={cn(
-                "grid size-7 place-items-center rounded-full text-primary transition-all hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary active:scale-90",
+                "grid h-full w-10 place-items-center rounded-full text-accent transition-colors hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary active:scale-90",
                 (!canIncrement || pending) &&
                   "cursor-not-allowed opacity-30 hover:bg-transparent",
               )}
