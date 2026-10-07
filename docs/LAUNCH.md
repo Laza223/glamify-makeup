@@ -42,7 +42,7 @@ Hoy `NEXT_PUBLIC_APP_URL` apunta a `glamify-makeup-1.vercel.app`: sitemap, robot
 ## Bloque 4 — Pagos y legal (decisiones tuyas)
 
 - [ ] **4.1 (Vos)** Facturación AFIP: definir cómo se factura cada venta (hoy el sistema no emite comprobantes). Consultarlo con la contadora.
-- [ ] **4.2 (Vos)** Rotar `MP_ACCESS_TOKEN`: quedó expuesto en la transcripción de un subagente durante la auditoría del 28/8. Generar uno nuevo en Mercado Pago y avisarme para cargarlo en Vercel + redeploy.
+- [x] **4.2 (Vos)** Rotar `MP_ACCESS_TOKEN`: quedó expuesto en la transcripción de un subagente durante la auditoría del 28/8. Generar uno nuevo en Mercado Pago y avisarme para cargarlo en Vercel + redeploy.
 - [ ] **4.3 (Vos)** "3 cuotas sin interés" aparece en la barra de anuncios y en los beneficios de la home, y las cards muestran "3 cuotas de $X": confirmar que está activado en tu cuenta de Mercado Pago. Si no lo está, **Yo** saco ese copy (es publicidad engañosa).
 - [ ] **4.4 (Vos)** `/terminos` y `/privacidad`: definir si los revisa una abogada o quedan como están.
 
@@ -57,9 +57,9 @@ Con "Eduardo" ($200), con tarjeta real, en `www.glamifymakeup.site`, **después*
 
 - [ ] **6.1** Checkout → Mercado Pago → vuelve a `www.glamifymakeup.site/checkout/gracias` (no a `vercel.app`).
 - [ ] **6.2** El pedido aparece como pagado en `/admin/pedidos` y el stock se descontó.
-- [ ] **6.3** Llegan el mail de confirmación a la clienta y la alerta a `RESEND_OWNER_EMAIL`.
-- [ ] **6.4** Cargar un número de seguimiento cualquiera en el pedido → pasa a "enviado" → llega el mail de despacho.
-- [ ] **6.5** Botón de Arrepentimiento: enviar el formulario → constancia `ARR-NNNNNN` → llega el mail a la dueña.
+- [x] **6.3** Llegan el mail de confirmación a la clienta y la alerta a `RESEND_OWNER_EMAIL`.
+- [x] **6.4** Cargar un número de seguimiento cualquiera en el pedido → pasa a "enviado" → llega el mail de despacho.
+- [x] **6.5** Botón de Arrepentimiento: enviar el formulario → constancia `ARR-NNNNNN` → llega el mail a la dueña. Hecho 6/10: ARR-000001, mail a la dueña OK.
 - [ ] **6.6** Reembolso manual del pago en Mercado Pago y **despublicar "Eduardo"**.
 
 ## Bloque 7 — Limpieza (Yo, no bloquea)
