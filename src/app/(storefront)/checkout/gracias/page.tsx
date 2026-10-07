@@ -7,6 +7,8 @@ import { whatsappLink } from "@/lib/whatsapp";
 import { Button } from "@/components/ui/button";
 import { RetryPaymentButton } from "@/components/orders/retry-payment-button";
 import { TrackOnMount } from "@/components/analytics/track-on-mount";
+import { AutoRefresh } from "@/components/orders/auto-refresh";
+import { paymentReturnView } from "@/lib/payments/return-view";
 
 export const metadata: Metadata = { title: "¡Gracias por tu compra!" };
 
@@ -15,7 +17,9 @@ export default async function GraciasPage({ searchParams }: { searchParams: Prom
   const orderId = sp["external_reference"] ?? sp["external_reference[]"];
   const order = orderId ? await prisma.order.findUnique({ where: { id: orderId }, include: { items: true } }) : null;
 
-  const paid = order?.status === "paid" || order?.status === "preparing" || order?.status === "shipped" || order?.status === "delivered";
+  const view = order ? paymentReturnView(order.status, sp["collection_status"] ?? sp["status"]) : null;
+  const paid = view === "paid";
+  const waiting = view === "approved_pending" || view === "confirming";
   const setting = await prisma.setting.findUnique({ where: { id: "default" }, select: { whatsappNumber: true } });
   const waHref = whatsappLink(
     setting?.whatsappNumber,
@@ -32,20 +36,30 @@ export default async function GraciasPage({ searchParams }: { searchParams: Prom
         />
       )}
       {paid ? <CheckCircle2 className="mx-auto size-14 text-primary" /> : <Clock className="mx-auto size-14 text-muted-foreground" />}
-      <h1 className="mt-4 font-display text-2xl font-bold">{paid ? "¡Gracias por tu compra!" : "Estamos confirmando tu pago"}</h1>
+      <h1 className="mt-4 font-display text-2xl font-bold">
+        {paid
+          ? "¡Gracias por tu compra!"
+          : view === "approved_pending"
+            ? "¡Recibimos tu pago!"
+            : view === "closed"
+              ? "Este pedido se canceló"
+              : "Estamos confirmando tu pago"}
+      </h1>
+      {waiting && <AutoRefresh />}
 
       {order ? (
         <>
           <p className="mt-2 text-muted-foreground">
             Pedido <strong className="text-foreground">{order.orderNumber}</strong>
-            {!paid && " — apenas se acredite te llega el email de confirmación."}
+            {waiting && " — lo estamos acreditando; esta página se actualiza sola y te llega el email de confirmación."}
+            {view === "closed" && " — no se cobró. Si querés, armalo de nuevo desde la tienda."}
           </p>
           {paid && order.shippingMethod === "digital" && (
             <p className="mt-2 text-sm text-muted-foreground">
               Te mandamos la gift card por mail en unos minutos (revisá spam).
             </p>
           )}
-          {order.status === "pending_payment" && (
+          {view === "retry" && (
             <div className="mx-auto mt-5 max-w-sm space-y-2">
               <p className="text-sm text-muted-foreground">
                 Si el pago no se completó (por ejemplo, no tenías saldo), podés volver a intentarlo. Si ya pagaste, esperá unos minutos.
