@@ -6,7 +6,7 @@ Plan aprobado: `~/.claude/plans/pasted-content-id-8b37-buenas-como-generic-melod
 |---|---|---|
 | 0a | Hotfixes en prod: claims engañosos (#31), tono de la barra fija (#32), funnel de analytics (#33) | ✅ mergeados 2026-10-07 |
 | 0b | Preparación: rama + PR draft, preview seguro, Impeccable, gobierno, E2E | 🟡 en curso |
-| 1 | `PRODUCT.md` (`impeccable init`) | ⬜ |
+| 1 | `PRODUCT.md` (`impeccable init`) | ✅ 2026-10-07 |
 | 2 | Línea de base (critique, audit, Lighthouse, funnel) | ⬜ |
 | 3 | Mundo visual: home + chrome global | ⬜ |
 | 4 | Rollout por superficie → Release 1 (compra + 404) → Release 2 | ⬜ |
@@ -27,7 +27,8 @@ Plan aprobado: `~/.claude/plans/pasted-content-id-8b37-buenas-como-generic-melod
 
 ## Pendientes de la clienta (REQUIERE INPUT)
 
-1. Política de cambios: hoy el sitio dice arrepentimiento 10 días + "por defecto escribinos". Falta confirmar la redacción explícita.
-2. Plazo real de despacho: el sitio promete "24 a 72 h hábiles". ¿Cada cuánto lleva paquetes al Correo?
-3. ¿Se puede decir "productos originales"? ¿Qué marcas salen más?
-4. Fotos propias de IG (15–30 originales) y `swatchHex` + nombre real de cada tono.
+- ~~Política de cambios~~ → decidido (Lazar, 2026-10-07): ley + fallas a cargo de Glamify, sin cambios por gusto. Falta pasarlo al copy de FAQ y envíos (PR chico a `main`).
+- ~~Plazo de despacho~~ → se mantiene "hasta 3 días hábiles"; Lazar lo confirma con la dueña.
+- ~~"Originales"~~ → no se dice (decisión de Lazar).
+1. ¿Qué marcas salen más? (hoy por catálogo: TEI 11, Pink 21 7, 4 Angels 4)
+2. Fotos propias de IG (15–30 originales) y `swatchHex` + nombre real de cada tono.
