@@ -38,7 +38,7 @@ Plan aprobado: `~/.claude/plans/pasted-content-id-8b37-buenas-como-generic-melod
 - Bug del checkout: el carrito pasa a `ordered` al crear el pedido, antes de pagar (`checkout-service.ts:224`). Si la clienta abandona Mercado Pago, vuelve y ve el carrito vacío; nada lo reabre (ni reintento, ni expiry, ni webhook rechazado) y el job de abandono no le escribe. Diagnóstico completo 2026-10-07. Fix recomendado: carrito `active` hasta el pago aprobado + reusar el pedido pendiente del mismo carrito. PR aparte a `main` (toca plata) — REQUIERE INPUT.
 - `/checkout/gracias` con pago rechazado dice "Estamos confirmando tu pago" (vista `retry`): copy engañoso, va con el fix de arriba.
 - `.text-glam` ya no se usa en el storefront (error.tsx rehecho); queda en el admin.
-- Sin uso tras el rediseño (borrar en fase 6 con OK): `GiftSection`, `ValueProps`, `CategoryChipsNav`→ en uso; `PriceTag`, `hanging-tag` (ya borrado), `showcase.lowestSellablePrice` (sin uso en la home actual).
+- Sin uso tras el rediseño (borrar en fase 6 con OK): `GiftSection`, `ValueProps`, `PriceTag`, `showcase.lowestSellablePrice`.
 
 ## Pendientes de la clienta (REQUIERE INPUT)
 
