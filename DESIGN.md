@@ -1,3 +1,5 @@
+> **DESACTUALIZADO (2026-10-07):** describe el mundo "Cartel de feria", que la clienta rechazó. La dirección vigente es "editorial glam": el hero de producción tal cual, Playfair + Nunito, blanco, negro y un solo rosa (#E6007A). Se reescribe cuando la clienta apruebe la home.
+
 ---
 name: Glamify Makeup
 description: Cartel de feria — el puesto prolijo de una feria de emprendedoras, con carteles de cartulina rosa y etiquetas de precio colgantes sobre producto real.

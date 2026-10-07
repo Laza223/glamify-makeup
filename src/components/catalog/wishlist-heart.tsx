@@ -10,11 +10,13 @@ export function WishlistHeart({ productId, initial = false, className }: { produ
   const router = useRouter();
   const [active, setActive] = useState(initial);
   const [pending, startTransition] = useTransition();
+  const [touched, setTouched] = useState(false); // late solo cuando lo marca ella, no al cargar
 
   function onClick(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
     const next = !active;
+    setTouched(true);
     setActive(next); // optimista
     startTransition(async () => {
       const res = await toggleWishlistAction(productId);
@@ -33,7 +35,11 @@ export function WishlistHeart({ productId, initial = false, className }: { produ
       aria-label={active ? "Quitar de favoritos" : "Agregar a favoritos"}
       className={cn("grid size-11 place-items-center rounded-full bg-white/90 text-foreground shadow-[0_2px_6px_-2px_rgb(0_0_0/0.18)] transition hover:bg-white", className)}
     >
-      <Heart className={cn("size-5", active ? "fill-primary text-primary" : "text-muted-foreground")} aria-hidden />
+      <Heart
+        key={active ? "on" : "off"}
+        className={cn("size-5", active ? cn("fill-primary text-primary", touched && "animate-heart-pop") : "text-muted-foreground")}
+        aria-hidden
+      />
     </button>
   );
 }

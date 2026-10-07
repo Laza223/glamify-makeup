@@ -102,14 +102,17 @@ const config: Config = {
             transform: "translateX(100%)",
           },
         },
-        // Etiqueta de precio: un balanceo amortiguado desde el agujero (interacción firma, ADR 0003).
-        "tag-swing": {
-          "0%": { transform: "rotate(-3deg)" },
-          "25%": { transform: "rotate(-14deg)" },
-          "50%": { transform: "rotate(5deg)" },
-          "72%": { transform: "rotate(-6deg)" },
-          "88%": { transform: "rotate(-2deg)" },
-          "100%": { transform: "rotate(-3deg)" },
+        // Corazón de favoritos: latido corto al marcar.
+        "heart-pop": {
+          "0%": { transform: "scale(1)" },
+          "30%": { transform: "scale(1.3)" },
+          "60%": { transform: "scale(0.9)" },
+          "100%": { transform: "scale(1)" },
+        },
+        // Tira de marcas: desplazamiento continuo (el contenido va duplicado, -50% cierra el loop).
+        marquee: {
+          "0%": { transform: "translateX(0)" },
+          "100%": { transform: "translateX(-50%)" },
         },
         // Contador del carrito: rebote corto con masa.
         "count-bump": {
@@ -128,7 +131,8 @@ const config: Config = {
         "accordion-up": "accordion-up 0.2s ease-out",
         "fade-up": "fade-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) both",
         shimmer: "shimmer 2s infinite",
-        "tag-swing": "tag-swing 0.9s cubic-bezier(0.22, 1, 0.36, 1) both",
+        "heart-pop": "heart-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both",
+        marquee: "marquee 40s linear infinite",
         "count-bump": "count-bump 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both",
         "shimmer-luxury": "shimmer-luxury 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite",
       },
