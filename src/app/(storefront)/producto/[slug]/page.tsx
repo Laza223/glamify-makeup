@@ -17,7 +17,6 @@ import { AddToCart } from "@/components/cart/add-to-cart";
 import { WishlistHeart } from "@/components/catalog/wishlist-heart";
 import { TrustBadges } from "@/components/catalog/trust-badges";
 import { PdpAccordions } from "@/components/catalog/pdp-accordions";
-import { MobileStickyBuyBar } from "@/components/catalog/mobile-sticky-buy-bar";
 import { CrossSell } from "@/components/catalog/cross-sell";
 import { isWishlisted } from "@/app/(storefront)/cuenta/favoritos/actions";
 import { getApprovedReviews } from "@/lib/reviews/queries";
@@ -178,7 +177,10 @@ export default async function ProductoPage({ params }: { params: Promise<{ slug:
                 </p>
               )}
 
-              <AddToCart variants={product.variants} />
+              <AddToCart
+                variants={product.variants}
+                stickyBar={{ productName: product.name, image: product.images[0], price }}
+              />
             </>
           )}
 
@@ -224,15 +226,6 @@ export default async function ProductoPage({ params }: { params: Promise<{ slug:
       {/* Productos Relacionados */}
       <CrossSell products={related} />
 
-      {/* Barra de Compra Móvil (Thumb-Zone CRO) */}
-      {!madeToOrder && (
-        <MobileStickyBuyBar
-          productName={product.name}
-          image={product.images[0]}
-          price={price}
-          variants={product.variants}
-        />
-      )}
     </article>
   );
 }
