@@ -17,8 +17,9 @@ export function HangingTag({
 }) {
   return (
     <span className={cn("pointer-events-none absolute left-3 top-0 z-10 flex flex-col items-start", className)}>
-      {/* hilo */}
-      <span aria-hidden className="ml-[13px] h-3 w-px bg-foreground/60" />
+      {/* clavo en el borde de la foto + hilo */}
+      <span aria-hidden className="ml-[11px] size-[5px] rounded-full bg-foreground/70" />
+      <span aria-hidden className="-mt-px ml-[13px] h-2.5 w-px bg-foreground/60" />
       <span
         key={swingKey}
         className={cn(

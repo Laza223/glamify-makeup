@@ -15,7 +15,7 @@ function Cartel({ word, tilt, className, children }: { word: string; tilt: numbe
   return (
     <div
       className={cn(
-        "flex items-center justify-between gap-3 rounded-[14px] bg-white px-4 py-3 shadow-[3px_4px_0_0_hsl(var(--accent)/0.16)] md:px-6 md:py-4",
+        "flex items-center justify-between gap-3 rounded-[14px] bg-white px-4 py-3 shadow-[0_6px_16px_-6px_hsl(var(--accent)/0.3)] md:px-6 md:py-4",
         className,
       )}
       style={{ transform: `rotate(${tilt}deg)` }}
@@ -28,7 +28,9 @@ function Cartel({ word, tilt, className, children }: { word: string; tilt: numbe
 
 /** Hero de la home: campo de cartulina a sangre con la triple B y su prueba (marcas, fotos y precio reales). */
 export function FeriaHero({ brands, showcase, fromPrice }: { brands: string[]; showcase: CatalogProduct[]; fromPrice: number | null }) {
-  const thumbs = showcase.slice(0, 4);
+  // Mobile: 3 fotos en el cartel. Desktop: la mesa muestra otros 4, para no repetir la prueba.
+  const thumbs = showcase.slice(0, 3);
+  const mesa = showcase.length >= 7 ? showcase.slice(3, 7) : showcase.slice(0, 4);
 
   return (
     <section
@@ -52,7 +54,7 @@ export function FeriaHero({ brands, showcase, fromPrice }: { brands: string[]; s
                 {thumbs.map((p) => {
                   const url = productImageUrl(p.images[0]);
                   return url ? (
-                    <li key={p.id} className="relative size-[38px] overflow-hidden rounded-[8px] bg-muted md:size-14">
+                    <li key={p.id} className="relative size-11 overflow-hidden rounded-[8px] bg-muted md:size-14">
                       <Image src={url} alt={p.name} fill sizes="56px" className="object-cover" />
                     </li>
                   ) : null;
@@ -61,11 +63,9 @@ export function FeriaHero({ brands, showcase, fromPrice }: { brands: string[]; s
             </Cartel>
             {fromPrice !== null && (
               <Cartel word="Barato." tilt={-0.75} className="ml-2 md:ml-4">
-                <p className="text-[15px] font-medium leading-tight text-muted-foreground md:text-[17px]">
+                <p className="text-[15px] font-medium leading-snug text-muted-foreground md:text-[17px]">
                   desde
-                  <span className="block text-[22px] font-bold tabular-nums text-foreground md:text-[26px]">
-                    {formatPrice(fromPrice)}
-                  </span>
+                  <span className="block tabular-nums text-foreground">{formatPrice(fromPrice)}</span>
                 </p>
               </Cartel>
             )}
@@ -81,7 +81,7 @@ export function FeriaHero({ brands, showcase, fromPrice }: { brands: string[]; s
 
         {/* La mesa: producto real con su etiqueta de precio real. Solo desktop. */}
         <ul className="ml-auto hidden w-full max-w-[500px] lg:ml-0 grid-cols-2 gap-x-5 gap-y-6 pb-6 pt-3 md:grid" aria-label="En la mesa hoy">
-          {thumbs.map((p, i) => {
+          {mesa.map((p, i) => {
             const url = productImageUrl(p.images[0]);
             return (
               <li key={p.id} className={cn("relative", i % 2 === 1 && "translate-y-6")}>
@@ -93,7 +93,7 @@ export function FeriaHero({ brands, showcase, fromPrice }: { brands: string[]; s
                     {url && <Image src={url} alt={p.name} fill sizes="(min-width: 1024px) 240px, 40vw" className="object-cover" priority={i < 2} />}
                   </span>
                 </Link>
-                <HangingTag className="-top-1">{formatPrice(getEffectivePrice(p))}</HangingTag>
+                <HangingTag className="top-0">{formatPrice(getEffectivePrice(p))}</HangingTag>
               </li>
             );
           })}

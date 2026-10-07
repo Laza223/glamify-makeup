@@ -92,7 +92,7 @@ export function ProductCard({ product }: { product: CatalogListItem }) {
         </div>
 
         {/* Etiqueta colgante: cuelga del borde superior de la foto. */}
-        <HangingTag muted={soldOut || madeToOrder} swingKey={swingKey} className="-top-1">
+        <HangingTag muted={soldOut || madeToOrder} swingKey={swingKey} className="top-0">
           {madeToOrder ? (
             "A pedido"
           ) : soldOut ? (
@@ -117,7 +117,7 @@ export function ProductCard({ product }: { product: CatalogListItem }) {
             {product.name}
           </Link>
         </h3>
-        <p className="text-[13px] text-muted-foreground">
+        <p className="text-[14px] text-muted-foreground">
           {[brand, madeToOrder ? "Armalo por WhatsApp" : product.category.name].filter(Boolean).join(" · ")}
         </p>
         {swatches.length > 0 && (

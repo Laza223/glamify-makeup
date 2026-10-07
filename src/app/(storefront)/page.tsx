@@ -16,7 +16,7 @@ import { appBaseUrl } from "@/lib/seo/url";
 import type { CatalogProduct } from "@/lib/catalog/types";
 
 /** Las 3 marcas con más productos a la venta hoy (dato real del catálogo, no una lista fija). */
-function topBrands(products: CatalogProduct[], n = 3): string[] {
+function topBrands(products: CatalogProduct[], n = Infinity): string[] {
   const counts = new Map<string, number>();
   for (const p of products) {
     const b = detectBrand(p.name);
@@ -55,13 +55,14 @@ export default async function HomePage() {
   const featured = sellable.filter((p) => p.isFeatured);
   const shelf = (featured.length > 0 ? featured : sellable).slice(0, 8);
   const giftHref = whatsappLink(setting?.whatsappNumber, "¡Hola! Quiero armar un ramo o una box de maquillaje para regalar");
+  const brands = topBrands(sellable);
   const base = appBaseUrl();
   const jsonLd = [buildWebSiteJsonLd(base), buildOrganizationJsonLd(base)];
 
   return (
     <div className="pb-12 [&>section+section]:mt-14 md:[&>section+section]:mt-20">
 
-      <FeriaHero brands={topBrands(sellable)} showcase={withPhoto} fromPrice={lowestSellablePrice(products)} />
+      <FeriaHero brands={brands.slice(0, 3)} showcase={withPhoto} fromPrice={lowestSellablePrice(products)} />
 
       <section aria-labelledby="categorias" className="!mt-4 md:!mt-6">
         <h2 id="categorias" className="sr-only">
@@ -101,6 +102,27 @@ export default async function HomePage() {
             linkLabel="Ver todo"
           />
           <ProductGrid products={shelf} />
+        </section>
+      )}
+
+      {brands.length > 0 && (
+        <section aria-labelledby="marcas" className="space-y-5">
+          <h2 id="marcas" className="text-[28px] font-semibold leading-tight md:text-[36px]">
+            Marcas que ya conocés
+          </h2>
+          {/* Carteles de marca: una placa por marca, inclinación alternada, cada una lleva a sus productos. */}
+          <ul className="flex flex-wrap gap-3 md:gap-4">
+            {brands.map((brand, i) => (
+              <li key={brand} style={{ transform: `rotate(${[-1.5, 1, -0.75, 1.25][i % 4]}deg)` }}>
+                <Link
+                  href={`/tienda?q=${encodeURIComponent(brand)}`}
+                  className="inline-flex min-h-12 items-center rounded-[14px] bg-secondary px-5 font-display text-[22px] font-semibold text-foreground shadow-[0_6px_16px_-8px_hsl(var(--accent)/0.35)] transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:px-6 md:text-[26px]"
+                >
+                  {brand}
+                </Link>
+              </li>
+            ))}
+          </ul>
         </section>
       )}
 
