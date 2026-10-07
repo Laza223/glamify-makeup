@@ -62,12 +62,14 @@ export function RetractionCard({ item }: { item: RetractionItemView }) {
             </span>
             <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
               <CalendarDays className="size-3" aria-hidden />
-              <span>{item.createdAt.toLocaleDateString("es-AR")}</span>
+              <span>{item.createdAt.toLocaleDateString("es-AR", { timeZone: "America/Argentina/Buenos_Aires" })}</span>
               <span>·</span>
               <span>
                 {item.createdAt.toLocaleTimeString("es-AR", {
                   hour: "2-digit",
                   minute: "2-digit",
+                  hourCycle: "h23",
+                  timeZone: "America/Argentina/Buenos_Aires",
                 })}
               </span>
             </div>
