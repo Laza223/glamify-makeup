@@ -15,9 +15,9 @@ describe("buildProductJsonLd", () => {
   it("incluye Offer con precio ARS y availability InStock", () => {
     const ld = buildProductJsonLd(base, { average: 0, count: 0 });
     expect(ld["@type"]).toBe("Product");
-    expect(ld.offers.priceCurrency).toBe("ARS");
-    expect(ld.offers.price).toBe("5000.00");
-    expect(ld.offers.availability).toContain("InStock");
+    expect(ld.offers?.priceCurrency).toBe("ARS");
+    expect(ld.offers?.price).toBe("5000.00");
+    expect(ld.offers?.availability).toContain("InStock");
     expect(ld.aggregateRating).toBeUndefined();
   });
 
@@ -28,7 +28,18 @@ describe("buildProductJsonLd", () => {
 
   it("OutOfStock cuando inStock=false", () => {
     const ld = buildProductJsonLd({ ...base, inStock: false }, { average: 0, count: 0 });
-    expect(ld.offers.availability).toContain("OutOfStock");
+    expect(ld.offers?.availability).toContain("OutOfStock");
+  });
+});
+
+describe("buildProductJsonLd — a pedido", () => {
+  it("no emite offers (ni precio ni stock) cuando madeToOrder", () => {
+    const ld = buildProductJsonLd(
+      { name: "Box", description: null, images: [], price: 0, inStock: false, url: "https://glamify/producto/box", madeToOrder: true },
+      { average: 0, count: 0 },
+    );
+    expect(ld.offers).toBeUndefined();
+    expect(ld["@type"]).toBe("Product");
   });
 });
 

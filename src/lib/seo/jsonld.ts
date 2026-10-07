@@ -9,6 +9,8 @@ export interface ProductLdInput {
   inStock: boolean;
   url: string;
   brand?: string;
+  /** Producto a pedido (se arma por WhatsApp): no declara precio ni stock, o sea sin `offers`. */
+  madeToOrder?: boolean;
 }
 
 export interface ProductJsonLd {
@@ -16,12 +18,12 @@ export interface ProductJsonLd {
   "@type": string;
   name: string;
   image: string[];
-  offers: { "@type": string; price: string; priceCurrency: string; availability: string; url: string };
+  offers?: { "@type": string; price: string; priceCurrency: string; availability: string; url: string };
   aggregateRating?: { "@type": string; ratingValue: number; reviewCount: number };
   [key: string]: unknown;
 }
 
-/** Product + Offer (ARS) + AggregateRating (solo si hay reseñas). */
+/** Product + Offer (ARS, salvo a pedido) + AggregateRating (solo si hay reseñas). */
 export function buildProductJsonLd(p: ProductLdInput, rating: { average: number; count: number }): ProductJsonLd {
   const ld: ProductJsonLd = {
     "@context": "https://schema.org",
@@ -29,14 +31,16 @@ export function buildProductJsonLd(p: ProductLdInput, rating: { average: number;
     name: p.name,
     image: p.images,
     brand: { "@type": "Brand", name: p.brand ?? "Glamify Makeup" },
-    offers: {
+  };
+  if (!p.madeToOrder) {
+    ld.offers = {
       "@type": "Offer",
       price: p.price.toFixed(2),
       priceCurrency: "ARS",
       availability: `https://schema.org/${p.inStock ? "InStock" : "OutOfStock"}`,
       url: p.url,
-    },
-  };
+    };
+  }
   if (p.description) ld.description = p.description;
   if (p.sku) ld.sku = p.sku;
   if (rating.count > 0) {

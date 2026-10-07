@@ -3,9 +3,10 @@ import { parseProductListParams, PAGE_SIZE } from "@/lib/catalog/filters";
 import { getProductList, getCategoryTree, type ProductListResult } from "@/lib/catalog/queries";
 import { ProductListView } from "@/components/catalog/product-list-view";
 import { CatalogBreadcrumbs } from "@/components/catalog/catalog-breadcrumbs";
+import { MADE_TO_ORDER_CATEGORY_SLUGS } from "@/lib/catalog/made-to-order";
 
 /** Slugs reales de las 4 categorías de regalo (creadas en /admin/categorias con showInMenu apagado). */
-const GIFT_SLUGS = ["lip-combos", "gift-cards", "ramos-maquillaje", "box-maquillaje"];
+const GIFT_SLUGS: string[] = ["lip-combos", "gift-cards", ...MADE_TO_ORDER_CATEGORY_SLUGS];
 
 export const metadata: Metadata = {
   title: "Especial Regalos",
