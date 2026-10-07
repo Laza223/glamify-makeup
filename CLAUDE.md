@@ -91,16 +91,18 @@ Otros: `design-system/MASTER.md` · `docs/LAUNCH.md` (ops/go-live) · `docs/deci
 | Fixes de una lista de hallazgos | `protocolo-fixes-general` | — |
 | Revisar PR / diff | `code-review` / `revision-pr` | `review` |
 | Verificar implementación propia | `verificacion-fresca` / `verification-before-completion` | — |
-| Diseñar / ajustar interfaz de usuario | `ux-ui-pro-max` + `design-system/MASTER.md` | UI ad-hoc |
+| Diseñar / ajustar interfaz de usuario (storefront) | `impeccable` + `PRODUCT.md` / `DESIGN.md` / `.impeccable/surfaces/` (rediseño en curso, ADR 0003) | `ux-ui-pro-max` · `MASTER.md` · UI ad-hoc |
 | Correr / arreglar tests | `protocolo-testing` / Vitest + Playwright | — |
 | Tocar DB / Prisma / Migraciones / deploy | `convenciones-stack` + `prisma-best-practices` | `db:push` en prod |
 | Cierre de milestone / release | `cierre-release` + `docs/LAUNCH.md` | `ship` sin DoD |
 
 ## UX y Design System
 
+> **Rediseño del storefront en curso** (`feat/rediseno-storefront`, ADR 0003, ledger `docs/rediseno/STATE.md`). La fuente visual del storefront pasa a ser `PRODUCT.md` + `DESIGN.md` + los surface briefs de `.impeccable/surfaces/`. Lo que sigue en esta sección (`MASTER.md`, `#FF2E93`, Playfair + Nunito, Soft UI Evolution) es el **estado anterior**: vale para el admin y como evidencia, no como regla del rediseño. Se mantienen: paleta rosa/blanco, logo actual, light mode, sin emojis, WCAG AA, touch targets ≥ 44px, `prefers-reduced-motion`.
+
 - **Visual:** Girly clean + glam accesible. Rosa eléctrico `#FF2E93` (primario), `#E01E7D` (hover), `#FF9ED1` (secundario), `#6E0B3F` (texto), fondos `#FFF5F9` y blanco.
 - **Tipografía:** Playfair Display (títulos) + Nunito Sans (cuerpo, min 16px) · Estilo: Soft UI Evolution, light mode, sombras suaves rosadas, radii 12-16px.
-- **A11y & Simplicidad:** WCAG AA (0 violaciones axe en CI), contraste ≥ 4.5:1, touch targets ≥ 44px, `prefers-reduced-motion`. Regla del dueño: "Tan simple que un niño lo entienda" (un paso, sin opciones superfluas).
+- **A11y & Simplicidad:** WCAG AA (0 violaciones serious/critical de axe en los E2E; axe no corre en CI), contraste ≥ 4.5:1, touch targets ≥ 44px, `prefers-reduced-motion`. Regla del dueño: "Tan simple que un niño lo entienda" (un paso, sin opciones superfluas).
 
 ## Comunicación
 

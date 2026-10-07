@@ -20,7 +20,7 @@ test.describe("Conversión + crecimiento (M4b)", () => {
     await expect(reject).toBeHidden();
   });
 
-  test("reseña de invitada queda pendiente (no se publica)", async ({ page }) => {
+  test("@db-write reseña de invitada queda pendiente (no se publica)", async ({ page }) => {
     await page.goto(`/producto/${GUEST_REVIEW_SLUG}`);
     await dismissConsent(page);
 
@@ -37,7 +37,7 @@ test.describe("Conversión + crecimiento (M4b)", () => {
     await expect(page.getByText(unique)).toHaveCount(0);
   });
 
-  test("order-bump visible en el carrito", async ({ page }) => {
+  test("@db-write order-bump visible en el carrito", async ({ page }) => {
     await page.goto(`/producto/${CART_SLUG}`);
     await dismissConsent(page);
     await page.getByRole("button", { name: /agregar al carrito/i }).click();

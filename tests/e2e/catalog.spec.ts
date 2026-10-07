@@ -14,11 +14,12 @@ for (const vp of VIEWPORTS) {
       // Home
       await page.goto("/");
       await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-      await expect(page.getByRole("link", { name: "Ver tienda" })).toBeVisible();
+      // La home tiene que llevar a la tienda (por href, no por el texto del CTA).
+      await expect(page.getByRole("main").locator('a[href="/tienda"]:visible').first()).toBeVisible();
 
       // Tienda
       await page.goto("/tienda");
-      await expect(page.getByRole("heading", { name: "Tienda" })).toBeVisible();
+      await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
       const firstProduct = page.locator('a[href^="/producto/"]').first();
       await expect(firstProduct).toBeVisible();
 
@@ -32,7 +33,9 @@ for (const vp of VIEWPORTS) {
 
     test("navegación por categoría con breadcrumbs", async ({ page }) => {
       await page.goto("/tienda/labios");
-      await expect(page.getByRole("navigation", { name: "breadcrumb" })).toBeVisible();
+      // Mobile muestra "volver a la categoría padre", desktop el breadcrumb completo: ambos son un
+      // <nav> dentro de <main> que linkea a /tienda.
+      await expect(page.getByRole("main").getByRole("navigation").locator('a[href="/tienda"]:visible').first()).toBeVisible();
       await expect(page.locator('a[href^="/producto/"]').first()).toBeVisible();
     });
   });

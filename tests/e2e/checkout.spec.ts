@@ -3,7 +3,8 @@ import { test, expect } from "@playwright/test";
 // Producto del seed (M1). Si cambia el seed, actualizar el slug.
 const PRODUCT_SLUG = "labial-mate-larga-duracion";
 
-test("agregar al carrito → drawer → carrito → checkout", async ({ page }) => {
+// @db-write: agregar al carrito persiste el carrito en la base compartida con prod.
+test("@db-write agregar al carrito → drawer → carrito → checkout", async ({ page }) => {
   await page.goto(`/producto/${PRODUCT_SLUG}`);
 
   // Agregar al carrito (variante por defecto, qty 1).

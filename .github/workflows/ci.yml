@@ -35,6 +35,10 @@ jobs:
       - name: Unit tests
         run: pnpm test
 
+      # Impeccable live mode inyecta marcadores en el código mientras se itera; nunca deben llegar a main.
+      - name: Sin marcadores de Impeccable live
+        run: "! grep -rnE 'impeccable-(live|variant|carbonize|param|css)|localhost:8400' src"
+
       - name: Build
         run: pnpm build
         env:

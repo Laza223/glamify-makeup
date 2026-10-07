@@ -6,6 +6,7 @@ import { CheckoutForm } from "@/app/(storefront)/checkout/checkout-form";
 import { OrderBump } from "@/components/cart/order-bump";
 import { getOrderBumpOffers } from "@/lib/catalog/recommendations";
 import { selectOrderBump } from "@/lib/catalog/recommend";
+import { isPreviewDeploy } from "@/lib/http/deploy-env";
 
 export const metadata: Metadata = { title: "Checkout" };
 
@@ -29,6 +30,7 @@ export default async function CheckoutPage() {
         couponFreeShipping={coupon?.freeShipping ?? false}
         defaultName={customer?.name ?? ""}
         defaultEmail={customer?.email ?? ""}
+        paymentsDisabled={isPreviewDeploy()}
         items={cart.items.map((item) => ({
           id: item.id,
           name: item.combo ? item.combo.name : item.variant!.product.name,

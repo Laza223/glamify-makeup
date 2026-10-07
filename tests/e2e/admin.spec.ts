@@ -14,7 +14,7 @@ const RUN = Date.now().toString(36).slice(-5).toUpperCase();
 test.describe("Panel admin — DoD M3", () => {
   test.skip(!ADMIN_EMAIL || !ADMIN_PASSWORD, "Definí ADMIN_EMAIL y ADMIN_PASSWORD (corré `pnpm admin:create`).");
 
-  test("login → crear producto con variante+stock → crear cupón → cambiar estado de pedido", async ({ page }) => {
+  test("@db-write login → crear producto con variante+stock → crear cupón → cambiar estado de pedido", async ({ page }) => {
     // 1) Login. El botón dice "Entrar" (login-form.tsx).
     await page.goto("/admin/login");
     await page.getByLabel(/email/i).fill(ADMIN_EMAIL);

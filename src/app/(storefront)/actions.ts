@@ -33,6 +33,7 @@ import {
 import { retryOrderPayment, defaultRetryPaymentDeps } from "@/lib/orders/retry-payment";
 import { getCustomer } from "@/lib/customer/auth";
 import type { ActionResult } from "@/lib/forms/action-result";
+import { isPreviewDeploy, PREVIEW_PAYMENTS_OFF_MESSAGE } from "@/lib/http/deploy-env";
 
 export type { ActionResult };
 
@@ -305,6 +306,7 @@ export async function createCheckoutAction(input: {
     agencyLabel?: string;
   };
 }): Promise<CheckoutResult> {
+  if (isPreviewDeploy()) return { ok: false, error: PREVIEW_PAYMENTS_OFF_MESSAGE };
   try {
     const { cart, cartId } = await loadCurrentCart();
     if (!cart || cart.items.length === 0)
@@ -353,6 +355,7 @@ export async function createCheckoutAction(input: {
 
 /** Reintento de pago de un pedido que sigue pendiente (pago rechazado, sin saldo o abandonado en MP). */
 export async function retryPaymentAction(orderId: string): Promise<CheckoutResult> {
+  if (isPreviewDeploy()) return { ok: false, error: PREVIEW_PAYMENTS_OFF_MESSAGE };
   try {
     const { initPoint } = await retryOrderPayment(orderId, defaultRetryPaymentDeps(appUrl()));
     return { ok: true, initPoint };

@@ -1,7 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 
 // Solo lectura: no agrega al carrito, solo verifica qué tono muestra la barra fija.
-test.use({ viewport: { width: 390, height: 844 } });
+// Solo corre en el proyecto `mobile` (390x844): la barra es md:hidden (ver playwright.config.ts).
 
 /** Busca en /tienda una ficha con al menos 2 tonos con stock. */
 async function openProductWithTwoTones(page: Page): Promise<boolean> {
