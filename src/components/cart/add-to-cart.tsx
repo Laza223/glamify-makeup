@@ -7,11 +7,18 @@ import { Button } from "@/components/ui/button";
 import { VariantSwatchSelector } from "@/components/catalog/variant-swatch-selector";
 import { QuantityStepper } from "@/components/catalog/quantity-stepper";
 import { useCartUI } from "@/components/cart/cart-provider";
+import { MobileStickyBuyBar } from "@/components/catalog/mobile-sticky-buy-bar";
 import { addToCartAction } from "@/app/(storefront)/actions";
 import { track } from "@/lib/analytics/track";
 import type { CatalogVariant } from "@/lib/catalog/types";
 
-export function AddToCart({ variants }: { variants: CatalogVariant[] }) {
+interface AddToCartProps {
+  variants: CatalogVariant[];
+  /** Barra fija mobile: comparte el tono elegido acá (si no, agregaría el primero con stock). */
+  stickyBar?: { productName: string; image?: string | null; price: number };
+}
+
+export function AddToCart({ variants, stickyBar }: AddToCartProps) {
   const router = useRouter();
   const { openCart } = useCartUI();
   const firstAvailable = variants.find((v) => v.stock > 0) ?? variants[0];
@@ -51,6 +58,7 @@ export function AddToCart({ variants }: { variants: CatalogVariant[] }) {
         </Button>
       </div>
       {error && <p className="text-sm text-destructive font-medium">{error}</p>}
+      {stickyBar && <MobileStickyBuyBar {...stickyBar} variants={variants} selectedVariantId={variantId} />}
     </div>
   );
 }
