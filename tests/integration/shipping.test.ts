@@ -6,7 +6,7 @@ import type { CartLine } from "@/lib/cart/types";
 // isZipnovaConfigured (y el resto de la lógica específica de Zipnova) se testea en
 // tests/unit/shipping/zipnova.test.ts. Zipnova ya no es el proveedor por defecto acá
 // (ver docs/decisions/0001-shipping-provider.md) — este archivo sólo integra quoteShipping.
-const line = (over: Partial<CartLine> = {}): CartLine => ({ id: "l1", kind: "variant", refId: "v1", unitPrice: 1000, qty: 1, weightGr: 50, ...over });
+const line = (over: Partial<CartLine> = {}): CartLine => ({ id: "l1", kind: "variant", refId: "v1", unitPrice: 1000, qty: 1, weightGr: 50, isGiftCard: false, ...over });
 const zones: Zone[] = [
   { id: "z-amba", matchType: "cpRange", provinces: [], cpFrom: "1000", cpTo: "1900", price: 9000, active: true, order: 0 },
   { id: "z-resto", matchType: "cpRange", provinces: [], cpFrom: "0", cpTo: "9999", price: 10000, active: true, order: 3 },

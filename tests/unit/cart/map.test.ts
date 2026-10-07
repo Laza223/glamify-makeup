@@ -5,7 +5,7 @@ const variantItem: CartItemWithRefs = {
   id: "ci1", qty: 2, unitPriceSnapshot: "3200", comboId: null, variantId: "v1",
   variant: {
     id: "v1", name: "Rojo Pasión", priceOverride: null, stock: 18, weightGrOverride: null,
-    product: { id: "p1", name: "Labial Mate", basePrice: "3200", weightGr: 25, categoryId: "c1", slug: "labial-mate", images: [] },
+    product: { id: "p1", name: "Labial Mate", basePrice: "3200", weightGr: 25, categoryId: "c1", slug: "labial-mate", images: [], category: { slug: "labios" }, categories: [] },
   },
   combo: null,
 } as unknown as CartItemWithRefs;
@@ -39,5 +39,20 @@ describe("cartItemToCartLine", () => {
     expect(l).toMatchObject({ id: "ci2", kind: "combo", refId: "combo1", unitPrice: 4990, qty: 1, productId: null, categoryId: null });
     expect(l.components).toEqual([{ variantId: "v1", qty: 1 }, { variantId: "v2", qty: 1 }]);
     expect(l.weightGr).toBe(47); // 25 + 22(override)
+  });
+});
+
+describe("cartItemToCartLine — isGiftCard", () => {
+  it("variante de producto en la categoría gift-cards (primaria) → true", () => {
+    const item = { ...variantItem, variant: { ...variantItem.variant!, product: { ...variantItem.variant!.product, category: { slug: "gift-cards" } } } } as unknown as CartItemWithRefs;
+    expect(cartItemToCartLine(item).isGiftCard).toBe(true);
+  });
+  it("variante con gift-cards como categoría adicional → true", () => {
+    const item = { ...variantItem, variant: { ...variantItem.variant!, product: { ...variantItem.variant!.product, categories: [{ category: { slug: "gift-cards" } }] } } } as unknown as CartItemWithRefs;
+    expect(cartItemToCartLine(item).isGiftCard).toBe(true);
+  });
+  it("producto normal y combos → false", () => {
+    expect(cartItemToCartLine(variantItem).isGiftCard).toBe(false);
+    expect(cartItemToCartLine(comboItem).isGiftCard).toBe(false);
   });
 });

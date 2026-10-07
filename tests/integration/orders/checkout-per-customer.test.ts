@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { createCheckout, type CreateCheckoutDeps, type CheckoutDb } from "@/lib/orders/checkout-service";
 import type { CartLine } from "@/lib/cart/types";
 
-const line: CartLine = { id: "i1", kind: "variant", refId: "v1", unitPrice: 5000, qty: 1, weightGr: 50, productId: "p1", categoryId: "c1" };
+const line: CartLine = { id: "i1", kind: "variant", refId: "v1", unitPrice: 5000, qty: 1, weightGr: 50, productId: "p1", categoryId: "c1", isGiftCard: false };
 
 function makeDeps(redemptions: number): { deps: CreateCheckoutDeps; createOrder: ReturnType<typeof vi.fn> } {
   const createOrder = vi.fn(async ({ data }: { data: Record<string, unknown> }) => ({ id: "ord1", orderNumber: "GLM-000001", ...data, payments: [{ id: "pay1" }] }));
@@ -36,7 +36,7 @@ describe("createCheckout — perCustomerLimit", () => {
     const { deps, createOrder } = makeDeps(1);
     await createCheckout({
       contactName: "Ana", contactEmail: "ana@x.com", contactPhone: "11", shippingMethod: "domicilio",
-      address: { cp: "1414" }, lines: [{ line, productNameSnapshot: "P", variantNameSnapshot: "V", skuSnapshot: "S", title: "P—V" }],
+      address: { cp: "1414", city: "CABA", street: "Calle", number: "1" }, lines: [{ line, productNameSnapshot: "P", variantNameSnapshot: "V", skuSnapshot: "S", title: "P—V" }],
       couponCode: "RECOMPRA", customerId: "u1", cartId: "cart1",
     }, deps);
     expect(createOrder).toHaveBeenCalledWith(expect.objectContaining({
@@ -48,7 +48,7 @@ describe("createCheckout — perCustomerLimit", () => {
     const { deps, createOrder } = makeDeps(0);
     await createCheckout({
       contactName: "Ana", contactEmail: "ana@x.com", contactPhone: "11", shippingMethod: "domicilio",
-      address: { cp: "1414" }, lines: [{ line, productNameSnapshot: "P", variantNameSnapshot: "V", skuSnapshot: "S", title: "P—V" }],
+      address: { cp: "1414", city: "CABA", street: "Calle", number: "1" }, lines: [{ line, productNameSnapshot: "P", variantNameSnapshot: "V", skuSnapshot: "S", title: "P—V" }],
       couponCode: "RECOMPRA", customerId: "u1", cartId: "cart1",
     }, deps);
     const call = createOrder.mock.calls[0][0] as { data: { couponId: string | null; discountTotal: number } };

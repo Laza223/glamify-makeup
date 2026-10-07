@@ -6,6 +6,7 @@ import { getRelatedProducts } from "@/lib/catalog/recommendations";
 import { buildBreadcrumbs, type CategoryNode } from "@/lib/catalog/categories";
 import { getEffectivePrice, isOnSale, getDiscountPercent, toNumber } from "@/lib/catalog/pricing";
 import { isProductMadeToOrder } from "@/lib/catalog/made-to-order";
+import { isProductGiftCard } from "@/lib/catalog/gift-card";
 import { storeWhatsappUrl } from "@/lib/email/whatsapp-url";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -55,6 +56,7 @@ export default async function ProductoPage({ params }: { params: Promise<{ slug:
   if (!product) notFound();
 
   const madeToOrder = isProductMadeToOrder(product);
+  const giftCard = isProductGiftCard(product);
   const whatsappUrl = madeToOrder ? await storeWhatsappUrl(`¡Hola! Quiero armar un ${product.name}`) : null;
   const price = getEffectivePrice(product);
   const onSale = isOnSale(product);
@@ -168,6 +170,13 @@ export default async function ProductoPage({ params }: { params: Promise<{ slug:
                 discountPercent={getDiscountPercent(product)}
                 size="lg"
               />
+
+              {giftCard && (
+                <p className="rounded-xl bg-secondary/60 p-3 text-sm text-muted-foreground">
+                  Llega por mail con un código. Un solo uso, vence a los 6 meses, descuenta productos (no el envío).
+                  Si la compra es menor, el saldo no se conserva.
+                </p>
+              )}
 
               <AddToCart variants={product.variants} />
             </>

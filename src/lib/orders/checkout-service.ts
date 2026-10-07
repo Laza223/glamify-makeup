@@ -1,8 +1,9 @@
 // NOTA: sin `import "server-only"` — lo importa scripts/simulate-mp-webhook.ts (node). Server por importar prisma.
 import { prisma, type PrismaTransactionClient } from "@/lib/prisma";
 import { round2 } from "@/lib/money";
-import { cartSubtotal } from "@/lib/cart/totals";
-import { lineTotal } from "@/lib/cart/totals";
+import { cartSubtotal, lineTotal, physicalSubtotal, isDigitalOnly } from "@/lib/cart/totals";
+import { validateShippingAddress } from "@/lib/shipping/address";
+import { releaseGiftCardReservation } from "@/lib/coupons/gift-card-service";
 import { validateCoupon, applyCoupon } from "@/lib/coupons/apply";
 import { formatOrderNumber } from "@/lib/orders/order-number";
 import { createPreference as realCreatePreference } from "@/lib/payments/mercadopago";
@@ -34,6 +35,7 @@ export interface CreateCheckoutInput {
   contactName: string;
   contactEmail: string;
   contactPhone: string;
+  /** Lo que eligió la clienta. Si el carrito es solo gift cards el server lo ignora (pedido `digital`). */
   shippingMethod: "domicilio" | "sucursal";
   address: CheckoutAddress;
   lines: CheckoutLineInput[];
@@ -57,6 +59,8 @@ export interface CouponRow {
   maxUses: number | null;
   usedCount: number;
   perCustomerLimit: number | null;
+  /** != null → es una gift card (emitida por ese pedido): se reserva al crear el pedido. */
+  sourceOrderId?: string | null;
 }
 
 /** Superficie mínima de DB que necesita el servicio (para inyectar fakes en tests). */
@@ -105,12 +109,20 @@ export async function createCheckout(input: CreateCheckoutInput, deps: CreateChe
   const now = deps.now ?? new Date();
   const cartLines = input.lines.map((l) => l.line);
   const subtotal = cartSubtotal(cartLines);
+  // El server decide si el pedido es digital (solo gift cards): nunca se confía en el cliente.
+  const digitalOnly = isDigitalOnly(cartLines);
+  const shippingMethod = digitalOnly ? "digital" : input.shippingMethod;
+  if (!digitalOnly) {
+    const addressError = validateShippingAddress(input.shippingMethod, input.address);
+    if (addressError) throw new Error(addressError);
+  }
 
-  // --- Cupón (revalidado en server) ---
+  // --- Cupón (revalidado en server) --- Un pedido digital ignora cualquier cupón (no hay a qué descontarle).
   let discount = 0;
   let freeShippingByCoupon = false;
   let couponId: string | null = null;
-  if (input.couponCode) {
+  let giftCardCoupon: CouponRow | null = null;
+  if (input.couponCode && !digitalOnly) {
     const coupon = await deps.db.coupon.findUnique({ where: { code: input.couponCode } });
     if (coupon) {
       let customerRedemptions = 0;
@@ -120,26 +132,45 @@ export async function createCheckout(input: CreateCheckoutInput, deps: CreateChe
         });
         customerRedemptions = r?.redeemedCount ?? 0;
       }
-      const v = validateCoupon(coupon, { subtotal, now, customerRedemptions });
+      // El mínimo se mide sobre lo físico: las gift cards no cuentan para cupones.
+      const v = validateCoupon(coupon, { subtotal: physicalSubtotal(cartLines), now, customerRedemptions });
       if (v.ok) {
         const res = applyCoupon(coupon, cartLines);
-        discount = res.discount;
-        freeShippingByCoupon = res.freeShipping;
-        couponId = coupon.id;
+        // Una gift card que no descuenta nada (ej. carrito solo de gift cards) no se aplica: se quemaría gratis.
+        const isGiftCardCoupon = coupon.sourceOrderId != null;
+        if (!isGiftCardCoupon || res.discount > 0) {
+          discount = res.discount;
+          freeShippingByCoupon = res.freeShipping;
+          couponId = coupon.id;
+          if (isGiftCardCoupon) giftCardCoupon = coupon;
+        }
       }
     }
   }
 
-  // --- Envío ---
-  const quote = await deps.quoteShipping({
-    cp: input.address.cp, province: input.address.province ?? null, city: input.address.city ?? null,
-    method: input.shippingMethod, lines: cartLines, subtotal,
-  });
+  // --- Envío --- (pedido digital: sin cotizar, sin dirección)
+  const quote = digitalOnly
+    ? { cost: 0, zoneId: null }
+    : await deps.quoteShipping({
+        cp: input.address.cp, province: input.address.province ?? null, city: input.address.city ?? null,
+        method: input.shippingMethod, lines: cartLines,
+        subtotal: physicalSubtotal(cartLines), // las gift cards no cuentan para el envío gratis
+      });
   const shippingCost = freeShippingByCoupon ? 0 : quote.cost;
   const total = round2(subtotal - discount + shippingCost);
+  if (total <= 0) throw new Error("El total no puede ser $0.");
 
   // --- Persistencia (tx) ---
   const order = await deps.db.$transaction(async (tx) => {
+    if (giftCardCoupon) {
+      // Reserva atómica: dos pedidos que compiten por la misma gift card → solo uno obtiene count 1.
+      // El webhook NO la vuelve a incrementar; se libera si el pedido se cancela sin pagarse.
+      const res = await tx.coupon.updateMany({
+        where: { id: giftCardCoupon.id, active: true, usedCount: { lt: giftCardCoupon.maxUses ?? 1 } },
+        data: { usedCount: { increment: 1 } },
+      });
+      if (res.count !== 1) throw new Error("Esta gift card ya fue usada.");
+    }
     const seq = await deps.nextOrderSeq(tx);
     const orderNumber = formatOrderNumber(seq);
     const created = await tx.order.create({
@@ -147,8 +178,8 @@ export async function createCheckout(input: CreateCheckoutInput, deps: CreateChe
         orderNumber,
         customerId: input.customerId ?? null,
         contactName: input.contactName, contactEmail: input.contactEmail, contactPhone: input.contactPhone,
-        shippingAddress: input.address as unknown as object,
-        shippingMethod: input.shippingMethod,
+        shippingAddress: (digitalOnly ? {} : input.address) as unknown as object,
+        shippingMethod,
         shippingZoneId: quote.zoneId,
         weightGr: orderWeightGr(cartLines), // snapshot para el envío automático a MiCorreo
         subtotal, shippingCost, discountTotal: discount, total,
@@ -164,6 +195,7 @@ export async function createCheckout(input: CreateCheckoutInput, deps: CreateChe
             unitPriceSnapshot: l.line.unitPrice,
             qty: l.line.qty,
             lineTotal: lineTotal(l.line),
+            isGiftCard: l.line.isGiftCard,
           })),
         },
         payments: { create: { provider: "mercadopago", status: "pending", amount: total } },
@@ -185,13 +217,31 @@ export async function createCheckout(input: CreateCheckoutInput, deps: CreateChe
           ...input.lines.map((l) => ({ title: l.title, quantity: l.line.qty, unit_price: l.line.unitPrice })),
           ...(shippingCost > 0 ? [{ title: "Envío", quantity: 1, unit_price: shippingCost }] : []),
         ];
-  const preference = await deps.createPreference({
-    orderId: order.id, orderNumber: order.orderNumber,
-    items: mpItems,
-    payerEmail: input.contactEmail,
-    appUrl: deps.appUrl,
-    notificationUrl: `${deps.appUrl}/api/webhooks/mercadopago`,
-  });
+  let preference: Awaited<ReturnType<typeof deps.createPreference>>;
+  try {
+    preference = await deps.createPreference({
+      orderId: order.id, orderNumber: order.orderNumber,
+      items: mpItems,
+      payerEmail: input.contactEmail,
+      appUrl: deps.appUrl,
+      notificationUrl: `${deps.appUrl}/api/webhooks/mercadopago`,
+    });
+  } catch (e) {
+    // Sin preference la clienta no puede pagar: el pedido queda huérfano. Se cancela (con la misma
+    // guarda de estado que el expiry job), se libera la gift card que reservó y el carrito vuelve a
+    // estar activo para que reintente. Best-effort: el error original es el que se propaga.
+    try {
+      await deps.db.$transaction(async (tx) => {
+        const res = await tx.order.updateMany({ where: { id: order.id, status: "pending_payment" }, data: { status: "cancelled" } });
+        if (res.count !== 1) return;
+        await releaseGiftCardReservation(tx, order.id);
+        if (input.cartId) await tx.cart.update({ where: { id: input.cartId }, data: { status: "active" } });
+      });
+    } catch (rollbackError) {
+      console.error(`[checkout] no pude cancelar el pedido ${order.orderNumber} tras fallar la preference:`, rollbackError instanceof Error ? rollbackError.message : rollbackError);
+    }
+    throw e;
+  }
 
   await deps.db.$transaction(async (tx) => {
     await tx.payment.update({ where: { id: order.payments[0].id }, data: { mpPreferenceId: preference.id } });

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { orderConfirmationEmail, newOrderAlertEmail, shipmentDispatchedEmail, shipmentAwaitingPickupEmail, shipmentDeliveredEmail, shipmentReturnedAlertEmail, retractionReceiptEmail, type OrderEmailData } from "@/lib/email/templates";
+import { orderConfirmationEmail, newOrderAlertEmail, giftCardEmail, shipmentDispatchedEmail, shipmentAwaitingPickupEmail, shipmentDeliveredEmail, shipmentReturnedAlertEmail, retractionReceiptEmail, type OrderEmailData } from "@/lib/email/templates";
 import { CORREO_TRACKING_URL } from "@/lib/shipping/tracking";
 
 const data: OrderEmailData = {
@@ -174,5 +174,51 @@ describe("link a la página de seguimiento propia", () => {
   it("el mail de sucursal también usa la página propia", () => {
     const m = shipmentAwaitingPickupEmail({ orderNumber: "GLM-1", contactName: "Ana", trackingNumber: "CA1", facility: null, trackingUrl: url });
     expect(m.html).toContain(`href="${url}"`);
+  });
+});
+
+describe("giftCardEmail", () => {
+  const cards = [
+    { code: "GIFT-AAAA-BBBB", amount: 20000, validTo: new Date("2027-04-08T01:00:00Z") },
+    { code: "GIFT-CCCC-DDDD", amount: 10000, validTo: new Date("2027-04-08T01:00:00Z") },
+  ];
+  it("asunto, un bloque por código con monto y vencimiento en ART, y las condiciones", () => {
+    const m = giftCardEmail({ orderNumber: "GLM-000050", contactName: "Ana", cards, whatsappUrl: "https://wa.me/1" });
+    expect(m.subject).toBe("Tu Gift Card Glamify");
+    expect(m.html).toContain("GIFT-AAAA-BBBB");
+    expect(m.html).toContain("GIFT-CCCC-DDDD");
+    expect(m.html).toContain("$ 20.000,00");
+    expect(m.html).toContain("07/04/2027");
+    expect(m.html).toContain("ingresá el código en el carrito");
+    expect(m.html).toMatch(/Un solo uso/);
+    expect(m.html).toMatch(/no el envío/);
+    expect(m.html).toMatch(/no se acumula con otras gift cards/i);
+    expect(m.html).toMatch(/saldo no se conserva/);
+    expect(m.html).toContain("https://wa.me/1");
+    expect(m.text).toContain("GIFT-AAAA-BBBB");
+  });
+  it("escapa el nombre", () => {
+    const m = giftCardEmail({ orderNumber: "GLM-1", contactName: "<b>x</b>", cards: [cards[0]] });
+    expect(m.html).not.toContain("<b>x</b>");
+  });
+});
+
+describe("emails de pedido digital", () => {
+  const digital: OrderEmailData = { ...data, shippingMethod: "digital", shippingCost: 0, discountTotal: 0, subtotal: 20000, total: 20000 };
+  it("confirmación: sin fila de envío ni texto de despacho", () => {
+    const m = orderConfirmationEmail(digital);
+    expect(m.html).toContain("Te mandamos la gift card en otro mail");
+    expect(m.html).not.toMatch(/despachemos|>Envío</);
+    expect(m.text).not.toMatch(/Envío:/);
+  });
+  it("alerta a la dueña: indica que no requiere envío y no marca REVISAR", () => {
+    const m = newOrderAlertEmail(digital);
+    expect(m.html).toContain("Pedido de gift card: no requiere envío");
+    expect(m.subject).not.toMatch(/REVISAR/);
+  });
+  it("alerta con cupón excedido → REVISAR y detalle", () => {
+    const m = newOrderAlertEmail({ ...data, couponOverLimit: "GLAM10" });
+    expect(m.subject).toMatch(/REVISAR/);
+    expect(m.html).toContain("GLAM10");
   });
 });

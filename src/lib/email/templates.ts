@@ -1,6 +1,7 @@
 import { formatARS } from "@/lib/money";
 import { appBaseUrl } from "@/lib/seo/url";
 import { CORREO_TRACKING_URL } from "@/lib/shipping/tracking";
+import { formatGiftCardDate } from "@/lib/coupons/gift-card";
 
 /** Escapa HTML para interpolar texto del usuario en cuerpos de email (anti-inyección). */
 function escapeHtml(s: string): string {
@@ -35,6 +36,8 @@ export interface OrderEmailData {
   micorreoImport?: { imported: boolean; detail: string };
   /** Link de WhatsApp de la tienda para el "escribinos" del mail a la clienta (opcional). */
   whatsappUrl?: string | null;
+  /** Código del cupón común que ya no tenía usos al confirmarse el pago (aviso a la dueña). */
+  couponOverLimit?: string;
 }
 export interface EmailContent {
   subject: string;
@@ -115,7 +118,7 @@ function totalsHtml(d: OrderEmailData): string {
   const rows: Array<readonly [string, number, boolean]> = [
     ["Subtotal", d.subtotal, false],
     ...(d.discountTotal > 0 ? ([["Descuento", -d.discountTotal, false]] as const) : []),
-    ["Envío", d.shippingCost, false],
+    ...(d.shippingMethod === "digital" ? [] : ([["Envío", d.shippingCost, false]] as const)),
     ["Total", d.total, true],
   ];
   const html = rows
@@ -161,21 +164,28 @@ const FOOTER_INTERNAL = "Aviso interno para la dueña de Glamify Makeup.";
 
 /** Email de confirmación a la clienta. */
 export function orderConfirmationEmail(d: OrderEmailData): EmailContent {
+  const digital = d.shippingMethod === "digital";
   const subject = `¡Gracias por tu compra! Pedido ${d.orderNumber} — Glamify Makeup`;
   const html = layout({
-    preheader: `Recibimos tu pedido ${d.orderNumber}. Te avisamos cuando lo despachemos.`,
+    preheader: digital
+      ? `Recibimos tu pedido ${d.orderNumber}. Te mandamos la gift card en otro mail.`
+      : `Recibimos tu pedido ${d.orderNumber}. Te avisamos cuando lo despachemos.`,
     title: "Gracias por tu compra",
     footer: FOOTER_CUSTOMER,
     body: [
       title(`¡Gracias, ${escapeHtml(d.contactName)}!`),
-      paragraph(`Recibimos tu pedido <strong>${escapeHtml(d.orderNumber)}</strong>. Te avisamos por mail apenas lo despachemos.`),
+      paragraph(
+        digital
+          ? `Recibimos tu pedido <strong>${escapeHtml(d.orderNumber)}</strong>. Te mandamos la gift card en otro mail.`
+          : `Recibimos tu pedido <strong>${escapeHtml(d.orderNumber)}</strong>. Te avisamos por mail apenas lo despachemos.`,
+      ),
       itemsHtml(d.items),
       totalsHtml(d),
-      paragraph(`Envío ${shippingLabel(d.shippingMethod)}.`),
+      ...(digital ? [] : [paragraph(`Envío ${shippingLabel(d.shippingMethod)}.`)]),
       helpLine(d.whatsappUrl),
     ].join("\n"),
   });
-  const text = `¡Gracias, ${d.contactName}!\nPedido ${d.orderNumber}\n\n${itemsText(d.items)}\n\nSubtotal: ${formatARS(d.subtotal)}\nDescuento: ${formatARS(d.discountTotal)}\nEnvío: ${formatARS(d.shippingCost)}\nTotal: ${formatARS(d.total)}\nEnvío: ${d.shippingMethod}${d.whatsappUrl ? `\n\nDudas por WhatsApp: ${d.whatsappUrl}` : ""}`;
+  const text = `¡Gracias, ${d.contactName}!\nPedido ${d.orderNumber}\n\n${itemsText(d.items)}\n\nSubtotal: ${formatARS(d.subtotal)}\nDescuento: ${formatARS(d.discountTotal)}\n${digital ? "Te mandamos la gift card en otro mail." : `Envío: ${formatARS(d.shippingCost)}`}\nTotal: ${formatARS(d.total)}${digital ? "" : `\nEnvío: ${d.shippingMethod}`}${d.whatsappUrl ? `\n\nDudas por WhatsApp: ${d.whatsappUrl}` : ""}`;
   return { subject, html, text };
 }
 
@@ -185,7 +195,8 @@ export function newOrderAlertEmail(d: OrderEmailData): EmailContent {
   const amountMismatch = d.amountPaid != null && Math.abs(d.amountPaid - d.total) > 0.01;
   // Sólo cuenta como "no cargado" si sabemos el resultado y fue negativo. Sin dato → no alarmar.
   const notImported = d.micorreoImport != null && !d.micorreoImport.imported;
-  const needsReview = oversell || amountMismatch || notImported;
+  const digital = d.shippingMethod === "digital";
+  const needsReview = oversell || amountMismatch || notImported || d.couponOverLimit != null;
   const subject = needsReview
     ? `Nuevo pedido ${d.orderNumber} — REVISAR`
     : `Nuevo pedido pagado ${d.orderNumber} (${formatARS(d.total)})`;
@@ -204,6 +215,9 @@ export function newOrderAlertEmail(d: OrderEmailData): EmailContent {
         `<strong>MiCorreo:</strong> este envío <strong>NO se cargó solo</strong> (${escapeHtml(d.micorreoImport!.detail)}). Entrá al pedido en el panel y tocá "Reintentar carga en MiCorreo", o cargalo a mano.`,
       )
     : "";
+  const couponHtml = d.couponOverLimit != null
+    ? alertBox(`<strong>Cupón:</strong> el cupón ${escapeHtml(d.couponOverLimit)} superó su límite de usos en este pedido. El pago está acreditado; revisalo si querés.`)
+    : "";
   const html = layout({
     preheader: `${d.orderNumber} · ${formatARS(d.total)} · ${d.contactName}`,
     title: `Nuevo pedido ${d.orderNumber}`,
@@ -213,14 +227,97 @@ export function newOrderAlertEmail(d: OrderEmailData): EmailContent {
       oversellHtml,
       amountHtml,
       importHtml,
+      couponHtml,
       paragraph(`<strong>${escapeHtml(d.contactName)}</strong><br /><a href="mailto:${escapeHtml(d.contactEmail)}" style="color:${COLOR.link};">${escapeHtml(d.contactEmail)}</a>`),
       itemsHtml(d.items),
       totalsHtml(d),
-      paragraph(`Envío ${shippingLabel(d.shippingMethod)}.`),
+      paragraph(digital ? "Pedido de gift card: no requiere envío." : `Envío ${shippingLabel(d.shippingMethod)}.`),
     ].join("\n"),
   });
-  const text = `Nuevo pedido ${d.orderNumber}\nCliente: ${d.contactName} (${d.contactEmail})\nTotal: ${formatARS(d.total)}${oversell ? `\nOVERSELL: ${d.oversoldLines!.map((l) => l.name).join(", ")}` : ""}${amountMismatch ? `\nMONTO: acreditado ${formatARS(d.amountPaid!)} ≠ total ${formatARS(d.total)}` : ""}${notImported ? `\nMiCorreo NO cargó solo: ${d.micorreoImport!.detail}` : ""}`;
+  const text = `Nuevo pedido ${d.orderNumber}\nCliente: ${d.contactName} (${d.contactEmail})\nTotal: ${formatARS(d.total)}${oversell ? `\nOVERSELL: ${d.oversoldLines!.map((l) => l.name).join(", ")}` : ""}${amountMismatch ? `\nMONTO: acreditado ${formatARS(d.amountPaid!)} ≠ total ${formatARS(d.total)}` : ""}${notImported ? `\nMiCorreo NO cargó solo: ${d.micorreoImport!.detail}` : ""}${d.couponOverLimit != null ? `\nCUPÓN: ${d.couponOverLimit} superó su límite de usos en este pedido` : ""}${digital ? "\nPedido de gift card: no requiere envío." : ""}`;
   return { subject, html, text };
+}
+
+export interface GiftCardEmailItem {
+  code: string;
+  amount: number;
+  validTo: Date;
+}
+export interface GiftCardEmailData {
+  orderNumber: string;
+  contactName: string;
+  cards: GiftCardEmailItem[];
+  whatsappUrl?: string | null;
+}
+
+const GIFT_CARD_CONDITIONS = [
+  "Un solo uso.",
+  "Descuenta productos, no el envío.",
+  "No se acumula con otras gift cards.",
+  "Si la compra es menor al monto, el saldo no se conserva.",
+] as const;
+
+/** Email a la clienta con los códigos de las gift cards que compró (un código por unidad). */
+export function giftCardEmail(d: GiftCardEmailData): EmailContent {
+  const plural = d.cards.length > 1;
+  const subject = "Tu Gift Card Glamify";
+  const cardBox = (c: GiftCardEmailItem) =>
+    `<tr><td align="center" style="padding:14px 32px 0 32px;"><table role="presentation" cellpadding="0" cellspacing="0" style="background-color:${COLOR.page};border:1px solid ${COLOR.line};border-radius:12px;"><tr><td align="center" style="padding:14px 28px;font-family:${FONT_BODY};font-size:14px;line-height:22px;color:${COLOR.muted};">Gift Card de ${formatARS(c.amount)}<br /><span style="font-size:26px;font-weight:bold;letter-spacing:2px;color:${COLOR.primary};">${escapeHtml(c.code)}</span><br />Vence el ${formatGiftCardDate(c.validTo)}</td></tr></table></td></tr>`;
+  const html = layout({
+    preheader: `Tu pedido ${d.orderNumber}: ${plural ? "tus códigos" : "tu código"} de gift card.`,
+    title: "Tu Gift Card Glamify",
+    footer: FOOTER_CUSTOMER,
+    body: [
+      title(`¡Tu gift card, ${escapeHtml(d.contactName)}!`),
+      paragraph(`Gracias por tu compra <strong>${escapeHtml(d.orderNumber)}</strong>. ${plural ? "Estos son tus códigos" : "Este es tu código"}:`),
+      ...d.cards.map(cardBox),
+      paragraph("Para usarla, ingresá el código en el carrito."),
+      block(GIFT_CARD_CONDITIONS.join(" "), "10px 32px 0 32px", `font-size:13px;line-height:20px;color:${COLOR.muted};`),
+      helpLine(d.whatsappUrl),
+    ].join("\n"),
+  });
+  const cardsText = d.cards.map((c) => `- ${formatARS(c.amount)}: ${c.code} (vence el ${formatGiftCardDate(c.validTo)})`).join("\n");
+  const text = `¡Tu gift card, ${d.contactName}!\nGracias por tu compra ${d.orderNumber}.\n\n${cardsText}\n\nPara usarla, ingresá el código en el carrito.\n${GIFT_CARD_CONDITIONS.join(" ")}${d.whatsappUrl ? `\nDudas por WhatsApp: ${d.whatsappUrl}` : ""}`;
+  return { subject, html, text };
+}
+
+export interface GiftCardRefundedUsedData {
+  orderNumber: string;
+  /** Cantidad de gift cards del pedido que ya estaban usadas (no se pudieron anular). */
+  used: number;
+}
+
+/** Alerta a la dueña: se reembolsó/canceló un pedido cuyas gift cards ya se habían usado. */
+export function giftCardRefundedUsedEmail(d: GiftCardRefundedUsedData): EmailContent {
+  const subject = `Reembolso de gift card ya usada — ${d.orderNumber}`;
+  const detail = `El pedido ${d.orderNumber} se reembolsó o canceló, pero ${d.used} gift card(s) ya se habían usado: no se pudieron anular.`;
+  const html = layout({
+    preheader: subject,
+    title: subject,
+    footer: FOOTER_INTERNAL,
+    body: [title(escapeHtml(subject)), alertBox(escapeHtml(detail)), paragraph("Revisá el pedido en el panel: las gift cards usadas ya descontaron en otras compras.")].join("\n"),
+  });
+  return { subject, html, text: `${detail}\nRevisá el pedido en el panel.` };
+}
+
+export interface ApprovedOnClosedOrderData {
+  orderNumber: string;
+  orderStatus: "cancelled" | "refunded";
+  amount: number;
+}
+
+/** Alerta a la dueña: MP aprobó un pago sobre un pedido ya cancelado/reembolsado (la plata entró). */
+export function approvedOnClosedOrderEmail(d: ApprovedOnClosedOrderData): EmailContent {
+  const label = d.orderStatus === "cancelled" ? "cancelado" : "reembolsado";
+  const subject = `Pago aprobado en pedido ${label} — ${d.orderNumber}`;
+  const detail = `Mercado Pago aprobó ${formatARS(d.amount)} en el pedido ${d.orderNumber}, que estaba ${label}: revisá y reembolsá o reactivá a mano.`;
+  const html = layout({
+    preheader: subject,
+    title: subject,
+    footer: FOOTER_INTERNAL,
+    body: [title(escapeHtml(subject)), alertBox(escapeHtml(detail))].join("\n"),
+  });
+  return { subject, html, text: detail };
 }
 
 export interface DispatchEmailData {

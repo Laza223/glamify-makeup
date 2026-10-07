@@ -1,4 +1,5 @@
 import { findExpiredOrderIds, type ExpirableOrder } from "@/lib/orders/expiry";
+import { releaseGiftCardReservation } from "@/lib/coupons/gift-card-service";
 import type { PrismaTransactionClient } from "@/lib/prisma";
 
 export interface ExpiryJobDb {
@@ -29,7 +30,11 @@ export async function runOrderExpiryJob(deps: ExpiryJobDeps): Promise<{ cancelle
       // Sin esto, un webhook que apruebe el pago en la ventana entre el findMany de arriba y este
       // update cancelaría un pedido que ya está "paid" — dinero cobrado, pedido marcado cancelado.
       const res = await tx.order.updateMany({ where: { id, status: "pending_payment" }, data: { status: "cancelled" } });
-      if (res.count === 1) cancelled++;
+      if (res.count === 1) {
+        cancelled++;
+        // Si el pedido reservó una gift card como cupón, vuelve a quedar disponible.
+        await releaseGiftCardReservation(tx, id);
+      }
     });
   }
   return { cancelled };

@@ -8,7 +8,7 @@ const baseCoupon = (over: Partial<ValidatableCoupon> = {}): ValidatableCoupon =>
 const NOW = new Date("2026-06-04T12:00:00Z");
 
 const line = (over: Partial<CartLine> = {}): CartLine => ({
-  id: "l1", kind: "variant", refId: "v1", unitPrice: 1000, qty: 1, weightGr: 25, productId: "p1", categoryId: "c1", ...over,
+  id: "l1", kind: "variant", refId: "v1", unitPrice: 1000, qty: 1, weightGr: 25, productId: "p1", categoryId: "c1", isGiftCard: false, ...over,
 });
 
 describe("validateCoupon", () => {
@@ -58,5 +58,28 @@ describe("applyCoupon", () => {
     const lines = [line({ kind: "combo", refId: "combo1", productId: null, categoryId: null, unitPrice: 4990, qty: 1 })];
     expect(applyCoupon(pct({ value: 10, scope: "category", scopeId: "c1" }), lines)).toEqual({ discount: 0, freeShipping: false });
     expect(applyCoupon(pct({ value: 10, scope: "all" }), lines)).toEqual({ discount: 499, freeShipping: false });
+  });
+});
+
+describe("applyCoupon con gift cards en el carrito", () => {
+  const gift = line({ id: "g", unitPrice: 20000, qty: 1, isGiftCard: true });
+  const physical = line({ id: "p", unitPrice: 3000, qty: 1 });
+  const pct: ApplicableCoupon = { type: "percentage", value: 10, scope: "all", scopeId: null };
+  const fixed: ApplicableCoupon = { type: "fixed", value: 5000, scope: "all", scopeId: null };
+
+  it("un % solo descuenta lo físico", () => {
+    expect(applyCoupon(pct, [gift, physical]).discount).toBe(300);
+  });
+  it("un fijo topea en la base física, no en el total del carrito", () => {
+    expect(applyCoupon(fixed, [gift, physical]).discount).toBe(3000);
+  });
+  it("carrito solo de gift cards → descuento 0", () => {
+    expect(applyCoupon(pct, [gift]).discount).toBe(0);
+    expect(applyCoupon(fixed, [gift]).discount).toBe(0);
+  });
+  it("scope product/category tampoco toca gift cards aunque coincida el id", () => {
+    const g = line({ id: "g2", unitPrice: 1000, isGiftCard: true, productId: "p9", categoryId: "c9" });
+    expect(applyCoupon({ type: "percentage", value: 50, scope: "product", scopeId: "p9" }, [g]).discount).toBe(0);
+    expect(applyCoupon({ type: "percentage", value: 50, scope: "category", scopeId: "c9" }, [g]).discount).toBe(0);
   });
 });

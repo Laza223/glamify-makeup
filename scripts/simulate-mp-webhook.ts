@@ -32,7 +32,7 @@ async function main(): Promise<void> {
   const line = {
     id: "sim", kind: "variant" as const, refId: variant.id,
     unitPrice: toNumber(variant.priceOverride ?? variant.product.basePrice), qty,
-    weightGr: variant.weightGrOverride ?? variant.product.weightGr,
+    weightGr: variant.weightGrOverride ?? variant.product.weightGr, isGiftCard: false,
     productId: variant.productId, categoryId: variant.product.categoryId,
   };
   const { orderId, orderNumber } = await createCheckout(

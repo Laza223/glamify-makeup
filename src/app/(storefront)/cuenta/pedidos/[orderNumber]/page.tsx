@@ -28,6 +28,7 @@ export default async function PedidoDetallePage({ params }: { params: Promise<{ 
     },
   });
   if (!order) notFound();
+  const isDigital = order.shippingMethod === "digital";
 
   return (
     <div className="space-y-5">
@@ -52,7 +53,7 @@ export default async function PedidoDetallePage({ params }: { params: Promise<{ 
       <div className="space-y-1 border-t border-border pt-3 text-sm">
         <div className="flex justify-between"><span>Subtotal</span><span className="tabular-nums">{formatARS(Number(order.subtotal))}</span></div>
         {Number(order.discountTotal) > 0 && <div className="flex justify-between"><span>Descuento</span><span className="tabular-nums">-{formatARS(Number(order.discountTotal))}</span></div>}
-        <div className="flex justify-between"><span>Envío</span><span className="tabular-nums">{formatARS(Number(order.shippingCost))}</span></div>
+        {!isDigital && <div className="flex justify-between"><span>Envío</span><span className="tabular-nums">{formatARS(Number(order.shippingCost))}</span></div>}
         <div className="flex justify-between font-semibold"><span>Total</span><span className="tabular-nums">{formatARS(Number(order.total))}</span></div>
       </div>
 
@@ -61,6 +62,9 @@ export default async function PedidoDetallePage({ params }: { params: Promise<{ 
           <p className="text-sm text-muted-foreground">Este pedido todavía no tiene el pago acreditado. Podés pagarlo ahora; si no, se cancela solo a las 24 horas.</p>
           <RetryPaymentButton orderId={order.id} />
         </div>
+      )}
+      {isDigital && order.status !== "pending_payment" && (
+        <p className="text-sm text-muted-foreground">Gift card enviada a tu mail.</p>
       )}
       {order.shipment?.trackingNumber && (
         <p className="text-sm text-muted-foreground">
