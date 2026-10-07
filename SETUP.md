@@ -1,9 +1,9 @@
 # Glamify Makeup — Setup & Credenciales (paso a paso)
 
 > Guía para dar de alta servicios y juntar credenciales. Hecha para seguir tranquilo, sin vueltas.
-> **Regla de oro de seguridad:** las claves **secretas** van solo en `.env.local` (que está en `.gitignore`) y en los **secrets de Cloudflare** (`wrangler secret put`). **Nunca** se pegan en el chat ni se suben a git.
+> **Regla de oro de seguridad:** las claves **secretas** van solo en `.env.local` (que está en `.gitignore`) y en las **variables de entorno de Vercel**. **Nunca** se pegan en el chat ni se suben a git.
 >
-> **Actualizado: 2026-06-04** — Migración Vercel → Cloudflare Workers.
+> **Actualizado: 2026-10-06** — el hosting es Vercel (migrado desde Cloudflare Workers en septiembre 2026).
 
 ---
 
@@ -11,7 +11,7 @@
 
 1. **GitHub** → repo del proyecto.
 2. **Supabase** → base de datos + auth + storage (lo más detallado).
-3. **Cloudflare** → hosting en Workers (se conecta al repo).
+3. **Vercel** → hosting (se conecta al repo).
 4. Cargar las **variables de entorno**.
 
 > Solo esto hace falta para arrancar **M0–M2**. Mercado Pago, MiCorreo y Resend vienen después (ver §6).
@@ -85,65 +85,38 @@ Para crear (de forma idempotente) la cuenta de la dueña:
 
 ---
 
-## 3. Cloudflare (hosting)
+## 3. Vercel (hosting)
 
-### 3.1 Crear cuenta
-1. Entrá a **dash.cloudflare.com** → **Sign up** (gratis).
-2. Verificá tu email.
+### 3.1 Proyecto
+- Proyecto `glamify-makeup-1` en Vercel (plan **Pro**: hace falta para el cron horario; Hobby no permite uso comercial y limita el cron a 1 por día).
+- Conectado por la integración Git al repo `Laza223/glamify-makeup-1`: cada PR genera un preview y cada merge a `main` despliega a producción.
+- Build: `pnpm build` (lo detecta solo).
 
-### 3.2 Conectar repo (después de M0, cuando el código esté pusheado)
-**Opción A — Por dashboard (fácil):**
-1. Dashboard → **Workers & Pages** → **Create** → **Pages** → **Connect to Git**.
-2. Seleccioná el repo `titi2233/glamify-makeup`.
-3. Build settings:
-   - **Build command:** `npm run build:worker`
-   - **Build output:** `.open-next`
-4. Deploy.
-
-**Opción B — Por CLI (más control):**
+### 3.2 Variables de entorno
+Vercel → Settings → Environment Variables → **Production**. Lista completa (ver `docs/LAUNCH.md` para el detalle de cada una):
 ```bash
-npm run build:worker && wrangler deploy
+NEXT_PUBLIC_SUPABASE_URL
+NEXT_PUBLIC_SUPABASE_ANON_KEY
+NEXT_PUBLIC_APP_URL          # https://www.glamifymakeup.site
+SUPABASE_SERVICE_ROLE_KEY
+DATABASE_URL                 # pooler 6543
+DIRECT_URL
+MP_ACCESS_TOKEN              # token PROD de Mercado Pago (no TEST)
+MP_WEBHOOK_SECRET
+RESEND_API_KEY
+RESEND_FROM                  # ej. "Glamify Makeup <hola@glamifymakeup.site>"
+RESEND_OWNER_EMAIL           # email donde caen alertas (pedidos + arrepentimientos + devoluciones)
+MICORREO_EMAIL
+MICORREO_PASSWORD
+MICORREO_GATEWAY_AUTH
+MICORREO_SANDBOX             # "true"/"false" — ausente cae al lado seguro (API PROD)
+CRON_SECRET                  # Vercel lo manda como Bearer al llamar /api/cron
+# Opcionales: MICORREO_VELOCITY ("classic" por defecto / "express"), MICORREO_ORIGIN_CP (6700), NEXT_PUBLIC_POSTHOG_*
 ```
+Después de cambiar una variable hay que **redeployar** (Deployments → ⋯ → Redeploy) para que tome efecto.
 
-### 3.3 Variables de entorno en Cloudflare
-Las secrets se cargan con el CLI de Wrangler. Lista completa (ver `docs/LAUNCH.md` para el detalle de cada una y el runbook de lanzamiento):
-```bash
-wrangler secret put SUPABASE_SERVICE_ROLE_KEY
-wrangler secret put DATABASE_URL
-wrangler secret put DIRECT_URL
-wrangler secret put MP_ACCESS_TOKEN       # token PROD de Mercado Pago (no TEST)
-wrangler secret put MP_WEBHOOK_SECRET
-wrangler secret put RESEND_API_KEY
-wrangler secret put RESEND_FROM           # ej. "Glamify Makeup <hola@glamifymakeup.site>"
-wrangler secret put RESEND_OWNER_EMAIL    # email donde caen alertas (pedidos + arrepentimientos)
-wrangler secret put MICORREO_EMAIL
-wrangler secret put MICORREO_PASSWORD
-wrangler secret put MICORREO_GATEWAY_AUTH
-wrangler secret put MICORREO_SANDBOX       # "true"/"false" — ausente cae al lado seguro (API PROD)
-# Opcionales: MICORREO_VELOCITY ("classic" por defecto / "express"), MICORREO_ORIGIN_CP (6700)
-```
-
-Las variables **públicas** (`NEXT_PUBLIC_*`) van en `wrangler.jsonc` bajo `[vars]` o en el dashboard:
-```jsonc
-{
-  "vars": {
-    "NEXT_PUBLIC_SUPABASE_URL": "https://xxxxx.supabase.co",
-    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "eyJ..."
-  }
-}
-```
-
-### 3.4 Dominio custom
-1. Dashboard → **Workers & Pages** → tu worker → **Custom Domains**.
-2. Agregar `glamifymakeup.site`.
-3. Cloudflare maneja DNS + SSL automáticamente si el dominio está en Cloudflare.
-
-### 3.5 ¿Por qué Cloudflare y no Vercel?
-- **Uso comercial gratis** — Cloudflare Workers permite uso comercial en el plan free. Vercel Hobby no (ToS "no comercial").
-- **100K req/día gratis** + assets estáticos ilimitados.
-- **Cron Triggers incluidos** (5 gratis) — para carrito abandonado y autocancel de pedidos.
-- **Sin cold starts** — edge global (300+ ciudades).
-- Si el tráfico crece → Workers Paid ($5/mes, 10M req/mes).
+### 3.3 Dominio
+- `www.glamifymakeup.site` es el dominio canónico, cargado en Vercel → Settings → Domains con los DNS apuntando a Vercel.
 
 ---
 
@@ -184,9 +157,9 @@ DIRECT_URL=...                       # direct 5432
 
 | Cuándo | Servicio | Qué necesitás |
 |---|---|---|
-| **Ahora (M0)** | GitHub · Supabase · Cloudflare | repo + URL/anon/service_role + DATABASE_URL/DIRECT_URL + cuenta Cloudflare |
+| **Ahora (M0)** | GitHub · Supabase · Vercel | repo + URL/anon/service_role + DATABASE_URL/DIRECT_URL + proyecto Vercel |
 | **M2** ✔ | Mercado Pago (sandbox) | `MP_ACCESS_TOKEN` (TEST) + `MP_WEBHOOK_SECRET` — carrito, checkout, webhook implementados |
-| **M5 (launch)** | MiCorreo · Resend · MP (prod) · Dominio | API Correo · API key + dominio verificado · token PROD · DNS → Cloudflare |
+| **M5 (launch)** | MiCorreo · Resend · MP (prod) · Dominio | API Correo · API key + dominio verificado · token PROD · DNS → Vercel |
 
 ---
 
@@ -228,10 +201,9 @@ Si `ADMIN_EMAIL`/`ADMIN_PASSWORD` no están definidas, el test se **saltea**
 - Por defecto Supabase pide **confirmar el email** antes de poder loguear. El registro muestra "revisá tu correo".
 - Para desactivarla (opcional): **Supabase → Authentication → Providers → Email → "Confirm email" off**.
 
-### Cron Triggers (carrito abandonado + autocancelación)
-- `wrangler.jsonc` define `triggers.crons: ["0 * * * *"]` (horario). El `worker.ts` corre `runAbandonedCartJob` (recupero a 24h) y `runOrderExpiryJob` (autocancela `pending_payment` > 24h).
-- Requiere en los **secrets de Cloudflare**: `DATABASE_URL`, `RESEND_API_KEY` (sin esta última, el email se loguea a consola). Probar local: `pnpm dev:worker` y `curl "http://localhost:8771/__scheduled?cron=0+*+*+*+*"`.
-- **Nota:** `pnpm build:worker` necesita un entorno que permita symlinks (Linux/CI o Windows con *Developer Mode*); en Windows sin esos permisos el build de standalone falla con `EPERM`.
+### Cron (carrito abandonado + autocancelación + seguimiento de envíos)
+- `vercel.json` define un cron horario (`0 * * * *`) que llama a `/api/cron`. Corre `runAbandonedCartJob` (recupero a 24h), `runOrderExpiryJob` (autocancela `pending_payment` > 24h) y `runShipmentTrackingJob` (consulta MiCorreo).
+- Requiere `CRON_SECRET`, `DATABASE_URL` y `RESEND_API_KEY` (sin esta última, el email se loguea a consola). Las corridas se ven en `npx vercel logs --environment production -q cron`.
 
 ## E2E de cuenta (M4)
 
@@ -261,7 +233,7 @@ El test de "login → favoritos → reseña" se **saltea** si `CUSTOMER_EMAIL`/`
 ### PostHog (analytics)
 1. Crear un proyecto **free** en [posthog.com](https://posthog.com) (región US o EU).
 2. Copiar la **Project API Key** y el **host** (`https://us.i.posthog.com` o `https://eu.i.posthog.com`).
-3. Cargar como variables **públicas** (`NEXT_PUBLIC_*`): en `.env.local` para dev y en `wrangler.jsonc → [vars]` (o secrets/vars del dashboard) para prod:
+3. Cargar como variables **públicas** (`NEXT_PUBLIC_*`): en `.env.local` para dev y en las variables de Vercel para prod:
    ```bash
    NEXT_PUBLIC_POSTHOG_KEY=phc_xxx
    NEXT_PUBLIC_POSTHOG_HOST=https://us.i.posthog.com

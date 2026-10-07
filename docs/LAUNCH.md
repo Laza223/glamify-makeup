@@ -60,11 +60,11 @@ Con "Eduardo" ($200), con tarjeta real, en `www.glamifymakeup.site`, **después*
 - [x] **6.3** Llegan el mail de confirmación a la clienta y la alerta a `RESEND_OWNER_EMAIL`.
 - [x] **6.4** Cargar un número de seguimiento cualquiera en el pedido → pasa a "enviado" → llega el mail de despacho.
 - [x] **6.5** Botón de Arrepentimiento: enviar el formulario → constancia `ARR-NNNNNN` → llega el mail a la dueña. Hecho 6/10: ARR-000001, mail a la dueña OK.
-- [ ] **6.6** Reembolso manual del pago en Mercado Pago y **despublicar "Eduardo"**.
+- [x] **6.6** Reembolso manual del pago en Mercado Pago y **despublicar "Eduardo"**.
 
 ## Bloque 7 — Limpieza (Yo, no bloquea)
 
-- [ ] **7.1** `CLAUDE.md` y `SETUP.md` todavía hablan de Cloudflare Workers; pasar a Vercel. El DoD menciona `format:check`, pero el CI no lo corre (371 archivos fallan por CRLF): sacarlo o arreglarlo.
+- [x] **7.1** `CLAUDE.md` y `SETUP.md` todavía hablan de Cloudflare Workers; pasar a Vercel. El DoD menciona `format:check`, pero el CI no lo corre (371 archivos fallan por CRLF): sacarlo o arreglarlo.
 - [ ] **7.2** 6 stashes viejos y ramas ya mergeadas por squash: revisar y borrar **con tu OK**.
 
 ## Cuándo está terminado
