@@ -3,7 +3,7 @@ import { requireCustomer } from "@/lib/customer/auth";
 import { prisma } from "@/lib/prisma";
 import { ProductCard } from "@/components/catalog/product-card";
 import { PRODUCT_INCLUDE } from "@/lib/catalog/queries";
-import type { CatalogListItem } from "@/lib/catalog/types";
+import { toCatalogProduct } from "@/lib/catalog/dto";
 
 export default async function FavoritosPage() {
   const customer = await requireCustomer();
@@ -14,7 +14,8 @@ export default async function FavoritosPage() {
   });
   const products = rows
     .map((r) => r.product)
-    .filter((p) => p.active && !p.deletedAt) as CatalogListItem[];
+    .filter((p) => p.active && !p.deletedAt)
+    .map(toCatalogProduct);
 
   if (products.length === 0) {
     return (
