@@ -3,8 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Sparkles, Plus, Loader2, Check } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { formatARS } from "@/lib/money";
+import { formatPrice } from "@/lib/money";
 import { addToCartAction } from "@/app/(storefront)/actions";
 import { track } from "@/lib/analytics/track";
 import type { BumpOffer } from "@/lib/catalog/recommend";
@@ -31,25 +30,27 @@ export function OrderBump({ offer }: { offer: BumpOffer | null }) {
     });
 
   return (
-    <div className="flex items-center gap-3 rounded-2xl border border-primary/20 bg-secondary/60 p-3.5 shadow-2xs">
-      <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-white shadow-2xs text-primary">
-        <Sparkles className="size-4" aria-hidden />
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-[11px] font-bold uppercase tracking-wider text-primary">Completá tu look</p>
-        <p className="truncate text-xs font-semibold text-foreground">
-          {offer.name} · <span className="font-bold text-foreground">{formatARS(offer.price)}</span>
+    <div className="flex items-center gap-3 rounded-[18px] border border-border bg-white p-3.5">
+      <span className="grid size-11 shrink-0 place-items-center rounded-full bg-secondary text-primary">
+        <Sparkles className="size-5" aria-hidden />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="font-display text-[17px] text-foreground">
+          Completá tu <em className="font-medium text-primary">look</em>
+        </p>
+        <p className="truncate text-[14px] text-muted-foreground">
+          {offer.name} · <span className="font-bold tabular-nums text-foreground">{formatPrice(offer.price)}</span>
         </p>
       </div>
-      <Button
-        size="sm"
+      <button
+        type="button"
         onClick={add}
         disabled={pending || added}
-        className="shrink-0 rounded-xl px-3.5 h-9 bg-white text-foreground border border-border hover:bg-neutral-50 text-xs font-semibold shadow-2xs"
+        className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-full border border-foreground px-4 text-[14px] font-semibold text-foreground transition-colors hover:bg-foreground hover:text-white disabled:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
-        {pending ? <Loader2 className="size-3.5 animate-spin" aria-hidden /> : added ? <Check className="size-3.5 text-emerald-600" aria-hidden /> : <Plus className="size-3.5 text-primary" aria-hidden />}
-        <span>{added ? "Agregado" : "+ Agregar"}</span>
-      </Button>
+        {pending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : added ? <Check className="size-4 text-success" aria-hidden /> : <Plus className="size-4" aria-hidden />}
+        <span>{added ? "Sumado" : "Sumar"}</span>
+      </button>
     </div>
   );
 }

@@ -1,10 +1,9 @@
 import Link from "next/link";
 import { Lock } from "lucide-react";
 import { getCartView } from "@/lib/cart/cart-view";
-import { round2, formatARS } from "@/lib/money";
+import { round2, formatPrice } from "@/lib/money";
 import { productImageUrl } from "@/lib/images";
 import { CouponInput } from "@/components/cart/coupon-input";
-import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { CartLineItem } from "@/components/cart/cart-line-item";
 import { FreeShippingBar } from "@/components/cart/free-shipping-bar";
@@ -49,22 +48,24 @@ export async function CartContents() {
       <CartSummary subtotal={subtotal} discount={discount} shippingCost={digitalOnly ? 0 : null} total={total} freeShipping={coupon?.freeShipping} />
       
       <div className="grid gap-2 pt-2">
-        <Button asChild size="lg" className="w-full rounded-2xl bg-[#161413] text-white hover:bg-neutral-800 py-6 text-sm font-semibold shadow-soft hover:shadow-soft-lg transition-all">
-          <Link href="/checkout">
-            Finalizar compra · {formatARS(total)}
-          </Link>
-        </Button>
-        <Button asChild variant="outline" className="w-full rounded-2xl border-border/80 text-xs font-semibold hover:bg-secondary">
-          <Link href="/carrito">Ver carrito completo</Link>
-        </Button>
+        <Link
+          href="/checkout"
+          className="inline-flex h-12 w-full items-center justify-center rounded-2xl bg-foreground px-6 text-[16px] font-semibold text-white transition hover:bg-foreground/85 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        >
+          Finalizar compra · <span className="ml-1 tabular-nums">{formatPrice(total)}</span>
+        </Link>
+        <Link
+          href="/carrito"
+          className="inline-flex h-11 w-full items-center justify-center rounded-2xl text-[15px] font-semibold text-foreground underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          Ver carrito completo
+        </Link>
       </div>
 
-      <div className="flex items-center justify-center gap-4 pt-1 text-[11px] text-muted-foreground">
-        <span className="inline-flex items-center gap-1">
-          <Lock className="size-3 text-emerald-600" />
-          <span>Pagás con Mercado Pago</span>
-        </span>
-      </div>
+      <p className="flex items-center justify-center gap-1.5 text-[14px] text-muted-foreground">
+        <Lock className="size-4 text-success" aria-hidden />
+        Pagás seguro con Mercado Pago
+      </p>
     </div>
   );
 }

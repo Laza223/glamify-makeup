@@ -69,6 +69,7 @@ export function MobileStickyBuyBar({
 
   return (
     <div
+      data-testid="sticky-buy-bar"
       className={`fixed bottom-14 left-0 right-0 z-20 border-t border-border bg-white/95 px-4 py-3 shadow-[0_-8px_24px_-12px_rgb(0_0_0/0.18)] backdrop-blur-md transition-transform duration-300 md:hidden ${
         visible ? "translate-y-0 opacity-100" : "translate-y-full opacity-0 pointer-events-none"
       }`}

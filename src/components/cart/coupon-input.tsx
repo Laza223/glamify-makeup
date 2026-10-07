@@ -3,7 +3,6 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { applyCouponAction, removeCouponAction } from "@/app/(storefront)/actions";
 
 export function CouponInput({ applied }: { applied: string | null }) {
@@ -27,9 +26,16 @@ export function CouponInput({ applied }: { applied: string | null }) {
 
   if (applied) {
     return (
-      <div className="flex items-center justify-between rounded-xl bg-muted px-3 py-2 text-sm">
+      <div className="flex min-h-12 items-center justify-between rounded-2xl bg-success/10 pl-4 pr-1 text-[15px]">
         <span>Cupón <strong>{applied}</strong> aplicado</span>
-        <button type="button" onClick={remove} disabled={pending} className="text-xs text-primary hover:underline">Quitar</button>
+        <button
+          type="button"
+          onClick={remove}
+          disabled={pending}
+          className="inline-flex min-h-11 items-center rounded-full px-3 font-semibold text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          Quitar
+        </button>
       </div>
     );
   }
@@ -46,13 +52,20 @@ export function CouponInput({ applied }: { applied: string | null }) {
             if (code.trim() && !pending) apply();
           }}
           enterKeyHint="done"
-          placeholder="Cupón"
+          placeholder="¿Tenés un cupón?"
           aria-label="Código de cupón"
-          className="uppercase"
+          className="h-12 rounded-2xl bg-white text-[16px] uppercase placeholder:normal-case"
         />
-        <Button type="button" variant="outline" onClick={apply} disabled={pending || !code.trim()}>Aplicar</Button>
+        <button
+          type="button"
+          onClick={apply}
+          disabled={pending || !code.trim()}
+          className="h-12 shrink-0 rounded-2xl border border-foreground px-5 text-[15px] font-semibold text-foreground transition-colors hover:bg-foreground hover:text-white disabled:border-border disabled:text-muted-foreground disabled:hover:bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          Aplicar
+        </button>
       </div>
-      {error && <p className="mt-1 text-xs text-destructive">{error}</p>}
+      {error && <p className="mt-1.5 text-[14px] text-destructive" role="alert">{error}</p>}
     </div>
   );
 }

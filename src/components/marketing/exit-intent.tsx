@@ -122,7 +122,7 @@ export function ExitIntent() {
           <div className="flex flex-col justify-center p-6 sm:p-8 md:col-span-12">
             <SheetHeader className="space-y-2 text-left">
               <div className="inline-flex size-9 items-center justify-center rounded-2xl bg-secondary text-primary">
-                <Gift className="size-4.5" aria-hidden />
+                <Gift className="size-[18px]" aria-hidden />
               </div>
               <SheetTitle className="font-display text-2xl font-bold leading-tight text-foreground">
                 Un descuento para tu primer pedido

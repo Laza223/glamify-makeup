@@ -28,7 +28,7 @@ export function Logo({ size = "md", className, showSubtitle = true }: LogoProps)
           className={cn(
             "absolute text-primary fill-current transition-transform duration-300 group-hover:scale-125 group-hover:rotate-12",
             size === "sm" && "size-3.5 -right-2.5 -top-1",
-            size === "md" && "size-4.5 -right-3 -top-1.5",
+            size === "md" && "size-[18px] -right-3 -top-1.5",
             size === "lg" && "size-6 -right-4 -top-2",
             size === "xl" && "size-7 -right-5 -top-2.5"
           )}
