@@ -1,9 +1,14 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { MessageCircle } from "lucide-react";
 import { getProductBySlug, resolveCategoryPath } from "@/lib/catalog/queries";
 import { getRelatedProducts } from "@/lib/catalog/recommendations";
 import { buildBreadcrumbs, type CategoryNode } from "@/lib/catalog/categories";
 import { getEffectivePrice, isOnSale, getDiscountPercent, toNumber } from "@/lib/catalog/pricing";
+import { isProductMadeToOrder } from "@/lib/catalog/made-to-order";
+import { storeWhatsappUrl } from "@/lib/email/whatsapp-url";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { CatalogBreadcrumbs } from "@/components/catalog/catalog-breadcrumbs";
 import { ProductGallery } from "@/components/catalog/product-gallery";
 import { PriceTag } from "@/components/catalog/price-tag";
@@ -49,6 +54,8 @@ export default async function ProductoPage({ params }: { params: Promise<{ slug:
   const product = await getProductBySlug(slug);
   if (!product) notFound();
 
+  const madeToOrder = isProductMadeToOrder(product);
+  const whatsappUrl = madeToOrder ? await storeWhatsappUrl(`¡Hola! Quiero armar un ${product.name}`) : null;
   const price = getEffectivePrice(product);
   const onSale = isOnSale(product);
   const wishlisted = await isWishlisted(product.id);
@@ -95,6 +102,7 @@ export default async function ProductoPage({ params }: { params: Promise<{ slug:
       price,
       inStock,
       url: absoluteUrl(`/producto/${slug}`),
+      madeToOrder,
     },
     { average, count },
   );
@@ -133,14 +141,37 @@ export default async function ProductoPage({ params }: { params: Promise<{ slug:
             )}
           </header>
 
-          <PriceTag
-            price={price}
-            compareAtPrice={onSale ? toNumber(product.compareAtPrice) : null}
-            discountPercent={getDiscountPercent(product)}
-            size="lg"
-          />
+          {madeToOrder ? (
+            <div className="space-y-3">
+              {whatsappUrl ? (
+                <a
+                  href={whatsappUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={cn(buttonVariants({ size: "lg" }), "w-full")}
+                >
+                  <MessageCircle aria-hidden />
+                  Armalo por WhatsApp
+                </a>
+              ) : (
+                <p className="text-sm font-semibold text-foreground">Escribinos por WhatsApp para armarlo</p>
+              )}
+              <p className="text-sm text-muted-foreground">
+                Lo armamos a tu gusto: elegís los productos y te pasamos el precio por WhatsApp.
+              </p>
+            </div>
+          ) : (
+            <>
+              <PriceTag
+                price={price}
+                compareAtPrice={onSale ? toNumber(product.compareAtPrice) : null}
+                discountPercent={getDiscountPercent(product)}
+                size="lg"
+              />
 
-          <AddToCart variants={product.variants} />
+              <AddToCart variants={product.variants} />
+            </>
+          )}
 
           <TrustBadges />
 
@@ -185,12 +216,14 @@ export default async function ProductoPage({ params }: { params: Promise<{ slug:
       <CrossSell products={related} />
 
       {/* Barra de Compra Móvil (Thumb-Zone CRO) */}
-      <MobileStickyBuyBar
-        productName={product.name}
-        image={product.images[0]}
-        price={price}
-        variants={product.variants}
-      />
+      {!madeToOrder && (
+        <MobileStickyBuyBar
+          productName={product.name}
+          image={product.images[0]}
+          price={price}
+          variants={product.variants}
+        />
+      )}
     </article>
   );
 }

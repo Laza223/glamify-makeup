@@ -13,6 +13,7 @@ import type { CatalogProduct } from "@/lib/catalog/types";
 
 export const PRODUCT_INCLUDE = {
   category: true,
+  categories: { select: { category: { select: { slug: true } } } },
   variants: { where: { active: true }, orderBy: { order: "asc" } },
 } satisfies Prisma.ProductInclude;
 

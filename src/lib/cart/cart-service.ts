@@ -2,6 +2,7 @@ import "server-only";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getEffectivePrice, toNumber } from "@/lib/catalog/pricing";
+import { isProductMadeToOrder } from "@/lib/catalog/made-to-order";
 import type { CartLine } from "@/lib/cart/types";
 
 /** Include estándar para cargar un carrito con todo lo necesario para calcular líneas. */
@@ -70,8 +71,12 @@ export interface AddItemInput {
 export async function addItem(input: AddItemInput): Promise<void> {
   const qty = Math.max(1, Math.floor(input.qty));
   if (input.variantId) {
-    const variant = await prisma.productVariant.findUnique({ where: { id: input.variantId }, include: { product: true } });
+    const variant = await prisma.productVariant.findUnique({
+      where: { id: input.variantId },
+      include: { product: { include: { category: true, categories: { select: { category: { select: { slug: true } } } } } } },
+    });
     if (!variant || !variant.active) throw new Error("Variante no disponible.");
+    if (isProductMadeToOrder(variant.product)) throw new Error("Este producto se arma por WhatsApp.");
     const unit = getEffectivePrice(variant.product, variant);
     const existing = await prisma.cartItem.findFirst({ where: { cartId: input.cartId, variantId: input.variantId } });
     if (existing) await prisma.cartItem.update({ where: { id: existing.id }, data: { qty: existing.qty + qty } });

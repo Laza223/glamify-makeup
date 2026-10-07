@@ -15,6 +15,7 @@ import {
   getDiscountPercent,
   toNumber,
 } from "@/lib/catalog/pricing";
+import { isProductMadeToOrder } from "@/lib/catalog/made-to-order";
 import { getProductStockState } from "@/lib/catalog/stock";
 import { formatARS } from "@/lib/money";
 import { cn } from "@/lib/utils";
@@ -32,6 +33,7 @@ export function ProductCard({ product }: { product: CatalogListItem }) {
 
   const price = getEffectivePrice(product, selectedVariant);
   const onSale = isOnSale(product);
+  const madeToOrder = isProductMadeToOrder(product);
   const stockState = getProductStockState(product.variants);
   const swatches = product.variants.filter((v) => v.swatchHex).slice(0, 5);
 
@@ -92,7 +94,7 @@ export function ProductCard({ product }: { product: CatalogListItem }) {
         </div>
 
         {/* Badge sin stock */}
-        {stockState === "out_of_stock" && (
+        {!madeToOrder && stockState === "out_of_stock" && (
           <span className="pointer-events-none absolute right-2.5 top-2.5 z-10">
             <StockBadge state="out_of_stock" />
           </span>
@@ -118,82 +120,100 @@ export function ProductCard({ product }: { product: CatalogListItem }) {
               {product.name}
             </h3>
           </Link>
-          <div className="pt-0.5">
-            <PriceTag
-              price={price}
-              compareAtPrice={onSale ? toNumber(product.compareAtPrice) : null}
-              discountPercent={0}
-              size="sm"
-            />
-            <p className="pt-0.5 text-[11px] text-muted-foreground">
-              3 cuotas de{" "}
-              <strong className="text-foreground">
-                {formatARS(Math.round(price / 3))}
-              </strong>
+          {madeToOrder ? (
+            <p className="pt-0.5 text-[12px] text-muted-foreground">
+              Armalo a tu gusto por WhatsApp
             </p>
-          </div>
+          ) : (
+            <div className="pt-0.5">
+              <PriceTag
+                price={price}
+                compareAtPrice={
+                  onSale ? toNumber(product.compareAtPrice) : null
+                }
+                discountPercent={0}
+                size="sm"
+              />
+              <p className="pt-0.5 text-[11px] text-muted-foreground">
+                3 cuotas de{" "}
+                <strong className="text-foreground">
+                  {formatARS(Math.round(price / 3))}
+                </strong>
+              </p>
+            </div>
+          )}
         </div>
 
-        {/* Fila inferior: Swatches a la izquierda + Stepper estilo PedidosYa a la derecha */}
-        <div className="mt-1 flex items-center justify-between gap-2 border-t border-border/40 pt-2">
-          {swatches.length > 0 ? (
-            <div
-              className="flex items-center gap-1.5"
-              aria-label={`${product.variants.length} tonos disponibles`}
-            >
-              {swatches.map((v) => {
-                const isSelected = selectedVariantId === v.id;
-                return (
-                  <button
-                    key={v.id}
-                    type="button"
-                    title={v.name}
-                    aria-label={`Tono ${v.name}`}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setSelectedVariantId(isSelected ? undefined : v.id);
-                    }}
-                    className={cn(
-                      "size-3.5 rounded-full border transition-all duration-200 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary",
-                      isSelected
-                        ? "scale-125 border-primary ring-2 ring-primary"
-                        : "shadow-2xs hover:scale-115 border-neutral-300/80",
-                    )}
-                    style={{ backgroundColor: v.swatchHex ?? undefined }}
-                  />
-                );
-              })}
-              {product.variants.length > swatches.length && (
+        {madeToOrder ? (
+          <div className="mt-1 flex items-center border-t border-border/40 pt-2">
+            <span className="rounded-full bg-secondary px-2.5 py-0.5 text-[11px] font-semibold text-primary">
+              A pedido
+            </span>
+          </div>
+        ) : (
+          <>
+            {/* Fila inferior: Swatches a la izquierda + Stepper estilo PedidosYa a la derecha */}
+            <div className="mt-1 flex items-center justify-between gap-2 border-t border-border/40 pt-2">
+              {swatches.length > 0 ? (
+                <div
+                  className="flex items-center gap-1.5"
+                  aria-label={`${product.variants.length} tonos disponibles`}
+                >
+                  {swatches.map((v) => {
+                    const isSelected = selectedVariantId === v.id;
+                    return (
+                      <button
+                        key={v.id}
+                        type="button"
+                        title={v.name}
+                        aria-label={`Tono ${v.name}`}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setSelectedVariantId(isSelected ? undefined : v.id);
+                        }}
+                        className={cn(
+                          "size-3.5 rounded-full border transition-all duration-200 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary",
+                          isSelected
+                            ? "scale-125 border-primary ring-2 ring-primary"
+                            : "shadow-2xs hover:scale-115 border-neutral-300/80",
+                        )}
+                        style={{ backgroundColor: v.swatchHex ?? undefined }}
+                      />
+                    );
+                  })}
+                  {product.variants.length > swatches.length && (
+                    <span className="text-[11px] font-medium text-muted-foreground">
+                      +{product.variants.length - swatches.length}
+                    </span>
+                  )}
+                </div>
+              ) : (
                 <span className="text-[11px] font-medium text-muted-foreground">
-                  +{product.variants.length - swatches.length}
+                  {stockState === "out_of_stock" ? "Agotado" : "Disponible"}
                 </span>
               )}
-            </div>
-          ) : (
-            <span className="text-[11px] font-medium text-muted-foreground">
-              {stockState === "out_of_stock" ? "Agotado" : "Disponible"}
-            </span>
-          )}
 
-          {/* Stepper interactivo animado */}
-          {stockState === "out_of_stock" ? (
-            <span className="select-none rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground/70">
-              Sin stock
-            </span>
-          ) : (
-            <CardQuickStepper
-              productId={product.id}
-              variants={product.variants}
-              selectedVariantId={selectedVariantId}
-              onOpenPicker={() => setPickerOpen(true)}
-            />
-          )}
-        </div>
+              {/* Stepper interactivo animado */}
+              {stockState === "out_of_stock" ? (
+                <span className="select-none rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground/70">
+                  Sin stock
+                </span>
+              ) : (
+                <CardQuickStepper
+                  productId={product.id}
+                  variants={product.variants}
+                  selectedVariantId={selectedVariantId}
+                  onOpenPicker={() => setPickerOpen(true)}
+                />
+              )}
+            </div>
+          </>
+        )}
       </div>
 
       {/* Picker modal de variantes si tiene más de 1 variante */}
-      {product.variants.length > 1 && (
+      {!madeToOrder && product.variants.length > 1 && (
         <QuickVariantPicker
           product={product}
           open={pickerOpen}
