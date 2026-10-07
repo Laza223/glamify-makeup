@@ -1,7 +1,8 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
 import { PRODUCT_INCLUDE } from "@/lib/catalog/queries";
-import type { CatalogProduct } from "@/lib/catalog/types";
+import { toCatalogProduct } from "@/lib/catalog/dto";
+import { toNumber } from "@/lib/catalog/pricing";
 
 export interface KitStepItem {
   id: string;
@@ -79,9 +80,15 @@ export async function getKitBuilderData() {
   ]);
 
   return {
-    labios: labiosProds as CatalogProduct[],
-    ojos: ojosProds as CatalogProduct[],
-    rostro: rostroProds as CatalogProduct[],
-    curatedCombos,
+    labios: labiosProds.map(toCatalogProduct),
+    ojos: ojosProds.map(toCatalogProduct),
+    rostro: rostroProds.map(toCatalogProduct),
+    // Solo lo que usa KitBuilder (cliente): nada de items/variantes/productos crudos (traerían `cost`).
+    curatedCombos: curatedCombos.map((c) => ({
+      id: c.id,
+      name: c.name,
+      comboPrice: toNumber(c.comboPrice),
+      images: c.images,
+    })),
   };
 }

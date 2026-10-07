@@ -9,7 +9,8 @@ import {
   type ProductListParams,
 } from "@/lib/catalog/filters";
 import { buildCategoryTree, findCategoryByPath, type CategoryNode } from "@/lib/catalog/categories";
-import type { CatalogProduct } from "@/lib/catalog/types";
+import { toCatalogProduct, toCatalogProductDetail } from "@/lib/catalog/dto";
+import type { CatalogProduct, CatalogProductDetail } from "@/lib/catalog/types";
 
 export const PRODUCT_INCLUDE = {
   category: true,
@@ -58,7 +59,7 @@ export async function getProductList(
   const pagedItems = sorted.slice(skip, skip + take);
 
   return {
-    items: pagedItems as CatalogProduct[],
+    items: pagedItems.map(toCatalogProduct),
     total,
     page: params.page,
     pageSize: PAGE_SIZE,
@@ -74,12 +75,12 @@ export async function resolveCategoryPath(categorySlug?: string, subcategorySlug
 }
 
 /** Producto por slug (activo, no borrado) con categoría + variantes activas. null si no existe. */
-export async function getProductBySlug(slug: string): Promise<CatalogProduct | null> {
+export async function getProductBySlug(slug: string): Promise<CatalogProductDetail | null> {
   const product = await prisma.product.findFirst({
     where: { slug, active: true, deletedAt: null },
     include: PRODUCT_INCLUDE,
   });
-  return product as CatalogProduct | null;
+  return product ? toCatalogProductDetail(product) : null;
 }
 
 /** Slugs de todos los productos activos (para generateStaticParams / sitemap futuro). */
@@ -101,7 +102,7 @@ export async function getFeaturedProducts(limit = 8): Promise<CatalogProduct[]> 
     if (aInStock === bInStock) return 0;
     return aInStock ? -1 : 1;
   });
-  return inStockFirst.slice(0, limit) as CatalogProduct[];
+  return inStockFirst.slice(0, limit).map(toCatalogProduct);
 }
 
 /** Productos recientes (fallback del Home si no hay destacados). */
@@ -112,5 +113,5 @@ export async function getNewestProducts(limit = 8): Promise<CatalogProduct[]> {
     orderBy: { createdAt: "desc" },
     take: limit,
   });
-  return rows as CatalogProduct[];
+  return rows.map(toCatalogProduct);
 }

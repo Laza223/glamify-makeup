@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { PRODUCT_INCLUDE } from "@/lib/catalog/queries";
 import { getEffectivePrice } from "@/lib/catalog/pricing";
 import { rankRelated, type BumpOffer } from "@/lib/catalog/recommend";
+import { toCatalogProduct } from "@/lib/catalog/dto";
 import type { CatalogProduct } from "@/lib/catalog/types";
 
 const NIL_UUID = "00000000-0000-0000-0000-000000000000";
@@ -18,7 +19,7 @@ export async function getOrderBumpOffers(): Promise<BumpOffer[]> {
     },
     include: PRODUCT_INCLUDE,
   });
-  const taggedOffers = (rows as CatalogProduct[])
+  const taggedOffers = rows
     .map((p): BumpOffer | null => {
       const variant = p.variants.find((v) => v.active && v.stock > 0);
       if (!variant) return null;
@@ -46,7 +47,7 @@ export async function getOrderBumpOffers(): Promise<BumpOffer[]> {
     take: 3,
   });
 
-  return (fallbacks as CatalogProduct[])
+  return fallbacks
     .map((p): BumpOffer | null => {
       const variant = p.variants.find((v) => v.active && v.stock > 0);
       if (!variant) return null;
@@ -69,7 +70,7 @@ export async function getRelatedProducts(productId: string, categoryId: string, 
     orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }],
     take: limit * 3,
   });
-  return rankRelated(rows as CatalogProduct[], limit);
+  return rankRelated(rows.map(toCatalogProduct), limit);
 }
 
 /** Cross-sell del carrito: productos de las categorías del carrito, excluyendo los que ya están. */
@@ -90,5 +91,5 @@ export async function getCartCrossSell(
     orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }],
     take: limit * 3,
   });
-  return rankRelated(rows as CatalogProduct[], limit);
+  return rankRelated(rows.map(toCatalogProduct), limit);
 }
