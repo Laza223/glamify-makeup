@@ -1,9 +1,12 @@
 import Link from "next/link";
-import { ArrowRight, Truck, PackageCheck, CreditCard, RotateCcw } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { ProductGrid } from "@/components/catalog/product-grid";
 import { ProductImage } from "@/components/catalog/product-image";
 import { GlamifyWelcomeBanner } from "@/components/marketing/glamify-welcome-banner";
 import { BrandMarquee } from "@/components/marketing/brand-marquee";
+import { GiftBand } from "@/components/marketing/gift-band";
+import { HowItWorks } from "@/components/marketing/how-it-works";
+import { isProductGiftCard } from "@/lib/catalog/gift-card";
 import { getActiveProducts, getCategoryTree } from "@/lib/catalog/queries";
 import { filterVisibleInNav } from "@/lib/catalog/categories";
 import { isSellableNow } from "@/lib/catalog/showcase";
@@ -11,7 +14,6 @@ import { detectBrand } from "@/lib/catalog/brand";
 import { getFreeShippingThreshold } from "@/lib/orders/checkout-data";
 import { prisma } from "@/lib/prisma";
 import { whatsappLink } from "@/lib/whatsapp";
-import { formatPrice } from "@/lib/money";
 import { buildWebSiteJsonLd, buildOrganizationJsonLd, serializeJsonLd } from "@/lib/seo/jsonld";
 import { appBaseUrl } from "@/lib/seo/url";
 import type { CatalogProduct } from "@/lib/catalog/types";
@@ -62,6 +64,10 @@ export default async function HomePage() {
   const shelf = (featured.length > 0 ? featured : sellable).slice(0, 8);
   const brands = topBrands(sellable, 8);
   const giftHref = whatsappLink(setting?.whatsappNumber, "¡Hola! Quiero armar un ramo o una box de maquillaje para regalar");
+  const giftCard = products.find((p) => isProductGiftCard(p) && p.variants.some((v) => v.stock > 0));
+  // El abanico de regalos usa fotos que no estén ya en la vitrina de arriba.
+  const giftPhotos = sellable.filter((p) => p.images.length > 0 && !shelf.includes(p)).map((p) => p.images[0]);
+  const fanPhotos = giftPhotos.length >= 3 ? giftPhotos : sellable.filter((p) => p.images.length > 0).map((p) => p.images[0]);
   const base = appBaseUrl();
   const jsonLd = [buildWebSiteJsonLd(base), buildOrganizationJsonLd(base)];
 
@@ -117,52 +123,10 @@ export default async function HomePage() {
       )}
 
       {giftHref && (
-        <section
-          aria-labelledby="regalos"
-          className="reveal relative overflow-hidden rounded-[20px] bg-foreground px-6 py-10 text-center text-white md:px-12 md:py-16"
-        >
-          <div className="mx-auto max-w-xl space-y-4">
-            <h2 id="regalos" className="font-display text-[30px] font-normal leading-tight text-white md:text-[42px]">
-              Regalá algo <em className="font-medium text-[#FF4FA3]">divino</em>
-            </h2>
-            <p className="text-[16px] leading-relaxed text-white/80 md:text-[17px]">
-              Ramos y boxes de maquillaje armados a medida: con lo que le encanta y el presupuesto que tengas. Lo charlamos
-              por WhatsApp.
-            </p>
-            <a
-              href={giftHref}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-2 inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-primary px-7 text-[15px] font-semibold text-primary-foreground transition hover:scale-[1.02] hover:bg-primary-hover active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-foreground"
-            >
-              Armar mi regalo
-              <ArrowRight className="size-4" aria-hidden />
-            </a>
-          </div>
-        </section>
+        <GiftBand whatsappHref={giftHref} photos={fanPhotos} giftCardHref={giftCard ? `/producto/${giftCard.slug}` : null} />
       )}
 
-      <section aria-labelledby="como-compras" className="reveal space-y-8">
-        <SectionTitle id="como-compras" lead="Comprar es" accent="re fácil" />
-        <ul className="grid gap-x-8 gap-y-6 sm:grid-cols-2 lg:grid-cols-4">
-          {[
-            { icon: Truck, t: "Envío a todo el país", d: `A tu casa o a la sucursal de Correo Argentino. Gratis desde ${formatPrice(threshold)}.` },
-            { icon: PackageCheck, t: "Sale rapidito", d: "Lo preparamos en Luján y lo despachamos en hasta 3 días hábiles." },
-            { icon: CreditCard, t: "Pagás con Mercado Pago", d: "Tarjeta o dinero en cuenta, en un solo paso." },
-            { icon: RotateCcw, t: "10 días para arrepentirte", d: "Y si algo llega fallado o equivocado, el cambio va por nuestra cuenta." },
-          ].map(({ icon: Icon, t, d }) => (
-            <li key={t} className="flex gap-4">
-              <span className="grid size-11 shrink-0 place-items-center rounded-full bg-secondary text-primary">
-                <Icon className="size-5" aria-hidden />
-              </span>
-              <span>
-                <span className="block text-[16px] font-bold text-foreground">{t}</span>
-                <span className="mt-0.5 block text-[15px] leading-relaxed text-muted-foreground">{d}</span>
-              </span>
-            </li>
-          ))}
-        </ul>
-      </section>
+      <HowItWorks threshold={threshold} brands={brands.slice(0, 3)} />
 
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }} />
     </div>
