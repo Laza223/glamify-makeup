@@ -8,7 +8,7 @@ Plan aprobado: `~/.claude/plans/pasted-content-id-8b37-buenas-como-generic-melod
 | 0b | Preparación: rama + PR draft (#34), preview seguro, Impeccable, gobierno, E2E de solo lectura | ✅ 2026-10-07 |
 | 1 | `PRODUCT.md` (`impeccable init`) | ✅ 2026-10-07 |
 | 2 | Línea de base: critique + detector + Lighthouse ✅ (`linea-de-base.md`) · audit /20 y funnel PostHog pendientes | 🟡 |
-| 3 | Mundo visual: home + chrome global | ⬜ |
+| 3 | Mundo visual "Cartel de feria" (seed 39ca24c7): tokens, chrome global, tarjeta, home · finish review `fix` → fixes aplicados · DESIGN.md | ✅ 2026-10-07 |
 | 4 | Rollout por superficie → Release 1 (compra + 404) → Release 2 | ⬜ |
 | 5 | Pasadas transversales | ⬜ |
 | 6 | Cierre | ⬜ |
@@ -27,6 +27,15 @@ Plan aprobado: `~/.claude/plans/pasted-content-id-8b37-buenas-como-generic-melod
 | 2026-10-07 | sonnet-implementer | E2E de solo lectura (@db-write, proyectos 390/1440, axe en 13 rutas) | ~143k tok | 11 archivos; 41/41 tras ajustar fixme → exclusión de solo color-contrast |
 | 2026-10-07 | general-purpose ×3 (A) | Critique baseline home / producto / checkout | ~195k + 167k + 185k tok | 19/32 · 19/36 · 21/40; 2 bugs reales en checkout |
 | 2026-10-07 | general-purpose (B) | Detector CLI + overlay en prod | ~129k tok | CLI 1, overlay 11/5/2; exit code del .cmd no confiable |
+| 2026-10-07 | general-purpose (Sonnet) | Finish review fase 3 + verdict pass | ~95k + 105k tok | `fix` → 6 resueltos, marcas parcial (resuelto después: tope 8, búsquedas verificadas), FAB y .text-glam diferidos |
+| 2026-10-07 | general-purpose (Sonnet) | Documenter → DESIGN.md + design.json | ~132k tok | escrito; 8 reglas con nombre; deuda legacy no canonizada |
+
+## Abiertos de fase 3 (pasan a fase 4)
+
+- FAB de WhatsApp tapa la columna derecha de tarjetas en mobile → resolver en la superficie /tienda.
+- `.text-glam` (texto con gradiente) en `error.tsx` → se va al rehacer esa superficie.
+- Gift block y "Cómo comprás" quedan sobrios (techo del mundo alcanzado en hero + banda de marcas).
+- Componentes de la home vieja sin uso (`GlamifyWelcomeBanner`, `ValueProps`, `GiftSection`, `CategoryChipsNav`): borrar en fase 6 con OK.
 
 ## Pendientes de la clienta (REQUIERE INPUT)
 
