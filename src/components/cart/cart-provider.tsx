@@ -11,6 +11,7 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 import { setVariantQtyAction } from "@/app/(storefront)/actions";
+import { track } from "@/lib/analytics/track";
 
 export interface CartItemState {
   id?: string;
@@ -149,6 +150,9 @@ export function CartProvider({
           setOptimisticCount((prev) => Math.max(0, prev - diff));
           return false;
         }
+
+        // Steppers y selector rápido de las tarjetas: solo las subidas cuentan como add_to_cart.
+        if (diff > 0) track("add_to_cart", { variantId, qty: diff, productId, source: "quick" });
 
         startTransition(() => {
           router.refresh();
