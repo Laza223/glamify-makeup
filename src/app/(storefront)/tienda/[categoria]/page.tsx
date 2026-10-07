@@ -39,7 +39,7 @@ export default async function CategoriaPage({
               <li key={sub.id}>
                 <Link
                   href={`/tienda/${resolved.category.slug}/${sub.slug}`}
-                  className="rounded-full border border-border px-3 py-1 text-sm hover:bg-muted"
+                  className="inline-flex min-h-11 items-center rounded-full border border-border px-5 text-[15px] font-semibold hover:border-primary hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   {sub.name}
                 </Link>

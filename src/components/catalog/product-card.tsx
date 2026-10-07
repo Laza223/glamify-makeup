@@ -18,6 +18,7 @@ const IMAGE_SIZES = "(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw";
 
 export function ProductCard({ product }: { product: CatalogListItem }) {
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [broken, setBroken] = useState(false); // foto que no carga → inicial en vez del ícono roto
 
   const price = getEffectivePrice(product);
   const compareAt = isOnSale(product) ? toNumber(product.compareAtPrice) : null;
@@ -33,13 +34,14 @@ export function ProductCard({ product }: { product: CatalogListItem }) {
   return (
     <article className="group relative flex h-full flex-col">
       <div className="relative aspect-[4/5] w-full overflow-hidden rounded-[14px] bg-muted">
-        {primaryUrl ? (
+        {primaryUrl && !broken ? (
           <>
             <Image
               src={primaryUrl}
               alt=""
               fill
               sizes={IMAGE_SIZES}
+              onError={() => setBroken(true)}
               className={`object-cover transition duration-700 ease-out group-hover:scale-[1.04] ${
                 secondaryUrl ? "group-hover:opacity-0" : ""
               } ${soldOut ? "opacity-60" : ""}`}
@@ -80,7 +82,7 @@ export function ProductCard({ product }: { product: CatalogListItem }) {
 
       <div className="flex flex-1 flex-col gap-1 pt-3">
         {brand && (
-          <p className="text-[12px] font-bold uppercase tracking-[0.12em] text-accent">{brand}</p>
+          <p className="text-[13px] font-bold uppercase tracking-[0.1em] text-accent">{brand}</p>
         )}
         <h3 className="line-clamp-2 font-sans text-[15px] font-semibold leading-snug tracking-normal text-foreground">
           <Link

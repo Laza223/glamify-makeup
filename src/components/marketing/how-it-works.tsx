@@ -18,7 +18,7 @@ export function HowItWorks({ threshold, brands }: { threshold: number; brands: s
   ];
 
   return (
-    <section aria-labelledby="como-compras" className="reveal space-y-10">
+    <section aria-labelledby="como-compras" className="space-y-10">
       <h2 id="como-compras" className="font-display text-[30px] font-normal leading-tight text-foreground md:text-[42px]">
         Comprar es <em className="font-medium text-primary">re fácil</em>
       </h2>
@@ -46,7 +46,7 @@ export function HowItWorks({ threshold, brands }: { threshold: number; brands: s
                   aria-hidden
                 />
               </span>
-              <span className="mt-1 block max-w-[30ch] text-[15px] leading-relaxed text-muted-foreground">{d}</span>
+              <span className="mt-1 block max-w-[30ch] text-[16px] leading-relaxed text-muted-foreground">{d}</span>
             </span>
           </li>
         ))}

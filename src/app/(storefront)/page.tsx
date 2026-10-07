@@ -78,14 +78,14 @@ export default async function HomePage() {
 
       <BrandMarquee brands={brands} />
 
-      <section aria-labelledby="categorias" className="reveal space-y-6">
+      <section aria-labelledby="categorias" className="space-y-6">
         <div className="flex items-end justify-between gap-4">
           <SectionTitle id="categorias" lead="Encontrá tu" accent="must" />
           <SeeAll href="/tienda">Ver todo</SeeAll>
         </div>
-        <ul className="-mx-4 flex snap-x gap-4 overflow-x-auto px-4 pb-2 [scrollbar-width:none] md:mx-0 md:grid md:grid-cols-5 md:gap-6 md:overflow-visible md:px-0 lg:grid-cols-10">
+        <ul className="-mx-4 flex snap-x gap-4 overflow-x-auto px-4 pb-2 [scrollbar-width:none] md:mx-0 md:px-0 xl:justify-between">
           {tree.map((cat) => (
-            <li key={cat.id} className="w-[88px] shrink-0 snap-start md:w-auto">
+            <li key={cat.id} className="w-[88px] shrink-0 snap-start md:w-[112px]">
               <Link
                 href={`/tienda/${cat.slug}`}
                 className="group block rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
@@ -95,7 +95,7 @@ export default async function HomePage() {
                     src={cat.image}
                     alt=""
                     fallbackLabel={cat.name}
-                    sizes="(min-width: 1024px) 120px, 88px"
+                    sizes="(min-width: 768px) 112px, 88px"
                     className="size-full rounded-none object-cover transition-transform duration-500 group-hover:scale-110"
                   />
                 </span>

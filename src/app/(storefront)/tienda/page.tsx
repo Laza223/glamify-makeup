@@ -19,5 +19,9 @@ export default async function TiendaPage({
     getCategoryTree().then((t) => filterVisibleInNav(t)),
   ]);
   const result = await getProductList(params, null);
-  return <ProductListView title="Tienda" result={result} categories={tree} />;
+  // Búsqueda: título con lo que buscó (lo usa el buscador del header y la tira de marcas de la home).
+  if (params.search) {
+    return <ProductListView title="Resultados para" accent={`“${params.search}”`} result={result} categories={tree} />;
+  }
+  return <ProductListView title="Toda la" accent="tienda" result={result} categories={tree} />;
 }

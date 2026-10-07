@@ -26,7 +26,7 @@ export function GiftBand({
   return (
     <section
       aria-labelledby="regalos"
-      className="reveal group relative isolate overflow-hidden rounded-[24px] bg-foreground text-white"
+      className="reveal-scale group relative isolate overflow-hidden rounded-[24px] bg-foreground text-white"
     >
       {/* Un solo brillo rosa detrás del abanico. */}
       <div

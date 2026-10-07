@@ -8,24 +8,18 @@ interface CategoryChipsNavProps {
   className?: string;
 }
 
-export function CategoryChipsNav({
-  categories,
-  activeSlug,
-  className,
-}: CategoryChipsNavProps) {
+const CHIP =
+  "inline-flex min-h-11 select-none items-center justify-center rounded-full border px-5 text-[15px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
+const ON = "border-foreground bg-foreground text-white";
+const OFF = "border-border bg-white text-foreground hover:border-primary hover:text-accent";
+
+/** Chips de categorías del listado: la activa en negro, el resto con borde fino y hover rosa. */
+export function CategoryChipsNav({ categories, activeSlug, className }: CategoryChipsNavProps) {
   return (
-    <div className={cn("w-full overflow-x-auto no-scrollbar py-2 -mx-4 px-4 sm:mx-0 sm:px-0", className)}>
-      <ul className="flex items-center gap-2 min-w-max">
+    <nav aria-label="Categorías" className={cn("-mx-4 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:px-0", className)}>
+      <ul className="flex min-w-max items-center gap-2 py-1">
         <li>
-          <Link
-            href="/tienda"
-            className={cn(
-              "inline-flex items-center justify-center rounded-full px-4 py-2 text-xs font-semibold transition-all select-none border",
-              !activeSlug
-                ? "bg-[#161413] text-white border-[#161413] shadow-xs"
-                : "bg-white/90 text-foreground border-border/80 hover:bg-secondary hover:text-primary hover:border-border"
-            )}
-          >
+          <Link href="/tienda" aria-current={!activeSlug ? "page" : undefined} className={cn(CHIP, !activeSlug ? ON : OFF)}>
             Todo
           </Link>
         </li>
@@ -35,12 +29,8 @@ export function CategoryChipsNav({
             <li key={cat.id}>
               <Link
                 href={`/tienda/${cat.slug}`}
-                className={cn(
-                  "inline-flex items-center justify-center rounded-full px-4 py-2 text-xs font-semibold transition-all select-none border",
-                  isActive
-                    ? "bg-[#161413] text-white border-[#161413] shadow-xs"
-                    : "bg-white/90 text-foreground border-border/80 hover:bg-secondary hover:text-primary hover:border-border"
-                )}
+                aria-current={isActive ? "page" : undefined}
+                className={cn(CHIP, isActive ? ON : OFF)}
               >
                 {cat.name}
               </Link>
@@ -48,6 +38,6 @@ export function CategoryChipsNav({
           );
         })}
       </ul>
-    </div>
+    </nav>
   );
 }

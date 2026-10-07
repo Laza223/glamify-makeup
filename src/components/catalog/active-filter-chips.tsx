@@ -2,12 +2,13 @@
 
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { X } from "lucide-react";
+import { formatPrice } from "@/lib/money";
 
 const LABELS: Record<string, (v: string) => string> = {
-  min: (v) => `Desde $${v}`,
-  max: (v) => `Hasta $${v}`,
-  oferta: () => "En oferta",
-  disponible: () => "Disponible",
+  min: (v) => `Desde ${formatPrice(Number(v))}`,
+  max: (v) => `Hasta ${formatPrice(Number(v))}`,
+  oferta: () => "Con descuento",
+  disponible: () => "En stock",
 };
 
 export function ActiveFilterChips() {
@@ -31,10 +32,10 @@ export function ActiveFilterChips() {
           <button
             type="button"
             onClick={() => remove(k)}
-            className="inline-flex items-center gap-1 rounded-full bg-muted px-3 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-secondary px-4 text-[15px] font-semibold text-foreground transition-colors hover:bg-primary hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             {LABELS[k](params.get(k) as string)}
-            <X className="size-3.5" aria-hidden />
+            <X className="size-4" aria-hidden />
             <span className="sr-only">Quitar filtro</span>
           </button>
         </li>

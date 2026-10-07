@@ -39,7 +39,7 @@ export default async function EspecialRegalosPage({
   return (
     <div className="space-y-4">
       <CatalogBreadcrumbs items={crumbs} />
-      <ProductListView title="Especial Regalos" result={result} />
+      <ProductListView title="Para" accent="regalar" result={result} />
     </div>
   );
 }

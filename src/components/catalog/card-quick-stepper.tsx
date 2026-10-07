@@ -99,7 +99,7 @@ export function CardQuickStepper({
         className={cn(
           "relative flex items-center overflow-hidden transition-all duration-300 ease-out",
           isExpanded
-            ? "h-11 w-[128px] justify-between rounded-full border-2 border-primary bg-white"
+            ? "h-11 w-[140px] justify-between rounded-full border-2 border-primary bg-white"
             : "h-11 w-11 justify-center rounded-full bg-primary text-primary-foreground shadow-[0_3px_8px_-3px_rgb(224_23_122/0.6)] hover:bg-primary-hover active:scale-95",
         )}
       >
@@ -131,7 +131,7 @@ export function CardQuickStepper({
               aria-label={
                 currentQty === 1 ? "Eliminar del carrito" : "Restar una unidad"
               }
-              className="grid h-full w-10 place-items-center rounded-full text-accent transition-colors hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary active:scale-90"
+              className="grid h-full w-11 place-items-center rounded-full text-accent transition-colors hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary active:scale-90"
             >
               <Minus className="size-3.5 stroke-[2.5]" aria-hidden />
             </button>
@@ -160,7 +160,7 @@ export function CardQuickStepper({
               disabled={pending || !canIncrement}
               aria-label="Sumar una unidad"
               className={cn(
-                "grid h-full w-10 place-items-center rounded-full text-accent transition-colors hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary active:scale-90",
+                "grid h-full w-11 place-items-center rounded-full text-accent transition-colors hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary active:scale-90",
                 (!canIncrement || pending) &&
                   "cursor-not-allowed opacity-30 hover:bg-transparent",
               )}

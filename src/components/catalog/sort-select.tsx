@@ -4,10 +4,10 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const OPTIONS = [
-  { value: "relevancia", label: "Relevancia" },
-  { value: "precio_asc", label: "Precio: menor a mayor" },
-  { value: "precio_desc", label: "Precio: mayor a menor" },
-  { value: "novedades", label: "Novedades" },
+  { value: "relevancia", label: "Recomendados" },
+  { value: "novedades", label: "Lo más nuevo" },
+  { value: "precio_asc", label: "Menor precio" },
+  { value: "precio_desc", label: "Mayor precio" },
 ] as const;
 
 export function SortSelect() {
@@ -25,12 +25,15 @@ export function SortSelect() {
 
   return (
     <Select value={current} onValueChange={onChange}>
-      <SelectTrigger className="w-[190px]" aria-label="Ordenar">
+      <SelectTrigger
+        className="h-11 w-[170px] rounded-full border-border px-5 text-[15px] font-semibold hover:border-foreground focus:ring-2 focus:ring-ring focus:ring-offset-2"
+        aria-label="Ordenar"
+      >
         <SelectValue placeholder="Ordenar" />
       </SelectTrigger>
       <SelectContent>
         {OPTIONS.map((o) => (
-          <SelectItem key={o.value} value={o.value}>
+          <SelectItem key={o.value} value={o.value} className="min-h-11 text-[15px]">
             {o.label}
           </SelectItem>
         ))}
