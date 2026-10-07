@@ -43,8 +43,12 @@ export default async function EnviosYPagosPage() {
       <h2>Cambios y devoluciones</h2>
       <p>
         Podés ejercer el derecho de arrepentimiento dentro de los {businessInfo.retractionDays} días corridos desde el{" "}
-        <Link href="/arrepentimiento">Botón de Arrepentimiento</Link>. Para cualquier consulta, escribinos por{" "}
-        <Link href="/contacto">contacto</Link>.
+        <Link href="/arrepentimiento">Botón de Arrepentimiento</Link>.
+      </p>
+      <p>
+        Si un producto te llegó roto, fallado o equivocado, escribinos por <Link href="/contacto">contacto</Link> con
+        una foto: te lo cambiamos o te devolvemos el dinero, con el envío a nuestro cargo. Por higiene, no hacemos
+        cambios por gusto fuera de esos casos.
       </p>
     </Prose>
   );

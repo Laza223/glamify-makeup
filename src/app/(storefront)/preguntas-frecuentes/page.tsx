@@ -29,9 +29,10 @@ const faqs: Array<{ q: string; a: React.ReactNode }> = [
     q: "¿Puedo cambiar o devolver un producto?",
     a: (
       <>
-        Sí. Tenés derecho de arrepentimiento por 10 días corridos (art. 34 Ley 24.240): gestionalo desde el{" "}
-        <Link href="/arrepentimiento">Botón de Arrepentimiento</Link>. Para cambios por defecto, escribinos por{" "}
-        <Link href="/contacto">contacto</Link>.
+        Tenés 10 días corridos para arrepentirte de la compra (art. 34 Ley 24.240): gestionalo desde el{" "}
+        <Link href="/arrepentimiento">Botón de Arrepentimiento</Link>. Si te llegó roto, fallado o equivocado,
+        escribinos por <Link href="/contacto">contacto</Link> con una foto y te lo cambiamos o te devolvemos el dinero,
+        con el envío a nuestro cargo. Por higiene, no hacemos cambios por gusto fuera de esos casos.
       </>
     ),
   },
