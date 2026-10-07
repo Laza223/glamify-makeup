@@ -39,9 +39,7 @@ export function RetractionForm() {
         <p className="font-semibold text-foreground">Recibimos tu solicitud de arrepentimiento.</p>
         <p className="mt-1 text-sm text-foreground/90">
           Tu número de constancia es <strong>{ticket}</strong>
-          {date ? <> del {date}</> : null}
-          {/* La hora en es-AR termina en "p. m.": no sumar otro punto. */}
-          {date?.endsWith(".") ? "" : "."} Te enviamos una copia por email y te vamos a contactar para coordinar la
+          {date ? <> del {date}</> : null}. Te enviamos una copia por email y te vamos a contactar para coordinar la
           devolución y el reintegro.
         </p>
       </div>

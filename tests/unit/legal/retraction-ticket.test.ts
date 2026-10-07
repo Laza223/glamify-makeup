@@ -18,4 +18,10 @@ describe("formatRetractionDate", () => {
     expect(s).toContain("2026");
     expect(s.toLowerCase()).toContain("junio");
   });
+
+  it("hora en 24 h (sin 'p. m.', que dejaba doble punto al cerrar la frase)", () => {
+    const s = formatRetractionDate(new Date("2026-10-06T23:16:00Z"));
+    expect(s).toContain("20:16");
+    expect(s).not.toMatch(/[ap]\. ?m\./);
+  });
 });

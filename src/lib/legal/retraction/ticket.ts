@@ -9,6 +9,7 @@ export function formatRetractionDate(d: Date): string {
   return new Intl.DateTimeFormat("es-AR", {
     dateStyle: "long",
     timeStyle: "short",
+    hourCycle: "h23",
     timeZone: "America/Argentina/Buenos_Aires",
   }).format(d);
 }
