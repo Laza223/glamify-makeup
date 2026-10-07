@@ -24,11 +24,13 @@ interface Props {
   items: ItemView[];
   defaultName?: string;
   defaultEmail?: string;
+  /** Preview de Vercel: el formulario se recorre, pero no se puede pagar. */
+  paymentsDisabled?: boolean;
 }
 
 type Method = "domicilio" | "sucursal";
 
-export function CheckoutForm({ subtotal, discount, couponCode, couponFreeShipping, digitalOnly = false, items, defaultName = "", defaultEmail = "" }: Props) {
+export function CheckoutForm({ subtotal, discount, couponCode, couponFreeShipping, digitalOnly = false, items, defaultName = "", defaultEmail = "", paymentsDisabled = false }: Props) {
   const [name, setName] = useState(defaultName);
   const [email, setEmail] = useState(defaultEmail);
   const [phone, setPhone] = useState("");
@@ -210,11 +212,13 @@ export function CheckoutForm({ subtotal, discount, couponCode, couponFreeShippin
           </span>
         </label>
         {error && <p className="text-sm text-destructive" role="alert">{error}</p>}
-        <Button type="submit" size="lg" className="w-full" disabled={submitting}>
+        <Button type="submit" size="lg" className="w-full" disabled={submitting || paymentsDisabled}>
           {submitting ? <Loader2 className="size-4 animate-spin" /> : null}
           Pagar con Mercado Pago
         </Button>
-        <p className="text-center text-xs text-muted-foreground">Pago seguro. Te redirigimos a Mercado Pago.</p>
+        <p className="text-center text-xs text-muted-foreground">
+          {paymentsDisabled ? "Vista previa: los pagos están desactivados." : "Pago seguro. Te redirigimos a Mercado Pago."}
+        </p>
       </aside>
     </form>
   );

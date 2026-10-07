@@ -61,3 +61,12 @@ fotos-categorias-nuevas/
 scripts/render_*.cjs
 scripts/test_*.cjs
 scripts/process_all_cutouts.py
+
+# Impeccable (rediseño): se commitean PRODUCT.md, DESIGN.md, .impeccable/config.json,
+# design.json, surfaces/ y critique/. Lo de abajo es local o regenerable.
+.impeccable/live/
+.impeccable/review/
+.impeccable/build/
+.impeccable/mocks/
+.impeccable/config.local.json
+.impeccable/hook.cache.json

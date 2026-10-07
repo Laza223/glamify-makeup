@@ -9,6 +9,7 @@ import { PostHogProvider } from "@/components/analytics/posthog-provider";
 import { CookieConsent } from "@/components/analytics/cookie-consent";
 import { ExitIntent } from "@/components/marketing/exit-intent";
 import { WhatsAppFab } from "@/components/layout/whatsapp-fab";
+import { PreviewBanner } from "@/components/layout/preview-banner";
 import { getCartView } from "@/lib/cart/cart-view";
 
 export default async function StorefrontLayout({
@@ -31,6 +32,7 @@ export default async function StorefrontLayout({
           Saltar al contenido
         </a>
         <div className="flex min-h-dvh flex-col">
+          <PreviewBanner />
           <SiteHeader />
           <main
             id="main"
