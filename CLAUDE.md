@@ -4,38 +4,37 @@ Guía para Claude Code (claude.ai/code) en este repositorio.
 
 # Glamify Makeup
 
-Ecommerce B2C de maquillaje y accesorios para chicas de 16–35 en Argentina (Luján / envíos a todo el país). Stack serverless Next.js 15 en Cloudflare Workers + Supabase Postgres vía Prisma adapter. Glam accesible, no humo.
+Ecommerce B2C de maquillaje y accesorios para chicas de 16–35 en Argentina (Luján / envíos a todo el país). Stack serverless Next.js 15 en Vercel + Supabase Postgres vía Prisma adapter. Glam accesible, no humo.
 
 ## Comandos y Definition of Done
 
-**Antes de declarar terminado cualquier cambio** — estos cuatro son exactamente lo que corre el required check *Quality / CI*:
+**Antes de declarar terminado cualquier cambio** — estos tres (más `pnpm build`) son exactamente lo que corre el check *CI / quality*:
 
 ```bash
-pnpm format:check   # NO `pnpm format`: ese reescribe, este falla
 pnpm lint           # ESLint sobre src/
 pnpm typecheck      # correr también después de cada cambio, no solo al cerrar
 pnpm test           # tests unitarios y de integración con Vitest
 ```
 
 Resto:
-- `pnpm dev` — localhost:3000 · `pnpm dev:worker` / `preview:worker` — preview Wrangler en `:8771`
-- `pnpm build` / `build:worker` · `pnpm deploy` — `build:worker` + `wrangler deploy`
+- `pnpm dev` — localhost:3000 · `pnpm build` — `prisma generate` (wasm) + `next build`
+- `pnpm format:check` NO es parte del DoD: el CI no lo corre y ~300 archivos no siguen Prettier. No correr `pnpm format` (reformatea medio repo).
 - `pnpm test:watch` · `pnpm test:e2e` — Playwright E2E (`@axe-core/playwright` para a11y)
 - `pnpm db:migrate` — `prisma migrate dev` · `pnpm db:push` · `pnpm db:studio` · `pnpm db:seed` / `cleanup`
 - `pnpm catalog:import` — import CSV · `admin:create` / `customer:create` · `sim:webhook` (MP local) · `micorreo:probe`
-- **CI / Deploy:** GitHub Actions corre `quality`. Al mergear a `main`, el job `deploy` compila en Linux y despliega a Workers (evita bug de symlinks/sockets en Windows).
+- **CI / Deploy:** GitHub Actions corre `quality` (lint, typecheck, test, build) en cada PR. Al mergear a `main`, la integración Git de Vercel despliega a producción (cada PR tiene su preview). Estado: `npx vercel ls --prod` · logs: `npx vercel logs --environment production --since 30m --no-follow`.
 - **Guard de escritura en DB:** dev y prod comparten base Supabase. Scripts mutadores (`prod-write-guard.ts`) exigen tipear el host por terminal interactiva.
 
 ## Stack
 
 - Next.js 15 (App Router) + React 19 + TypeScript strict · shadcn/ui + Tailwind CSS v3.4 · Vitest + Playwright
-- **Deploy:** Cloudflare Workers vía `@opennextjs/cloudflare` con `nodejs_compat` (NO Vercel, NO `@cloudflare/next-on-pages`).
-- **PostgreSQL vía Supabase** (Auth + Storage) · **Prisma ORM** con driver adapter (`@prisma/adapter-pg`) y `@prisma/client/wasm`.
-- **Conexión DB por-request (`src/lib/prisma.ts`):** en Workers un socket TCP no se comparte entre requests. `getDb()` crea el cliente por-request vía `cache()` de React y un `Proxy` perezoso. Soporta binding `env.HYPERDRIVE` o `process.env.DATABASE_URL`.
+- **Deploy:** Vercel (plan Pro, funciones Node serverless), proyecto `glamify-makeup-1`, dominio `www.glamifymakeup.site`. Migrado desde Cloudflare Workers en septiembre 2026.
+- **PostgreSQL vía Supabase** (Auth + Storage) · **Prisma ORM** con driver adapter (`@prisma/adapter-pg`).
+- **Cliente DB (`src/lib/prisma.ts`):** singleton de módulo **perezoso** (Proxy que crea el cliente en el primer uso), con `process.env.DATABASE_URL`. Perezoso porque `next build` importa las rutas sin env de DB.
 - **MercadoPago Checkout Pro:** pagos instantáneos (tarjeta y dinero en cuenta; efectivo/offline EXCLUIDO). `webhook-service.ts` valida firma HMAC `x-signature` (`validateMpSignature`) y re-consulta el pago por API a MP. Idempotencia por `mpPaymentId`.
 - **Envíos:** Correo Argentino (MiCorreo / PaqAr v2 REST + JWT) cotización en vivo por CP/peso desde Luján (6700). Tabla de zonas `ShippingZone` como fallback/override. (*Zipnova descartado por markup ~2x*).
 - **Resend:** email transaccional (alertas de compra/arrepentimiento a dueña; confirmación/despacho/abandono a clientas).
-- **PostHog:** analítica de eventos y conversión · **Cron Triggers:** en `worker.ts` (`runAbandonedCartJob` y `runOrderExpiryJob` 24h).
+- **PostHog:** analítica de eventos y conversión · **Cron:** Vercel Cron horario → `/api/cron` (`vercel.json`, protegido con `CRON_SECRET`): `runAbandonedCartJob`, `runOrderExpiryJob` (24h) y `runShipmentTrackingJob` (seguimiento MiCorreo).
 
 ## Arquitectura del código
 
@@ -44,7 +43,7 @@ Patrón: **Next.js App Router + servicios desacoplados en `src/lib/*`**. La lóg
 - `src/app/(storefront)/*` — Storefront: home, `/tienda`, `/producto/[slug]`, `/carrito`, `/checkout` (un paso), `/cuenta`, `/ingresar`, `/arrepentimiento` (botón legal), páginas institucionales y legales (`/terminos`, `/privacidad`, `/envios-y-pagos`, `/preguntas-frecuentes`, `/contacto`, `/nosotras`).
 - `src/app/admin/*` — Panel admin: `/admin/login`, `/admin/(panel)` (`/pedidos`, `/productos`, `/categorias`, `/combos`, `/cupones`, `/resenas`, métricas).
 - `src/app/api/*` — Route Handlers exclusivamente para webhooks (`/api/webhooks/mercadopago`), callbacks de auth (`/auth/*`), sitemap y robots.
-- `src/lib/*` — Dominios: `orders/` (checkout, máquina de estados, auto-shipment, expiry job, stock), `payments/` (adapter MP, firma HMAC, webhook effects), `cart/` (servicio, cookies, merge, job abandono), `catalog/`, `shipping/` (MiCorreo adapter, quote, zonas), `admin/` (`requireAdmin`, CRUDs, SKU generator), `customer/`, `coupons/` (`perCustomerLimit`), `reviews/` (moderación), `email/` (Resend templates), `prisma.ts` (cliente Workers).
+- `src/lib/*` — Dominios: `orders/` (checkout, máquina de estados, auto-shipment, expiry job, stock), `payments/` (adapter MP, firma HMAC, webhook effects), `cart/` (servicio, cookies, merge, job abandono), `catalog/`, `shipping/` (MiCorreo adapter, quote, zonas), `admin/` (`requireAdmin`, CRUDs, SKU generator), `customer/`, `coupons/` (`perCustomerLimit`), `reviews/` (moderación), `email/` (Resend templates), `prisma.ts` (cliente DB perezoso).
 - **Guards y Auth:** Staff: Supabase Auth → verificación en tabla `User` (`role = 'owner' | 'admin'`). `requireAdmin()` en layouts y Server Actions. Clientas: Supabase Auth (email/Google) → `Customer` (uid = `Customer.id`). Compras de invitadas guardan contacto/dirección en `Order`. `middleware.ts`: refresca sesión.
 
 ## Invariantes de dominio
@@ -67,19 +66,19 @@ Patrón: **Next.js App Router + servicios desacoplados en `src/lib/*`**. La lóg
 - **Sorpresitas / Price Tiers (1x$1000 / 2x$1500): NO en web** — Mecánica de feria/presencial, no de ecommerce con envíos (blueprint 01).
 - **Stock falso / Urgencia falsa: PROHIBIDO** — Viola ley de consumidor. `StockBadge` y ofertas solo con inventario y fechas reales (blueprint 06).
 - **Emojis como íconos: PROHIBIDOS** (usar Lucide SVG) · **Dark mode: NO** (light mode only, Soft UI Evolution rosa `#FF2E93`).
-- **Deploy en Vercel: DESCARTADO** — 100% Cloudflare Workers vía `@opennextjs/cloudflare` (D07-2).
+- **Volver a Cloudflare Workers: NO** — el deploy es Vercel desde septiembre 2026 (D07-2 revisada; ver `docs/BITACORA.md`).
 - **WhatsApp automatizado (Evolution Go) en v1: DIFERIDO** — v1 usa Resend para alertas; contacto vía botón manual `wa.me` (D07-1).
 
 ## Seguridad y Permisos
 
 - **Admin:** `requireAdmin()` chequea sesión Supabase Auth + rol `owner`/`admin` en tabla `User`.
 - **MP Webhook:** Valida firma HMAC en header `x-signature` (`validateMpSignature`), re-consulta estado a API MP (`getPayment`), procesa idempotentemente por `mpPaymentId`.
-- **Secretos:** Solo en Cloudflare Secrets (`wrangler secret put`) y `.env.local`. NUNCA en git ni en cliente (`MP_*`, `SUPABASE_SERVICE_ROLE_KEY`, `RESEND_*`, `MICORREO_*`, `DATABASE_URL`).
+- **Secretos:** Solo en las variables de entorno de Vercel (Production) y `.env.local`. NUNCA en git ni en cliente (`MP_*`, `SUPABASE_SERVICE_ROLE_KEY`, `RESEND_*`, `MICORREO_*`, `DATABASE_URL`).
 - **Guard de mutación:** `scripts/prod-write-guard.ts` intercepta scripts locales para confirmar host de Supabase por terminal.
 
 ## Documentación
 
-`blueprints/` (00–09) es la fuente de verdad: `00` visión/alcance · `01` modelo datos/Prisma · `02` storefront/UX · `03` admin · `04` checkout/MP · `05` envíos/MiCorreo · `06` conversión/growth · `07` arquitectura/Workers · `08` roadmap M0–M5 · `09` playbook.
+`blueprints/` (00–09) es la fuente de verdad: `00` visión/alcance · `01` modelo datos/Prisma · `02` storefront/UX · `03` admin · `04` checkout/MP · `05` envíos/MiCorreo · `06` conversión/growth · `07` arquitectura (escrito para Workers; el deploy hoy es Vercel) · `08` roadmap M0–M5 · `09` playbook.
 Otros: `design-system/MASTER.md` · `docs/LAUNCH.md` (ops/go-live) · `docs/decisions/` (ADR 0001, 0002) · `SETUP.md` · `TODO.md` (diferidos).
 
 ## Skill routing
@@ -94,7 +93,7 @@ Otros: `design-system/MASTER.md` · `docs/LAUNCH.md` (ops/go-live) · `docs/deci
 | Verificar implementación propia | `verificacion-fresca` / `verification-before-completion` | — |
 | Diseñar / ajustar interfaz de usuario | `ux-ui-pro-max` + `design-system/MASTER.md` | UI ad-hoc |
 | Correr / arreglar tests | `protocolo-testing` / Vitest + Playwright | — |
-| Tocar DB / Prisma / Migraciones / Workers | `convenciones-stack` + `prisma-best-practices` | `db:push` en prod |
+| Tocar DB / Prisma / Migraciones / deploy | `convenciones-stack` + `prisma-best-practices` | `db:push` en prod |
 | Cierre de milestone / release | `cierre-release` + `docs/LAUNCH.md` | `ship` sin DoD |
 
 ## UX y Design System
@@ -110,7 +109,7 @@ Respuestas directas, sin intro ni conclusiones. Código y comandos exactos. Si h
 ## Guardrails
 
 **SIEMPRE**
-- Correr `format:check`, `lint`, `typecheck`, `test` antes de decir "listo". Al declarar verde, **citar el output real**.
+- Correr `lint`, `typecheck`, `test` antes de decir "listo". Al declarar verde, **citar el output real**.
 - TypeScript strict sin excepciones. Server Actions para mutaciones UI; Route Handlers solo para webhooks MP, auth callbacks y sitemap/robots. Queries a DB solo desde Server Components o Server Actions vía `prisma` por-request. Respetar `prod-write-guard.ts`.
 
 **PREGUNTAR ANTES**
@@ -119,10 +118,11 @@ Respuestas directas, sin intro ni conclusiones. Código y comandos exactos. Si h
 **NUNCA**
 - `any` (usar `unknown` + type guards). Commitear o pushear a `main` directamente. Modificar una migración ya aplicada (`prisma migrate dev` para nueva). Inventar nombres de tablas/columnas/rutas. Hardcodear credenciales o URLs de prod. Agregar dark mode, emojis o contadores de urgencia falsos. Refactorizar fuera de scope.
 
-## Git (cuenta titi2233)
+## Git
 
-- **Repo:** `titi2233/glamify-makeup` · **SSH host:** `git@github-titi:titi2233/glamify-makeup.git` · **User:** `titi2233` / `lisantiziana@gmail.com`
-- **Branching:** ramas por feature/milestone (`m0-cimientos`, `m1-catalogo`...), merge a `main` tras PR y CI verde.
+- **Repo canónico:** `Laza223/glamify-makeup-1` (de ahí despliega Vercel; PRs con `gh pr create -R Laza223/glamify-makeup-1 --base main`). El `main` local puede estar viejo: ramificar desde `git fetch https://github.com/Laza223/glamify-makeup-1.git main` → `FETCH_HEAD`.
+- **Commits:** user `titi2233` / `lisantiziana@gmail.com`.
+- **Branching:** una rama por cambio (`feat/…`, `fix/…`, `chore/…`), merge a `main` tras PR y CI verde.
 
 ## Compact Instructions
 

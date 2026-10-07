@@ -3,6 +3,8 @@
 > **Propósito:** cómo se arma el sistema por dentro: stack, topología, entornos, auth, seguridad, performance, testing, deploy y la **verdad de costos**. Robustez sin sobre-ingeniería.
 >
 > Estado: ✅ **aprobado** · Fecha: 2026-06-03 · **Actualizado: 2026-06-04** (migración Vercel → Cloudflare)
+>
+> **Nota 2026-10-06:** el deploy se migró de Cloudflare Workers a **Vercel (plan Pro)** en septiembre 2026 (ver `docs/BITACORA.md`, rama `chore/migrate-deploy-vercel`). Lo de Workers en este documento (OpenNext, cliente Prisma por-request, Cron Triggers, `wrangler`) es histórico; hoy: funciones Node de Vercel, singleton Prisma perezoso (`src/lib/prisma.ts`) y Vercel Cron → `/api/cron`.
 
 ---
 
