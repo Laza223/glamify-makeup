@@ -26,6 +26,16 @@ describe("buildProductJsonLd", () => {
     expect(ld.aggregateRating).toEqual({ "@type": "AggregateRating", ratingValue: 4.5, reviewCount: 3 });
   });
 
+  it("no declara a Glamify como marca: sin brand cuando no se informa (revendemos marcas de terceros)", () => {
+    const ld = buildProductJsonLd(base, { average: 0, count: 0 });
+    expect(ld.brand).toBeUndefined();
+  });
+
+  it("usa la marca real cuando se informa", () => {
+    const ld = buildProductJsonLd({ ...base, brand: "PINK 21" }, { average: 0, count: 0 });
+    expect(ld.brand).toEqual({ "@type": "Brand", name: "PINK 21" });
+  });
+
   it("OutOfStock cuando inStock=false", () => {
     const ld = buildProductJsonLd({ ...base, inStock: false }, { average: 0, count: 0 });
     expect(ld.offers?.availability).toContain("OutOfStock");

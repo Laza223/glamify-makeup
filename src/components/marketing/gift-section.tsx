@@ -23,9 +23,9 @@ const GIFT_ITEMS: GiftItem[] = [
   {
     id: "lip-combos",
     title: "Lip Combos",
-    badge: "Tendencia Viral",
+    badge: "Combinados",
     description:
-      "Combinaciones exclusivas de delineador, labial y gloss para un acabado profesional y jugoso.",
+      "Delineador, labial y gloss combinados para regalar o regalarte.",
     href: "/tienda/labios",
     icon: Sparkles,
     image: "/images/product_lipstick.png",
@@ -45,7 +45,7 @@ const GIFT_ITEMS: GiftItem[] = [
   {
     id: "ramos-maquillaje",
     title: "Ramos de Maquillaje",
-    badge: "El Más Elegido",
+    badge: "A pedido",
     description:
       "Presentaciones tipo ramo súper originales armadas con los mejores cosméticos y detalles girly.",
     href: "/tienda/ramos-maquillaje",

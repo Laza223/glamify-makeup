@@ -43,7 +43,7 @@ Hoy `NEXT_PUBLIC_APP_URL` apunta a `glamify-makeup-1.vercel.app`: sitemap, robot
 
 - [ ] **4.1 (Vos)** Facturación AFIP: definir cómo se factura cada venta (hoy el sistema no emite comprobantes). Consultarlo con la contadora.
 - [x] **4.2 (Vos)** Rotar `MP_ACCESS_TOKEN`: quedó expuesto en la transcripción de un subagente durante la auditoría del 28/8. Generar uno nuevo en Mercado Pago y avisarme para cargarlo en Vercel + redeploy.
-- [ ] **4.3 (Vos)** "3 cuotas sin interés" aparece en la barra de anuncios y en los beneficios de la home, y las cards muestran "3 cuotas de $X": confirmar que está activado en tu cuenta de Mercado Pago. Si no lo está, **Yo** saco ese copy (es publicidad engañosa).
+- [x] **4.3 (Vos)** "3 cuotas sin interés" aparece en la barra de anuncios y en los beneficios de la home, y las cards muestran "3 cuotas de $X": confirmar que está activado en tu cuenta de Mercado Pago. Si no lo está, **Yo** saco ese copy (es publicidad engañosa).
 - [ ] **4.4 (Vos)** `/terminos` y `/privacidad`: definir si los revisa una abogada o quedan como están.
 
 ## Bloque 5 — Operativo

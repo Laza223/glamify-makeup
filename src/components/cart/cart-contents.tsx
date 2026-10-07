@@ -62,12 +62,12 @@ export async function CartContents() {
       <div className="flex items-center justify-center gap-4 pt-1 text-[11px] text-muted-foreground">
         <span className="inline-flex items-center gap-1">
           <Lock className="size-3 text-emerald-600" />
-          <span>Pago 100% Protegido</span>
+          <span>Pagás con Mercado Pago</span>
         </span>
         <span>•</span>
         <span className="inline-flex items-center gap-1">
           <ShieldCheck className="size-3 text-primary" />
-          <span>Garantía 30 Días</span>
+          <span>10 días para arrepentirte</span>
         </span>
       </div>
     </div>

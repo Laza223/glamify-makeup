@@ -2,17 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { Truck, CreditCard, ShieldCheck } from "lucide-react";
+import { Truck, CreditCard } from "lucide-react";
 
 const MESSAGES = [
   {
     icon: Truck,
     text: "Envío gratis a todo el país superando el monto mínimo",
   },
-  { icon: CreditCard, text: "3 cuotas sin interés con todas las tarjetas" },
   {
-    icon: ShieldCheck,
-    text: "Pagos 100% seguros y protegidos con Mercado Pago",
+    icon: CreditCard,
+    text: "Pagá con tarjeta o dinero en cuenta de Mercado Pago",
   },
 ];
 

@@ -17,7 +17,6 @@ import {
 } from "@/lib/catalog/pricing";
 import { isProductMadeToOrder } from "@/lib/catalog/made-to-order";
 import { getProductStockState } from "@/lib/catalog/stock";
-import { formatARS } from "@/lib/money";
 import { cn } from "@/lib/utils";
 import type { CatalogListItem } from "@/lib/catalog/types";
 
@@ -134,12 +133,6 @@ export function ProductCard({ product }: { product: CatalogListItem }) {
                 discountPercent={0}
                 size="sm"
               />
-              <p className="pt-0.5 text-[11px] text-muted-foreground">
-                3 cuotas de{" "}
-                <strong className="text-foreground">
-                  {formatARS(Math.round(price / 3))}
-                </strong>
-              </p>
             </div>
           )}
         </div>

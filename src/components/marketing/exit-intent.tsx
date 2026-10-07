@@ -119,27 +119,13 @@ export function ExitIntent() {
         className="overflow-hidden rounded-3xl border border-border/80 bg-card p-0 shadow-soft-lg sm:max-w-lg"
       >
         <div className="grid grid-cols-1 md:grid-cols-12">
-          <div className="relative hidden bg-secondary md:col-span-5 md:block">
-            <img
-              src="/images/exit_modal_visual.jpg"
-              alt="Glamify Makeup Especial"
-              className="h-full w-full object-cover"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
-            <div className="absolute bottom-4 left-4 right-4 text-white">
-              <span className="rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest">
-                Exclusivo
-              </span>
-            </div>
-          </div>
-
-          <div className="flex flex-col justify-center p-6 sm:p-8 md:col-span-7">
+          <div className="flex flex-col justify-center p-6 sm:p-8 md:col-span-12">
             <SheetHeader className="space-y-2 text-left">
               <div className="inline-flex size-9 items-center justify-center rounded-2xl bg-secondary text-primary">
                 <Gift className="size-4.5" aria-hidden />
               </div>
               <SheetTitle className="font-display text-2xl font-bold leading-tight text-foreground">
-                10% OFF en tu primer pedido
+                Un descuento para tu primer pedido
               </SheetTitle>
               <SheetDescription className="text-xs leading-relaxed text-muted-foreground">
                 Dejanos tu email para recibir tu cupón de bienvenida. Tus datos
@@ -180,7 +166,7 @@ export function ExitIntent() {
                   className="h-11 w-full rounded-xl bg-[#161413] text-xs font-bold text-white shadow-soft hover:bg-neutral-800"
                   disabled={pending}
                 >
-                  {pending ? "Generando cupón…" : "Obtener mi 10% OFF"}
+                  {pending ? "Generando cupón…" : "Quiero mi cupón"}
                 </Button>
               </form>
             ) : (
@@ -188,7 +174,7 @@ export function ExitIntent() {
                 {coupon ? (
                   <>
                     <p className="text-xs text-muted-foreground">
-                      Tu código de descuento exclusivo:
+                      Tu código de descuento:
                     </p>
                     <div className="flex items-center justify-center gap-2">
                       <code className="rounded-xl border border-border bg-secondary/80 px-4 py-2 font-mono text-base font-bold tracking-widest text-foreground">

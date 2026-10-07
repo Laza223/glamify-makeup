@@ -192,8 +192,8 @@ export default async function ProductoPage({ params }: { params: Promise<{ slug:
       <section className="border-t border-border/80 pt-10">
         <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
-            <h2 className="font-display text-2xl font-bold uppercase tracking-wide">Opiniones de la Comunidad</h2>
-            <p className="text-xs text-muted-foreground">Experiencias reales de clientas verificadas</p>
+            <h2 className="font-display text-2xl font-bold uppercase tracking-wide">Opiniones</h2>
+            <p className="text-xs text-muted-foreground">Lo que cuentan quienes ya lo probaron</p>
           </div>
           {count > 0 && (
             <span className="flex items-center gap-1.5 text-sm font-semibold">

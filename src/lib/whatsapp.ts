@@ -1,5 +1,5 @@
 /** Mensaje por defecto al abrir WhatsApp desde la web. */
-export const WHATSAPP_DEFAULT_MESSAGE = "¡Hola! Tengo una consulta sobre Glamify Makeup 💄";
+export const WHATSAPP_DEFAULT_MESSAGE = "¡Hola! Tengo una consulta sobre Glamify Makeup";
 
 /** Deja solo dígitos (formato que espera wa.me). Devuelve "" si no hay número. */
 export function toWhatsappDigits(raw?: string | null): string {

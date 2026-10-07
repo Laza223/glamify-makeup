@@ -3,21 +3,21 @@ import { Truck, CreditCard, Sparkles } from "lucide-react";
 const PROPS = [
   {
     icon: Sparkles,
-    title: "Tendencias y Favoritos Virales",
+    title: "Marcas que ya conocés",
     description:
-      "El maquillaje más buscado seleccionado especialmente para vos con los mejores tonos.",
+      "TEI, Pink 21 y más, a precios accesibles.",
   },
   {
     icon: Truck,
     title: "Envíos a Todo el País",
     description:
-      "Seguimiento online en tiempo real y embalaje con protección premium.",
+      "Por Correo Argentino, a domicilio o sucursal, con número de seguimiento.",
   },
   {
     icon: CreditCard,
-    title: "3 Cuotas Sin Interés",
+    title: "Pagá con Mercado Pago",
     description:
-      "Pagá de forma segura con Mercado Pago y todas las tarjetas de crédito.",
+      "Con tarjeta de crédito, débito o dinero en cuenta.",
   },
 ];
 
