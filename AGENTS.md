@@ -120,7 +120,7 @@ Respuestas directas, sin intro ni conclusiones. Código y comandos exactos. Si h
 
 ## Git
 
-- **Repo canónico:** `Laza223/glamify-makeup-1` (de ahí despliega Vercel; PRs con `gh pr create -R Laza223/glamify-makeup-1 --base main`). El `main` local puede estar viejo: ramificar desde `git fetch https://github.com/Laza223/glamify-makeup-1.git main` → `FETCH_HEAD`.
+- **Repo canónico:** `Laza223/glamify-makeup` (de ahí despliega Vercel; PRs con `gh pr create -R Laza223/glamify-makeup --base main`). El `main` local puede estar viejo: ramificar desde `git fetch https://github.com/Laza223/glamify-makeup.git main` → `FETCH_HEAD`.
 - **Commits:** con la identidad global de git de Lazar (`Laza223`); no configurar `user.name`/`user.email` locales en este clon.
 - **Branching:** una rama por cambio (`feat/…`, `fix/…`, `chore/…`), merge a `main` tras PR y CI verde.
 

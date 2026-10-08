@@ -89,7 +89,7 @@ Para crear (de forma idempotente) la cuenta de la dueña:
 
 ### 3.1 Proyecto
 - Proyecto `glamify-makeup-1` en Vercel (plan **Pro**: hace falta para el cron horario; Hobby no permite uso comercial y limita el cron a 1 por día).
-- Conectado por la integración Git al repo `Laza223/glamify-makeup-1`: cada PR genera un preview y cada merge a `main` despliega a producción.
+- Conectado por la integración Git al repo `Laza223/glamify-makeup`: cada PR genera un preview y cada merge a `main` despliega a producción.
 - Build: `pnpm build` (lo detecta solo).
 
 ### 3.2 Variables de entorno
