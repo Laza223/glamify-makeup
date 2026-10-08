@@ -19,12 +19,12 @@ export default async function PedidosPage() {
   }
 
   return (
-    <ul className="divide-y divide-border rounded-[20px] border border-border">
+    <ul className="divide-y divide-border overflow-hidden rounded-[20px] border border-border">
       {orders.map((o) => (
         <li key={o.orderNumber}>
           <Link
             href={`/cuenta/pedidos/${o.orderNumber}`}
-            className="group flex min-h-[72px] items-center gap-4 px-4 py-3 transition-colors first:rounded-t-[20px] last:rounded-b-[20px] hover:bg-secondary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring md:px-5"
+            className="group flex min-h-[72px] items-center gap-4 px-4 py-3 transition-colors hover:bg-secondary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring md:px-5"
           >
             <div className="min-w-0 flex-1">
               <p className="text-[16px] font-semibold tabular-nums">{o.orderNumber}</p>

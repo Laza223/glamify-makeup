@@ -56,7 +56,7 @@ export function KitBuilder({ labios, ojos, rostro, curatedCombos }: KitBuilderPr
   const isComplete = selectedCount === 3;
   const rawSubtotal = STEPS.reduce((sum, s) => sum + (slots[s.key]?.price ?? 0), 0);
 
-  const handleSelectProduct = (step: Step, product: CatalogProduct, variantId?: string) => {
+  const handleSelectProduct = (step: Step, product: CatalogProduct, variantId?: string, advance = true) => {
     const activeVariants = product.variants.filter((v) => v.active && v.stock > 0);
     const chosenVariant =
       (variantId ? activeVariants.find((v) => v.id === variantId) : null) ??
@@ -74,7 +74,8 @@ export function KitBuilder({ labios, ojos, rostro, curatedCombos }: KitBuilderPr
     };
 
     setSlots((prev) => ({ ...prev, [step]: slotData }));
-    // Avanza al próximo paso vacío (si lo hay).
+    // Avanza al próximo paso vacío (si lo hay); cambiar solo el tono no salta de paso.
+    if (!advance) return;
     const next = STEPS.find((s) => s.key !== step && !slots[s.key]);
     if (next && step !== "rostro") setActiveTab(next.key);
   };
@@ -151,7 +152,7 @@ export function KitBuilder({ labios, ojos, rostro, curatedCombos }: KitBuilderPr
                     <select
                       id={selectId}
                       value={shownVariantId}
-                      onChange={(e) => handleSelectProduct(step, p, e.target.value)}
+                      onChange={(e) => handleSelectProduct(step, p, e.target.value, false)}
                       className="h-11 w-full rounded-xl border border-input bg-white px-3 text-[15px] text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     >
                       {activeVariants.map((v) => (
