@@ -1,6 +1,8 @@
-import { formatARS } from "@/lib/money";
-import { Truck, CheckCircle2 } from "lucide-react";
+import { formatPrice } from "@/lib/money";
+import { Truck, PartyPopper } from "lucide-react";
+import { cn } from "@/lib/utils";
 
+/** Progreso real hacia el envío gratis (umbral de Setting). */
 export function FreeShippingBar({ subtotal, threshold }: { subtotal: number; threshold: number }) {
   if (threshold <= 0) return null;
   const remaining = Math.max(0, threshold - subtotal);
@@ -8,28 +10,35 @@ export function FreeShippingBar({ subtotal, threshold }: { subtotal: number; thr
   const hasFree = remaining <= 0;
 
   return (
-    <div className={`rounded-2xl p-3.5 border transition-all ${hasFree ? "bg-emerald-50/80 border-emerald-200/80 text-emerald-900" : "bg-secondary border-border/80 text-foreground"}`}>
-      <div className="mb-2 flex items-center justify-between gap-2 text-xs font-semibold">
-        <span className="flex items-center gap-1.5">
+    <div className={cn("rounded-[18px] p-4", hasFree ? "bg-success/10" : "bg-secondary")}>
+      <p className="mb-2.5 flex items-center gap-2 text-[15px] text-foreground">
+        {hasFree ? (
+          <PartyPopper className="size-5 shrink-0 text-success" aria-hidden />
+        ) : (
+          <Truck className="size-5 shrink-0 text-primary" aria-hidden />
+        )}
+        <span>
           {hasFree ? (
-            <CheckCircle2 className="size-4 text-emerald-600 shrink-0" aria-hidden="true" />
+            <>
+              ¡Listo! Tu envío es <strong>gratis</strong>
+            </>
           ) : (
-            <Truck className="size-4 text-primary shrink-0" aria-hidden="true" />
+            <>
+              Te faltan <strong className="tabular-nums text-accent">{formatPrice(remaining)}</strong> para el envío gratis
+            </>
           )}
-          <span>
-            {hasFree ? (
-              <>¡Tenés <strong>Envío Gratis</strong> a todo el país!</>
-            ) : (
-              <>Te faltan <strong className="text-primary font-bold">{formatARS(remaining)}</strong> para envío gratis</>
-            )}
-          </span>
         </span>
-        <span className="text-[11px] font-bold opacity-80 tabular-nums">{pct}%</span>
-      </div>
-
-      <div className="h-2 w-full overflow-hidden rounded-full bg-black/10" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
+      </p>
+      <div
+        className="h-2 w-full overflow-hidden rounded-full bg-white"
+        role="progressbar"
+        aria-label="Progreso hacia el envío gratis"
+        aria-valuenow={pct}
+        aria-valuemin={0}
+        aria-valuemax={100}
+      >
         <div
-          className={`h-full rounded-full transition-all duration-500 ease-out ${hasFree ? "bg-emerald-600" : "bg-primary"}`}
+          className={cn("h-full rounded-full transition-[width] duration-700 ease-out", hasFree ? "bg-success" : "bg-primary")}
           style={{ width: `${pct}%` }}
         />
       </div>

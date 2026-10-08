@@ -1,39 +1,35 @@
-"use client";
-
-import { useEffect } from "react";
+import type { Metadata } from "next";
 import Link from "next/link";
-import { RotateCw } from "lucide-react";
 
-export default function StorefrontError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
-  useEffect(() => {
-    // eslint-disable-next-line no-console
-    console.error(error);
-  }, [error]);
+export const metadata: Metadata = { title: "No encontramos esta página" };
 
+/** 404 de fichas y categorías inexistentes (`notFound()` dentro del storefront), con header y footer. */
+export default function StorefrontNotFound() {
   return (
     <div className="mx-auto flex max-w-xl flex-col items-center gap-6 py-16 text-center md:py-24">
-      <span className="grid size-16 place-items-center rounded-full bg-secondary text-primary" aria-hidden>
-        <RotateCw className="size-7" />
-      </span>
+      <p aria-hidden className="font-display text-[96px] italic leading-none text-primary md:text-[128px]">
+        404
+      </p>
       <div className="space-y-2">
         <h1 className="font-display text-[32px] font-normal leading-tight md:text-[40px]">
-          Algo salió <em className="font-medium text-primary">mal</em>
+          Uy, esta página se nos <em className="font-medium text-primary">perdió</em>
         </h1>
-        <p className="text-[16px] text-muted-foreground">Probá de nuevo en unos segundos. Si sigue pasando, escribinos.</p>
+        <p className="text-[16px] text-muted-foreground">
+          Capaz cambió de lugar o el link está mal escrito. Lo que buscás seguro está en la tienda.
+        </p>
       </div>
       <div className="flex flex-col gap-3 sm:flex-row">
-        <button
-          type="button"
-          onClick={() => reset()}
+        <Link
+          href="/tienda"
           className="inline-flex h-12 items-center justify-center rounded-2xl bg-foreground px-7 text-[16px] font-semibold text-white transition hover:bg-foreground/85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
-          Probar de nuevo
-        </button>
+          Ir a la tienda
+        </Link>
         <Link
-          href="/contacto"
+          href="/"
           className="inline-flex h-12 items-center justify-center rounded-2xl border border-border px-7 text-[16px] font-semibold text-foreground transition-colors hover:border-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          Contactanos
+          Volver al inicio
         </Link>
       </div>
     </div>

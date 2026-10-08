@@ -18,7 +18,7 @@ const styles: Record<StockState, string> = {
 export function StockBadge({ state, stock, className }: StockBadgeProps) {
   const Icon = state === "in_stock" ? Check : state === "low_stock" ? AlertTriangle : XCircle;
   return (
-    <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium", styles[state], className)}>
+    <span className={cn("inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[13px] font-semibold", styles[state], className)}>
       <Icon className="size-3.5" aria-hidden />
       {stockLabel(state, stock)}
     </span>

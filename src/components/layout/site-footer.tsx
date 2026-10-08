@@ -57,7 +57,9 @@ export function SiteFooter() {
       <div className="container grid grid-cols-2 gap-x-6 gap-y-10 py-12 md:grid-cols-4">
         <div className="col-span-2 space-y-3 md:col-span-1">
           <Logo size="sm" />
-          <p className="max-w-xs font-display text-xl font-semibold leading-snug">Bueno, bonito y barato.</p>
+          <p className="max-w-xs font-display text-[22px] font-normal leading-snug">
+            Bueno, <em className="font-medium text-primary">bonito</em> y barato.
+          </p>
           <p className="max-w-xs text-[15px] leading-relaxed text-foreground/80">
             Maquillaje de marcas que ya conocés. Desde Luján a todo el país.
           </p>

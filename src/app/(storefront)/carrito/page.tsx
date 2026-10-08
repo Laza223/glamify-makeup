@@ -3,7 +3,6 @@ import { getCartView } from "@/lib/cart/cart-view";
 import { round2 } from "@/lib/money";
 import { productImageUrl } from "@/lib/images";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { CartLineItem } from "@/components/cart/cart-line-item";
 import { FreeShippingBar } from "@/components/cart/free-shipping-bar";
@@ -23,7 +22,9 @@ export default async function CarritoPage() {
   if (!cart || count === 0) {
     return (
       <div className="mx-auto max-w-md py-8">
-        <h1 className="mb-6 font-display text-2xl font-bold">Tu carrito</h1>
+        <h1 className="mb-6 text-center font-display text-[34px] font-normal">
+          Tu <em className="font-medium text-primary">carrito</em>
+        </h1>
         <EmptyCart />
       </div>
     );
@@ -41,12 +42,17 @@ export default async function CarritoPage() {
   ]);
 
   return (
-    <div className="mx-auto max-w-4xl py-6">
-      <h1 className="mb-6 font-display text-2xl font-bold">Tu carrito ({count})</h1>
-      <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
+    <div className="mx-auto max-w-5xl py-6">
+      <h1 className="mb-6 font-display text-[34px] font-normal leading-tight md:text-[44px]">
+        Tu <em className="font-medium text-primary">carrito</em>{" "}
+        <span className="font-sans text-[18px] font-semibold text-muted-foreground">
+          ({count === 1 ? "1 producto" : `${count} productos`})
+        </span>
+      </h1>
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="space-y-4">
           {!digitalOnly && <FreeShippingBar subtotal={physicalSubtotal} threshold={threshold} />}
-          <div className="divide-y divide-border rounded-2xl border border-border px-4">
+          <div className="divide-y divide-border rounded-[20px] border border-border px-4 md:px-5">
             {cart.items.map((item) => (
               <CartLineItem
                 key={item.id}
@@ -61,14 +67,19 @@ export default async function CarritoPage() {
               />
             ))}
           </div>
-        </div>
-        <aside className="space-y-4 rounded-2xl border border-border p-5 lg:sticky lg:top-20 lg:self-start">
           {bump && <OrderBump offer={bump} />}
+        </div>
+        <aside className="space-y-4 rounded-[20px] bg-secondary p-5 lg:sticky lg:top-32 lg:self-start md:p-6">
           <CouponInput applied={coupon?.code ?? null} />
           <Separator />
           <CartSummary subtotal={subtotal} discount={discount} shippingCost={digitalOnly ? 0 : null} total={total} freeShipping={coupon?.freeShipping} />
-          <p className="text-xs text-muted-foreground">El envío se calcula en el checkout según tu código postal.</p>
-          <Button asChild size="lg" className="w-full"><Link href="/checkout">Iniciar compra</Link></Button>
+          <p className="text-[14px] text-muted-foreground">El envío se calcula en el checkout con tu código postal.</p>
+          <Link
+            href="/checkout"
+            className="inline-flex h-12 w-full items-center justify-center rounded-2xl bg-foreground px-6 text-[16px] font-semibold text-white transition hover:bg-foreground/85 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          >
+            Iniciar compra
+          </Link>
         </aside>
       </div>
       <div className="mt-10">

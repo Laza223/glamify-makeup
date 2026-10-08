@@ -1,5 +1,5 @@
 ---
-version: 1
+version: 2
 slug: "src-app-storefront-page-tsx"
 primary_target: "src/app/(storefront)/page.tsx"
 related_targets: ["src/app/(storefront)/layout.tsx","src/components/catalog/product-card.tsx"]
@@ -11,27 +11,27 @@ Home del storefront (`/`) + chrome global (anuncio, header, bottom-nav, footer, 
 
 ## Audience, job, proof
 
-Chica de 16–24 que llega del link en bio, con el pulgar. Tiene que entender en un viewport qué es Glamify (marcas que ya conoce, elegidas por una persona real, a precio de feria), ver producto y precio reales, y tocar la tienda o una categoría. Prueba: fotos reales (flatlays de categoría, ramo y box hechos por la dueña), marcas reales, precios reales de la base, umbral real de envío gratis (`Setting`), plazo real (hasta 3 días hábiles), 10 días de arrepentimiento, WhatsApp humano.
+Chica de 16–24 que llega del link en bio, con el pulgar. Tiene que reconocer la marca (el "¡Hola!"), ver marcas que ya conoce y productos con precio real, y tocar la tienda, una categoría o el +. Prueba: fotos reales del catálogo, marcas detectadas del catálogo, precios y umbral de envío reales (`Setting`), plazo real (hasta 3 días hábiles), WhatsApp humano.
 
 ## Constraints
 
-Rosa + blanco, logo actual, light mode, sin emojis (Lucide), WCAG AA, targets ≥ 44 px, cuerpo ≥ 16 px. El admin no cambia. Ganchos DOM y eventos de PostHog se conservan (plan, "Lo que el rediseño no puede romper").
+Hero de producción intacto (pedido de la dueña). Un solo rosa, blanco y negro; sin pastel. Logo actual, light mode, sin emojis (Lucide), WCAG AA, targets ≥ 44 px, cuerpo ≥ 16 px. El admin no cambia. Políticas de cambio fuera de la home y del carrito.
 
 ## Direction contract
 
-THESIS: Glamify es el puesto prolijo de una feria de emprendedoras: carteles de cartulina escritos a mano con cuidado y etiquetas de precio colgantes sobre producto real. Rechaza la plantilla boutique-lujo (serif + negro + destellos) y también la mesa de liquidación: "Barato" nunca va solo ni más grande que "Bueno" y "Bonito", y siempre lleva su prueba (el precio real). Sin vocabulario de oferta: ni rojo, ni estrellas, ni "OFERTA", ni tachados salvo `compareAtPrice` real.
+THESIS: Glamify es una tienda de maquillaje estándar hecha con cuidado editorial: estructura de ecommerce que cualquiera entiende (hero, marcas, categorías, productos, regalos, cómo comprar) y una voz propia en la tipografía — Playfair con una palabra en itálica rosa, como su "¡Hola!" — y en el copy girly rioplatense ("Tu nueva obsesión", "Encontrá tu must", "Regalá algo divino", "Comprar es re fácil"). Rechaza el disfraz temático y la plantilla genérica sin voz.
 
-OWN-WORLD: Fondo blanco; cartulina rosa `#FFD3E6` como campo que ocupa regiones enteras; tinta rosa `#E0177A` (relleno de acción, blanco encima 4,59:1) y `#C8006A` para texto rosa sobre cartulina; marcador `#1A1A1A`. Letra de cartel: Shantell Sans (marcador legible) solo en carteles y títulos; UI y cuerpo en Figtree, precios en Figtree tabular. Carteles = placas planas con radio 14 px, inclinación ±1,5° y sombra con offset suave; precios en etiqueta colgante (agujero + hilo, geometría SVG exacta). Nada de texturas de papel, cinta ni brillo fingidos.
+OWN-WORLD: Fondo blanco; negro `#161413` para botones principales, la barra de anuncio y el bloque de regalos; un solo rosa `#E6007A` (relleno con blanco encima 4,53:1; `#C20067` para texto rosa chico; `#FF4FA3` solo sobre negro); porcelana `#FBF6F8` como superficie suave, nunca pastel. Playfair Display (itálica real) en títulos y en la palabra acento; Nunito Sans en UI, cuerpo y precios. Fotos reales en radio 14, categorías en círculo.
 
-STORY: Entiende "marcas que ya conocés, lindas, a precio de feria"; cree porque ve las marcas, las fotos y el número; toca una categoría o un producto y agrega con el +.
+STORY: Reconoce a Glamify por su "¡Hola!", ve marcas que conoce pasando, elige categoría o producto, agrega con el +; si es para regalar, va a WhatsApp o a la Gift Card.
 
-FIRST VIEWPORT (390×844): header compacto (logo, buscar, carrito) ≤ 56 px + anuncio fijo de una línea con el umbral real. Campo de cartulina rosa a sangre con tres carteles apilados en escalera: "Bueno." (TEI · Pink 21 · 4 Angels y más), "Bonito." (fila de 4 fotos reales chicas), "Barato." (desde $X real); botón "Ver la tienda" rosa lleno a ≤ 600 px. Fila de categorías con foto visible antes del pliegue. Desktop: carteles a la izquierda, foto real del ramo/box a la derecha como la mesa.
+FIRST VIEWPORT (390×844): barra negra con envío gratis real, header (logo, buscar, carrito), hero de producción completo con "Explorar Catálogo" y "Armá tu kit"; debajo, la tira de marcas asomando. Desktop: además la fila de categorías del header.
 
-FORM: Cartel de feria — candidato 1 de mi lista ordenada (elegido por Lazar como IMPECCABLE'S PICK sobre la tirada), seed key 39ca24c7. Interacción firma: al agregar al carrito, la etiqueta de precio se balancea una vez desde su agujero y el contador del carrito suma con un rebote con masa; sin movimiento con `prefers-reduced-motion`.
+FORM: El estándar de la categoría (canon card de la ronda de dirección, seed 39ca24c7), elegido por la dueña tras rechazar "Cartel de feria"; ejecutado sobre su identidad de producción. Micro-interacciones: + que se abre en stepper, corazón que late al marcar, contador del carrito que rebota, fotos que cambian al hover, tira de marcas que se pausa con hover, abanico de regalos que se abre, línea de pasos que se dibuja y secciones que aparecen al scrollear; todo anulado con `prefers-reduced-motion`.
 
 FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance
 
 ## Unresolved
 
-- Fotos propias de la clienta (pendientes): el layout tiene que funcionar con las actuales (flatlays + ramo/box) y con las nuevas sin cambios.
+- Fotos propias de la clienta (pendientes): las de categoría son assets previos de origen no verificado.
 - `swatchHex` vacío: los mini-swatches de la tarjeta se ocultan hasta que haya color cargado.

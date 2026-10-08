@@ -19,9 +19,11 @@ export default async function CheckoutPage() {
   const bump = selectOrderBump(await getOrderBumpOffers(), cartVariantIds);
 
   return (
-    <div className="mx-auto max-w-4xl py-6">
-      <h1 className="mb-6 font-display text-2xl font-bold">Finalizá tu compra</h1>
-      {bump && <div className="mb-6"><OrderBump offer={bump} /></div>}
+    <div className="mx-auto max-w-6xl py-6">
+      <h1 className="mb-8 font-display text-[34px] font-normal leading-tight md:text-[44px]">
+        Ya casi es <em className="font-medium text-primary">tuyo</em>
+      </h1>
+      {bump && <div className="mb-8 max-w-2xl"><OrderBump offer={bump} /></div>}
       <CheckoutForm
         subtotal={subtotal}
         digitalOnly={digitalOnly}

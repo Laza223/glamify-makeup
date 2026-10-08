@@ -8,11 +8,11 @@ import { getEffectivePrice, isOnSale, getDiscountPercent, toNumber } from "@/lib
 import { isProductMadeToOrder } from "@/lib/catalog/made-to-order";
 import { isProductGiftCard } from "@/lib/catalog/gift-card";
 import { storeWhatsappUrl } from "@/lib/email/whatsapp-url";
-import { buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import { CatalogBreadcrumbs } from "@/components/catalog/catalog-breadcrumbs";
 import { ProductGallery } from "@/components/catalog/product-gallery";
-import { PriceTag } from "@/components/catalog/price-tag";
+import { detectBrand } from "@/lib/catalog/brand";
+import { getFreeShippingThreshold } from "@/lib/orders/checkout-data";
+import { formatPrice } from "@/lib/money";
 import { AddToCart } from "@/components/cart/add-to-cart";
 import { WishlistHeart } from "@/components/catalog/wishlist-heart";
 import { TrustBadges } from "@/components/catalog/trust-badges";
@@ -59,7 +59,9 @@ export default async function ProductoPage({ params }: { params: Promise<{ slug:
   const whatsappUrl = madeToOrder ? await storeWhatsappUrl(`¡Hola! Quiero armar un ${product.name}`) : null;
   const price = getEffectivePrice(product);
   const onSale = isOnSale(product);
-  const wishlisted = await isWishlisted(product.id);
+  const [wishlisted, threshold] = await Promise.all([isWishlisted(product.id), getFreeShippingThreshold()]);
+  const brand = detectBrand(product.name);
+  const discount = onSale ? getDiscountPercent(product) : 0;
 
   // Ubicar la categoría del producto en el árbol para los breadcrumbs.
   const { tree } = await resolveCategoryPath();
@@ -122,23 +124,23 @@ export default async function ProductoPage({ params }: { params: Promise<{ slug:
         </div>
 
         <div className="lg:col-span-5 lg:sticky lg:top-28 space-y-6">
-          <header className="space-y-2">
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-xs font-bold uppercase tracking-widest text-primary">{product.category.name}</p>
-              <WishlistHeart productId={product.id} initial={wishlisted} />
+          <header className="space-y-3">
+            <div className="flex items-start justify-between gap-3">
+              <p className="pt-2 text-[13px] font-bold uppercase tracking-[0.1em] text-accent">
+                {[brand, product.category.name].filter(Boolean).join(" · ")}
+              </p>
+              <WishlistHeart productId={product.id} initial={wishlisted} className="shrink-0 border border-border" />
             </div>
-            
-            <h1 className="font-display text-2xl font-bold md:text-3xl text-foreground leading-tight">
+
+            <h1 className="font-display text-[32px] font-normal leading-tight text-foreground md:text-[40px]">
               {product.name}
             </h1>
 
             {count > 0 && (
-              <div className="flex items-center gap-1.5 pt-0.5">
+              <a href="#opiniones" className="inline-flex min-h-11 items-center gap-2 text-[15px] text-muted-foreground hover:text-foreground">
                 <RatingStars value={average} size="sm" />
-                <span className="text-xs font-medium text-muted-foreground">
-                  {average.toFixed(1)} ({count} reseñas)
-                </span>
-              </div>
+                {average.toFixed(1)} · {count === 1 ? "1 opinión" : `${count} opiniones`}
+              </a>
             )}
           </header>
 
@@ -149,31 +151,40 @@ export default async function ProductoPage({ params }: { params: Promise<{ slug:
                   href={whatsappUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className={cn(buttonVariants({ size: "lg" }), "w-full")}
+                  className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-foreground px-6 text-[16px] font-semibold text-white transition hover:bg-foreground/85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
-                  <MessageCircle aria-hidden />
+                  <MessageCircle className="size-5" aria-hidden />
                   Armalo por WhatsApp
                 </a>
               ) : (
-                <p className="text-sm font-semibold text-foreground">Escribinos por WhatsApp para armarlo</p>
+                <p className="text-[16px] font-semibold text-foreground">Escribinos por WhatsApp para armarlo</p>
               )}
-              <p className="text-sm text-muted-foreground">
+              <p className="text-[16px] text-muted-foreground">
                 Lo armamos a tu gusto: elegís los productos y te pasamos el precio por WhatsApp.
               </p>
             </div>
           ) : (
             <>
-              <PriceTag
-                price={price}
-                compareAtPrice={onSale ? toNumber(product.compareAtPrice) : null}
-                discountPercent={getDiscountPercent(product)}
-                size="lg"
-              />
+              <p className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                <span className="text-[30px] font-bold tabular-nums text-foreground">{formatPrice(price)}</span>
+                {onSale && (
+                  <>
+                    <s className="text-[18px] tabular-nums text-muted-foreground">
+                      {formatPrice(toNumber(product.compareAtPrice))}
+                    </s>
+                    {discount > 0 && (
+                      <span className="rounded-full bg-primary px-2.5 py-0.5 text-[14px] font-bold text-primary-foreground">
+                        -{discount}%
+                      </span>
+                    )}
+                  </>
+                )}
+              </p>
 
               {giftCard && (
-                <p className="rounded-xl bg-secondary/60 p-3 text-sm text-muted-foreground">
-                  Llega por mail con un código. Un solo uso, vence a los 6 meses, descuenta productos (no el envío).
-                  Si la compra es menor, el saldo no se conserva.
+                <p className="rounded-[18px] bg-secondary p-4 text-[15px] leading-relaxed text-foreground">
+                  Llega por mail con un código. Un solo uso, vence a los 6 meses y descuenta productos (no el envío). Si
+                  la compra es menor, el saldo no se conserva.
                 </p>
               )}
 
@@ -184,28 +195,30 @@ export default async function ProductoPage({ params }: { params: Promise<{ slug:
             </>
           )}
 
-          <TrustBadges />
+          <TrustBadges freeShippingThreshold={threshold} />
 
           <PdpAccordions description={product.description} />
         </div>
       </div>
 
       {/* Sección de Reseñas */}
-      <section className="border-t border-border/80 pt-10">
-        <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+      <section id="opiniones" className="scroll-mt-32 border-t border-border pt-12">
+        <div className="mb-6 flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
           <div>
-            <h2 className="font-display text-2xl font-bold uppercase tracking-wide">Opiniones</h2>
-            <p className="text-xs text-muted-foreground">Lo que cuentan quienes ya lo probaron</p>
+            <h2 className="font-display text-[30px] font-normal leading-tight md:text-[38px]">
+              Lo que <em className="font-medium text-primary">opinan</em>
+            </h2>
+            <p className="mt-1 text-[15px] text-muted-foreground">Las chicas que ya lo probaron</p>
           </div>
           {count > 0 && (
-            <span className="flex items-center gap-1.5 text-sm font-semibold">
-              <RatingStars value={average} size="sm" /> {average.toFixed(1)} ({count} reseñas)
+            <span className="flex items-center gap-2 text-[16px] font-semibold">
+              <RatingStars value={average} size="sm" /> {average.toFixed(1)} · {count === 1 ? "1 opinión" : `${count} opiniones`}
             </span>
           )}
         </div>
 
         {customer && alreadyReviewed ? (
-          <p className="text-sm text-muted-foreground bg-secondary/50 rounded-xl p-3">
+          <p className="rounded-[18px] bg-secondary p-4 text-[15px] text-foreground">
             Ya dejaste tu reseña sobre este producto. ¡Muchas gracias por tu recomendación!
           </p>
         ) : (
@@ -214,8 +227,8 @@ export default async function ProductoPage({ params }: { params: Promise<{ slug:
 
         <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {reviews.length === 0 ? (
-            <p className="col-span-full text-sm text-muted-foreground rounded-2xl border border-dashed border-border p-6 text-center">
-              Todavía no hay reseñas para este producto. ¡Sé la primera en compartir tu experiencia!
+            <p className="col-span-full rounded-[18px] bg-secondary p-6 text-center text-[16px] text-muted-foreground">
+              Todavía no hay opiniones. ¡Contanos qué te pareció y sé la primera!
             </p>
           ) : (
             reviews.map((r) => <ReviewCard key={r.id} review={r} />)

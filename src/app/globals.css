@@ -4,45 +4,45 @@
 
 @layer base {
   :root {
-    /* === Glamify — Cartel de feria (rediseño 2026-10, ADR 0003) === */
+    /* === Glamify — Editorial glam (rediseño 2026-10, ADR 0003): blanco, negro y un solo rosa === */
     --background: 0 0% 100%; /* blanco */
-    --foreground: 0 0% 10%; /* marcador #1A1A1A */
+    --foreground: 24 8% 8%; /* #161413 */
 
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 10%;
+    --card-foreground: 24 8% 8%;
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 10%;
+    --popover-foreground: 24 8% 8%;
 
-    --primary: 330 81% 48%; /* tinta rosa #E0177A (blanco encima 4,59:1) */
-    --primary-hover: 328 100% 39%; /* #C8006A */
+    --primary: 328 100% 45%; /* #E6007A, el rosa de Glamify (blanco encima 4,53:1) */
+    --primary-hover: 328 100% 38%; /* #C20067 */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 334 100% 91%; /* cartulina rosa #FFD3E6 */
-    --secondary-foreground: 0 0% 10%;
+    --secondary: 330 30% 97%; /* #FBF6F8 porcelana: casi blanco, nunca pastel */
+    --secondary-foreground: 24 8% 8%;
 
-    --accent: 326 100% 36%; /* rosa para texto sobre cartulina #B80068 */
+    --accent: 328 100% 38%; /* #C20067: rosa para texto chico (5,9:1 en blanco) */
     --accent-foreground: 0 0% 100%;
 
-    --muted: 336 100% 97%; /* #FFF0F6 */
-    --muted-foreground: 330 10% 39%; /* #6E5A64: 6,35:1 en blanco, 4,75:1 en cartulina */
+    --muted: 330 15% 96%; /* #F7F4F5 fondo de fotos */
+    --muted-foreground: 0 0% 40%; /* #666: 5,7:1 en blanco */
 
     --destructive: 0 72% 42%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 150 61% 30%; /* #1E7A4C */
+    --success: 150 61% 30%;
     --success-foreground: 0 0% 100%;
     --warning: 38 92% 50%;
     --warning-foreground: 28 80% 16%;
 
-    --border: 333 54% 89%; /* #F2D3E1 */
-    --input: 331 20% 58%; /* #A97F93: borde de control 3,42:1 */
-    --ring: 330 81% 48%;
+    --border: 330 10% 91%; /* #ECE6E9 */
+    --input: 330 6% 55%; /* borde de control ≥3:1 */
+    --ring: 328 100% 45%;
 
-    --surface-alt: 330 100% 98%; /* #FFF7FB */
+    --surface-alt: 330 30% 98%;
 
     --radius: 0.875rem;
-    --ff-sans: var(--font-figtree);
-    --ff-display: var(--font-shantell);
+    --ff-sans: var(--font-nunito);
+    --ff-display: var(--font-playfair);
   }
 
   /* Admin: conserva el sistema anterior (ADR 0003). El storefront nunca depende de :has(). */
@@ -216,5 +216,71 @@
   }
   .page-enter {
     animation: none !important;
+  }
+}
+
+/* Aparición al scrollear: solo CSS (scroll-driven animations). Sin soporte o con reduced-motion, se ve sin animar. */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .reveal {
+      animation: reveal-up linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 35%;
+    }
+    /* Bloque de regalos: entra creciendo apenas, distinto de las demás secciones. */
+    .reveal-scale {
+      animation: reveal-scale linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 45%;
+    }
+    /* Línea de "Comprar es re fácil": se dibuja mientras la sección cruza la pantalla. */
+    .draw-line-x,
+    .draw-line-y {
+      animation: linear both;
+      animation-timeline: view();
+      animation-range: entry 40% cover 55%;
+    }
+    .draw-line-x {
+      animation-name: draw-x;
+    }
+    .draw-line-y {
+      animation-name: draw-y;
+    }
+  }
+}
+@keyframes reveal-up {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes reveal-scale {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes draw-x {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+@keyframes draw-y {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
   }
 }

@@ -28,5 +28,7 @@ test("la barra fija mobile usa el tono elegido, no el primero con stock", async 
 
   // Al scrollear fuera del CTA principal aparece la barra fija.
   await page.mouse.wheel(0, 4000);
-  await expect(page.getByText(`(${toneName})`, { exact: true })).toBeVisible();
+  const bar = page.getByTestId("sticky-buy-bar");
+  await expect(bar).toBeVisible();
+  await expect(bar.getByText(toneName, { exact: true })).toBeVisible();
 });

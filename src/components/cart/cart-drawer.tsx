@@ -20,9 +20,11 @@ export function CartDrawer({ children }: { children: ReactNode }) {
   }, [pathname, setOpen]);
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      <SheetContent side="right" className="flex w-full flex-col gap-0 sm:max-w-md">
+      <SheetContent side="right" aria-describedby={undefined} className="flex w-full flex-col gap-0 sm:max-w-md sm:rounded-l-[24px]">
         <SheetHeader className="text-left">
-          <SheetTitle className="font-display text-xl">Tu carrito</SheetTitle>
+          <SheetTitle className="font-display text-[28px] font-normal">
+            Tu <em className="font-medium text-primary">carrito</em>
+          </SheetTitle>
         </SheetHeader>
         <div className="flex-1 overflow-y-auto py-4">{children}</div>
       </SheetContent>

@@ -2,9 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { CheckCircle2, Clock } from "lucide-react";
 import { prisma } from "@/lib/prisma";
-import { formatARS } from "@/lib/money";
+import { formatPrice } from "@/lib/money";
 import { whatsappLink } from "@/lib/whatsapp";
-import { Button } from "@/components/ui/button";
 import { RetryPaymentButton } from "@/components/orders/retry-payment-button";
 import { TrackOnMount } from "@/components/analytics/track-on-mount";
 import { AutoRefresh } from "@/components/orders/auto-refresh";
@@ -35,10 +34,14 @@ export default async function GraciasPage({ searchParams }: { searchParams: Prom
           props={{ orderNumber: order.orderNumber, total: Number(order.total) }}
         />
       )}
-      {paid ? <CheckCircle2 className="mx-auto size-14 text-primary" /> : <Clock className="mx-auto size-14 text-muted-foreground" />}
-      <h1 className="mt-4 font-display text-2xl font-bold">
+      <span
+        className={`mx-auto grid size-20 place-items-center rounded-full ${paid ? "bg-primary text-primary-foreground animate-in zoom-in-50 duration-500" : "bg-secondary text-muted-foreground"}`}
+      >
+        {paid ? <CheckCircle2 className="size-10" aria-hidden /> : <Clock className="size-10" aria-hidden />}
+      </span>
+      <h1 className="mt-6 font-display text-[34px] font-normal leading-tight md:text-[40px]">
         {paid
-          ? "¡Gracias por tu compra!"
+          ? <>¡Gracias, <em className="font-medium text-primary">reina</em>!</>
           : view === "approved_pending"
             ? "¡Recibimos tu pago!"
             : view === "closed"
@@ -51,46 +54,52 @@ export default async function GraciasPage({ searchParams }: { searchParams: Prom
 
       {order ? (
         <>
-          <p className="mt-2 text-muted-foreground">
+          <p className="mt-3 text-[16px] text-muted-foreground">
+            {paid && "Ya lo recibimos y te avisamos por mail cuando sale. "}
             Pedido <strong className="text-foreground">{order.orderNumber}</strong>
             {waiting && " — lo estamos acreditando; esta página se actualiza sola y te llega el email de confirmación."}
             {view === "closed" && " — no se cobró. Si querés, armalo de nuevo desde la tienda."}
           </p>
           {paid && order.shippingMethod === "digital" && (
-            <p className="mt-2 text-sm text-muted-foreground">
+            <p className="mt-2 text-[15px] text-muted-foreground">
               Te mandamos la gift card por mail en unos minutos (revisá spam).
             </p>
           )}
           {view === "retry" && (
             <div className="mx-auto mt-5 max-w-sm space-y-2">
-              <p className="text-sm text-muted-foreground">
+              <p className="text-[15px] text-muted-foreground">
                 Podés volver a intentarlo (por ejemplo, con otra tarjeta). Tu carrito sigue guardado. Si ya pagaste, esperá unos minutos.
               </p>
               <div className="flex justify-center"><RetryPaymentButton orderId={order.id} /></div>
             </div>
           )}
-          <div className="mx-auto mt-6 max-w-sm rounded-2xl border border-border p-5 text-left text-sm">
+          <div className="mx-auto mt-8 max-w-sm rounded-[20px] bg-secondary p-5 text-left text-[15px]">
             <ul className="space-y-1">
               {order.items.map((it) => (
                 <li key={it.id} className="flex justify-between gap-2">
                   <span className="text-muted-foreground">{it.productNameSnapshot}{it.variantNameSnapshot ? ` — ${it.variantNameSnapshot}` : ""} × {it.qty}</span>
-                  <span className="tabular-nums">{formatARS(Number(it.lineTotal))}</span>
+                  <span className="shrink-0 font-semibold tabular-nums">{formatPrice(Number(it.lineTotal))}</span>
                 </li>
               ))}
             </ul>
-            <div className="mt-3 flex justify-between border-t border-border pt-3 font-bold">
-              <span>Total</span><span className="tabular-nums">{formatARS(Number(order.total))}</span>
+            <div className="mt-3 flex justify-between border-t border-border pt-3 text-[17px] font-bold">
+              <span>Total</span><span className="tabular-nums">{formatPrice(Number(order.total))}</span>
             </div>
           </div>
         </>
       ) : (
-        <p className="mt-2 text-muted-foreground">Si completaste el pago, te enviaremos la confirmación por email.</p>
+        <p className="mt-3 text-[16px] text-muted-foreground">Si completaste el pago, te mandamos la confirmación por email.</p>
       )}
 
       <div className="mt-8 flex flex-col items-center gap-3">
-        <Button asChild><Link href="/tienda">Seguir comprando</Link></Button>
+        <Link
+          href="/tienda"
+          className="inline-flex h-12 items-center rounded-2xl bg-foreground px-7 text-[16px] font-semibold text-white transition hover:bg-foreground/85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        >
+          Seguir mirando
+        </Link>
         {waHref && (
-          <a href={waHref} className="text-sm text-primary hover:underline" target="_blank" rel="noopener noreferrer">
+          <a href={waHref} className="inline-flex min-h-11 items-center text-[15px] font-semibold text-accent hover:underline" target="_blank" rel="noopener noreferrer">
             ¿Dudas? Escribinos por WhatsApp
           </a>
         )}

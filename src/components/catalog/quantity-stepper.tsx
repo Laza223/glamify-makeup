@@ -19,17 +19,17 @@ export function QuantityStepper({ max = 99, initial = 1, onChange, className }: 
     onChange?.(clamped);
   };
   return (
-    <div className={cn("inline-flex items-center rounded-xl border border-border", className)} role="group" aria-label="Cantidad">
+    <div className={cn("inline-flex h-12 items-center rounded-full border border-border bg-white", className)} role="group" aria-label="Cantidad">
       <button
         type="button"
         onClick={() => set(qty - 1)}
         disabled={qty <= 1}
         aria-label="Restar"
-        className="grid size-11 place-items-center disabled:opacity-40"
+        className="grid size-11 place-items-center rounded-full transition-colors hover:bg-secondary disabled:opacity-40"
       >
         <Minus className="size-4" aria-hidden />
       </button>
-      <span className="min-w-10 text-center tabular-nums" aria-live="polite">
+      <span className="min-w-8 text-center text-[16px] font-bold tabular-nums" aria-live="polite">
         {qty}
       </span>
       <button
@@ -37,7 +37,7 @@ export function QuantityStepper({ max = 99, initial = 1, onChange, className }: 
         onClick={() => set(qty + 1)}
         disabled={qty >= max}
         aria-label="Sumar"
-        className="grid size-11 place-items-center disabled:opacity-40"
+        className="grid size-11 place-items-center rounded-full transition-colors hover:bg-secondary disabled:opacity-40"
       >
         <Plus className="size-4" aria-hidden />
       </button>

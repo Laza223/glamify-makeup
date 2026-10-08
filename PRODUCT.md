@@ -57,6 +57,9 @@ Tienda online de **Glamify Makeup**, un emprendimiento chico de Luján (Buenos A
 - **Voz:** español rioplatense con voseo; cercana, femenina, directa, vendedora pero no pesada, **nada de humo**. La triple B es la columna del mensaje.
 - **Gusto de la clienta (dueña):** moderno, estético, con micro-interacciones lindas, que se sienta del nicho maquillaje.
 - **Regla del dueño:** "tan simple que un nene lo entienda" (un paso, sin opciones superfluas).
+- **Preferencia firme de la dueña (2026-10-07):** estructura estándar de ecommerce, ejecutada linda y moderna. Rechazó el mundo "cartel de feria": nada de letra de marcador ni rosa pastel. **Un solo rosa** (el fuerte, `#E6007A`), con blanco y negro.
+- **El hero es intocable:** "Decile *¡Hola!* a tu nuevo maquillaje favorito." con su diseño de producción (`GlamifyWelcomeBanner`) es el slogan principal de la marca.
+- **Políticas de cambio/arrepentimiento solo en sus páginas** (Envíos y pagos, FAQ, Arrepentimiento), nunca como argumento de venta en la home o el carrito: la dueña sufre reclamos falsos. El link legal al Botón de Arrepentimiento del footer sí va siempre.
 
 ## Evidence on Hand
 

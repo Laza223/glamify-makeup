@@ -19,7 +19,7 @@ export function ProductCardSkeleton() {
 
         {/* Precio */}
         <div className="pt-1.5">
-          <Skeleton className="h-4.5 w-24 rounded-md" />
+          <Skeleton className="h-[18px] w-24 rounded-md" />
         </div>
 
         {/* Swatches de tonos */}

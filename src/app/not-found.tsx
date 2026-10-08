@@ -1,0 +1,42 @@
+import Link from "next/link";
+import { Logo } from "@/components/ui/logo";
+
+/**
+ * 404 de URLs que no matchean ninguna ruta (responde con status 404 real).
+ * Vive fuera del layout del storefront, así que trae su propio logo; los `notFound()` de fichas y
+ * categorías usan `(storefront)/not-found.tsx`, con header y footer.
+ */
+export default function RootNotFound() {
+  return (
+    <main className="flex min-h-dvh flex-col items-center justify-center gap-8 bg-white px-4 py-16 text-center">
+      <Link href="/" aria-label="Glamify Makeup, ir al inicio" className="rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+        <Logo />
+      </Link>
+      <p aria-hidden className="font-display text-[96px] italic leading-none text-primary md:text-[128px]">
+        404
+      </p>
+      <div className="max-w-xl space-y-2">
+        <h1 className="font-display text-[32px] font-normal leading-tight md:text-[40px]">
+          Uy, esta página se nos <em className="font-medium text-primary">perdió</em>
+        </h1>
+        <p className="text-[16px] text-muted-foreground">
+          Capaz cambió de lugar o el link está mal escrito. Lo que buscás seguro está en la tienda.
+        </p>
+      </div>
+      <div className="flex flex-col gap-3 sm:flex-row">
+        <Link
+          href="/tienda"
+          className="inline-flex h-12 items-center justify-center rounded-2xl bg-foreground px-7 text-[16px] font-semibold text-white transition hover:bg-foreground/85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        >
+          Ir a la tienda
+        </Link>
+        <Link
+          href="/"
+          className="inline-flex h-12 items-center justify-center rounded-2xl border border-border px-7 text-[16px] font-semibold text-foreground transition-colors hover:border-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          Volver al inicio
+        </Link>
+      </div>
+    </main>
+  );
+}

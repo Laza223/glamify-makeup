@@ -1,4 +1,4 @@
-import { formatARS } from "@/lib/money";
+import { formatPrice } from "@/lib/money";
 
 export interface CartSummaryProps {
   subtotal: number;
@@ -10,17 +10,17 @@ export interface CartSummaryProps {
 
 export function CartSummary({ subtotal, discount, shippingCost, total, freeShipping }: CartSummaryProps) {
   return (
-    <dl className="space-y-2 text-sm">
-      <div className="flex justify-between"><dt className="text-muted-foreground">Subtotal</dt><dd className="tabular-nums">{formatARS(subtotal)}</dd></div>
+    <dl className="space-y-2.5 text-[16px]">
+      <div className="flex justify-between"><dt className="text-muted-foreground">Subtotal</dt><dd className="tabular-nums">{formatPrice(subtotal)}</dd></div>
       {discount > 0 && (
-        <div className="flex justify-between text-primary"><dt>Descuento</dt><dd className="tabular-nums">−{formatARS(discount)}</dd></div>
+        <div className="flex justify-between font-semibold text-accent"><dt>Descuento</dt><dd className="tabular-nums">−{formatPrice(discount)}</dd></div>
       )}
       <div className="flex justify-between">
         <dt className="text-muted-foreground">Envío</dt>
-        <dd className="tabular-nums">{freeShipping ? "Gratis" : shippingCost == null ? "A calcular" : formatARS(shippingCost)}</dd>
+        <dd className="tabular-nums">{freeShipping ? "Gratis" : shippingCost == null ? "A calcular" : formatPrice(shippingCost)}</dd>
       </div>
-      <div className="flex justify-between border-t border-border pt-2 text-base font-bold">
-        <dt>Total</dt><dd className="tabular-nums">{formatARS(total)}</dd>
+      <div className="flex items-baseline justify-between border-t border-border pt-3 text-[18px] font-bold">
+        <dt>Total</dt><dd className="text-[22px] tabular-nums">{formatPrice(total)}</dd>
       </div>
     </dl>
   );

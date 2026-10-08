@@ -8,8 +8,8 @@ Plan aprobado: `~/.claude/plans/pasted-content-id-8b37-buenas-como-generic-melod
 | 0b | Preparación: rama + PR draft (#34), preview seguro, Impeccable, gobierno, E2E de solo lectura | ✅ 2026-10-07 |
 | 1 | `PRODUCT.md` (`impeccable init`) | ✅ 2026-10-07 |
 | 2 | Línea de base: critique + detector + Lighthouse ✅ (`linea-de-base.md`) · audit /20 y funnel PostHog pendientes | 🟡 |
-| 3 | Mundo visual "Cartel de feria" (seed 39ca24c7): tokens, chrome global, tarjeta, home · finish review `fix` → fixes aplicados · DESIGN.md | ✅ 2026-10-07 |
-| 4 | Rollout por superficie → Release 1 (compra + 404) → Release 2 | ⬜ |
+| 3 | Home + chrome: "Cartel de feria" rechazado por la dueña → pivot a "editorial glam" (hero de producción intacto, Playfair + un solo rosa) · aprobada · finish review `fix` aplicado · DESIGN.md reescrito | ✅ 2026-10-07 |
+| 4 | Release 1: /tienda, ficha, carrito, checkout, gracias, 404 ✅ · falta: ver carrito con productos (requiere escribir en la DB compartida), finish review de la fase, bug del carrito "ordered" (REQUIERE INPUT) · Release 2 (cuenta, legales, arma tu kit) | 🟡 |
 | 5 | Pasadas transversales | ⬜ |
 | 6 | Cierre | ⬜ |
 
@@ -29,13 +29,16 @@ Plan aprobado: `~/.claude/plans/pasted-content-id-8b37-buenas-como-generic-melod
 | 2026-10-07 | general-purpose (B) | Detector CLI + overlay en prod | ~129k tok | CLI 1, overlay 11/5/2; exit code del .cmd no confiable |
 | 2026-10-07 | general-purpose (Sonnet) | Finish review fase 3 + verdict pass | ~95k + 105k tok | `fix` → 6 resueltos, marcas parcial (resuelto después: tope 8, búsquedas verificadas), FAB y .text-glam diferidos |
 | 2026-10-07 | general-purpose (Sonnet) | Documenter → DESIGN.md + design.json | ~132k tok | escrito; 8 reglas con nombre; deuda legacy no canonizada |
+| 2026-10-07 | general-purpose (Sonnet) | Finish review home editorial glam | ~101k tok | `fix` → 5 arreglos aplicados (16 px, categorías, reveal, stepper 44, marca 13 px) |
+| 2026-10-07 | general-purpose (Sonnet) | Documenter editorial glam | ~133k tok | DESIGN.md + design.json reescritos (9 reglas) |
+| 2026-10-07 | sonnet-debugger | Diagnóstico carrito `ordered` antes del pago | ~49k tok | defecto real preexistente; opción B recomendada |
 
-## Abiertos de fase 3 (pasan a fase 4)
+## Abiertos
 
-- FAB de WhatsApp tapa la columna derecha de tarjetas en mobile → resolver en la superficie /tienda.
-- `.text-glam` (texto con gradiente) en `error.tsx` → se va al rehacer esa superficie.
-- Gift block y "Cómo comprás" quedan sobrios (techo del mundo alcanzado en hero + banda de marcas).
-- Componentes de la home vieja sin uso (`GlamifyWelcomeBanner`, `ValueProps`, `GiftSection`, `CategoryChipsNav`): borrar en fase 6 con OK.
+- Bug del checkout: el carrito pasa a `ordered` al crear el pedido, antes de pagar (`checkout-service.ts:224`). Si la clienta abandona Mercado Pago, vuelve y ve el carrito vacío; nada lo reabre (ni reintento, ni expiry, ni webhook rechazado) y el job de abandono no le escribe. Diagnóstico completo 2026-10-07. Fix recomendado: carrito `active` hasta el pago aprobado + reusar el pedido pendiente del mismo carrito. PR aparte a `main` (toca plata) — REQUIERE INPUT.
+- `/checkout/gracias` con pago rechazado dice "Estamos confirmando tu pago" (vista `retry`): copy engañoso, va con el fix de arriba.
+- `.text-glam` ya no se usa en el storefront (error.tsx rehecho); queda en el admin.
+- Sin uso tras el rediseño (borrar en fase 6 con OK): `GiftSection`, `ValueProps`, `PriceTag`, `showcase.lowestSellablePrice`.
 
 ## Pendientes de la clienta (REQUIERE INPUT)
 
