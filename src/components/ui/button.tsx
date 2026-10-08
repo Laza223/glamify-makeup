@@ -11,6 +11,8 @@ const buttonVariants = cva(
         default:
           "bg-primary-hover text-primary-foreground shadow-soft hover:brightness-95",
         secondary: "bg-secondary text-secondary-foreground hover:brightness-95",
+        // CTA principal del storefront (negro); el admin sigue con `default`.
+        ink: "rounded-2xl bg-foreground text-[16px] text-white hover:bg-foreground/85 active:scale-[0.98]",
         outline:
           "border border-border bg-background text-foreground hover:bg-muted",
         ghost: "text-foreground hover:bg-muted",

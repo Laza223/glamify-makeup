@@ -15,6 +15,8 @@ const pages = [
   "/contacto",
   "/preguntas-frecuentes",
   "/envios-y-pagos",
+  "/nosotras",
+  "/arma-tu-kit",
 ];
 
 const TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"];

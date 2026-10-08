@@ -12,7 +12,7 @@ test.describe("Cuenta de clienta (DoD M4)", () => {
     await page.getByLabel(/nombre/i).fill("Nueva Clienta");
     await page.getByLabel(/email/i).fill(unique);
     await page.getByLabel(/contraseña/i).fill("Password123!");
-    await page.getByRole("button", { name: /crear cuenta/i }).click();
+    await page.getByRole("button", { name: /crear mi cuenta/i }).click();
     await expect(page.getByText(/revisá tu correo/i)).toBeVisible({ timeout: 15000 });
   });
 
@@ -23,7 +23,7 @@ test.describe("Cuenta de clienta (DoD M4)", () => {
     await page.goto("/ingresar");
     await page.getByLabel(/email/i).fill(CUSTOMER_EMAIL);
     await page.getByLabel(/contraseña/i).fill(CUSTOMER_PASSWORD);
-    await page.getByRole("button", { name: /^ingresar$/i }).click();
+    await page.locator("form").getByRole("button", { name: /^ingresar$/i }).click();
     await expect(page).toHaveURL(/\/cuenta(\/)?$/, { timeout: 15000 });
 
     // Wishlist toggle
