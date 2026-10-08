@@ -93,6 +93,7 @@ Otros: `design-system/MASTER.md` · `docs/LAUNCH.md` (ops/go-live) · `docs/deci
 | Verificar implementación propia | agente `sonnet-adversarial-reviewer` | — |
 | Diseñar / ajustar interfaz de usuario (storefront) | `impeccable` + `PRODUCT.md` / `DESIGN.md` / `.impeccable/surfaces/` (rediseño en curso, ADR 0003) | `MASTER.md` · UI ad-hoc |
 | Correr / arreglar tests | Vitest + Playwright | — |
+| Tocar DB / Prisma / Migraciones / deploy | `migracion-segura` | `db:push` en prod |
 | Cierre de milestone / release | agente `sonnet-release-verifier` + `docs/LAUNCH.md` | `ship` sin DoD |
 
 ## UX y Design System
