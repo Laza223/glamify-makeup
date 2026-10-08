@@ -6,8 +6,8 @@ import { MessageCircle } from "lucide-react";
 export function WhatsAppFabButton({ href }: { href: string }) {
   const pathname = usePathname();
 
-  // Ocultar en PDP (donde está la sticky buy bar en mobile) y en checkout (para no tapar inputs ni botones)
-  if (pathname.startsWith("/checkout") || pathname.startsWith("/producto/")) {
+  // Ocultar en PDP y en Armá tu kit (tienen barra fija abajo) y en checkout (para no tapar inputs ni botones)
+  if (pathname.startsWith("/checkout") || pathname.startsWith("/producto/") || pathname.startsWith("/arma-tu-kit")) {
     return null;
   }
 

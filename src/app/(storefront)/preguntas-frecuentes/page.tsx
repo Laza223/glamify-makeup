@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, MessageCircle } from "lucide-react";
+import { PageTitle } from "@/components/ui/page-title";
 
 export const metadata: Metadata = {
   title: "Preguntas frecuentes",
@@ -48,24 +49,39 @@ const faqs: Array<{ q: string; a: React.ReactNode }> = [
 
 export default function FaqPage() {
   return (
-    <section className="mx-auto max-w-prose space-y-6 py-6">
-      <header className="space-y-2">
-        <h1 className="font-display text-3xl font-bold">Preguntas frecuentes</h1>
-        <p className="text-foreground/90">Respuestas rápidas a las consultas más comunes.</p>
-      </header>
+    <section className="mx-auto max-w-prose space-y-8 py-8 md:py-12">
+      <PageTitle lead="Preguntas" accent="frecuentes">
+        Lo que más nos consultan, en corto.
+      </PageTitle>
 
-      <div className="space-y-3">
-        {faqs.map((f) => (
-          <details key={f.q} className="group rounded-2xl border border-border p-4">
-            <summary className="flex cursor-pointer items-center justify-between gap-3 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+      <div className="divide-y divide-border border-y border-border">
+        {faqs.map((f, i) => (
+          <details key={f.q} className="group" open={i === 0}>
+            <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-4 rounded-[10px] py-4 text-[17px] font-semibold text-foreground transition-colors hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
               <span>{f.q}</span>
-              <ChevronDown className="h-5 w-5 shrink-0 transition group-open:rotate-180 motion-reduce:transition-none" aria-hidden />
+              <span className="grid size-9 shrink-0 place-items-center rounded-full bg-secondary transition group-open:bg-foreground group-open:text-white">
+                <ChevronDown className="size-4 transition-transform duration-300 group-open:rotate-180 motion-reduce:transition-none" aria-hidden />
+              </span>
             </summary>
-            <div className="mt-2 text-sm leading-relaxed text-foreground/90 [&_a]:text-primary-hover [&_a]:underline">
+            <div className="pb-5 pr-12 text-[16px] leading-relaxed text-muted-foreground [&_a]:font-medium [&_a]:text-accent [&_a]:underline [&_a]:underline-offset-4">
               {f.a}
             </div>
           </details>
         ))}
+      </div>
+
+      <div className="flex flex-col items-start gap-4 rounded-[20px] bg-secondary p-6 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="font-display text-[22px] leading-snug">¿Te quedó alguna <em className="font-medium text-primary">duda</em>?</p>
+          <p className="mt-1 text-[15px] text-muted-foreground">Escribinos y te ayudamos con tu pedido o a elegir tu tono.</p>
+        </div>
+        <Link
+          href="/contacto"
+          className="inline-flex h-12 shrink-0 items-center gap-2 rounded-2xl bg-foreground px-6 text-[16px] font-semibold text-white transition hover:bg-foreground/85 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        >
+          <MessageCircle className="size-[18px]" aria-hidden />
+          Escribinos
+        </Link>
       </div>
     </section>
   );
