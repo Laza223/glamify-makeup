@@ -49,7 +49,7 @@ export default async function CarritoPage() {
           ({count === 1 ? "1 producto" : `${count} productos`})
         </span>
       </h1>
-      <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="space-y-4">
           {!digitalOnly && <FreeShippingBar subtotal={physicalSubtotal} threshold={threshold} />}
           <div className="divide-y divide-border rounded-[20px] border border-border px-4 md:px-5">
@@ -67,9 +67,9 @@ export default async function CarritoPage() {
               />
             ))}
           </div>
+          {bump && <OrderBump offer={bump} />}
         </div>
         <aside className="space-y-4 rounded-[20px] bg-secondary p-5 lg:sticky lg:top-32 lg:self-start md:p-6">
-          {bump && <OrderBump offer={bump} />}
           <CouponInput applied={coupon?.code ?? null} />
           <Separator />
           <CartSummary subtotal={subtotal} discount={discount} shippingCost={digitalOnly ? 0 : null} total={total} freeShipping={coupon?.freeShipping} />

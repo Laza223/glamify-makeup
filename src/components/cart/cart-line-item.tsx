@@ -47,7 +47,7 @@ export function CartLineItem({ item }: { item: CartLineItemView }) {
             onClick={remove}
             disabled={pending}
             aria-label={`Sacar ${item.name} del carrito`}
-            className="-mr-2 -mt-2 grid size-11 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="-mt-2 grid size-11 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <Trash2 className="size-[18px]" aria-hidden />
           </button>

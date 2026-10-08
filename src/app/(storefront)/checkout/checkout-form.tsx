@@ -156,7 +156,7 @@ export function CheckoutForm({ subtotal, discount, couponCode, couponFreeShippin
   };
 
   return (
-    <form onSubmit={submit} noValidate className="grid gap-8 lg:grid-cols-[1fr_400px] lg:gap-12">
+    <form onSubmit={submit} noValidate className="grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1fr)_400px] lg:gap-12">
       <div className="space-y-10">
         <fieldset>
           <StepTitle n={1}>Tus datos</StepTitle>
