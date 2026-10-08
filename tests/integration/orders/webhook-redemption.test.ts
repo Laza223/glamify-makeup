@@ -3,7 +3,7 @@ import { processWebhook, type ProcessWebhookDeps, type WebhookOrder } from "@/li
 
 function makeOrder(over: Partial<WebhookOrder> = {}): WebhookOrder {
   return {
-    id: "ord1", customerId: "u1", orderNumber: "GLM-000001", status: "pending_payment", couponId: "cpn1",
+    id: "ord1", customerId: "u1", cartId: null, orderNumber: "GLM-000001", status: "pending_payment", couponId: "cpn1",
     contactName: "Ana", contactEmail: "ana@x.com", contactPhone: "1144556677", shippingMethod: "domicilio",
     shippingAddress: {}, weightGr: 50,
     subtotal: 5000, shippingCost: 2500, discountTotal: 500, total: 7000, items: [], ...over,

@@ -49,7 +49,8 @@ export async function runAbandonedCartJob(deps: AbandonedJobDeps): Promise<{ sen
   const idleHours = deps.idleHours ?? 24;
   const cutoff = new Date(deps.now.getTime() - idleHours * 3600_000);
   const carts = await deps.db.cart.findMany({
-    where: { status: "active", abandonedEmailSentAt: null, updatedAt: { lte: cutoff } },
+    // Un carrito con pedido pendiente no está abandonado: la clienta está pagando (sigue activo hasta el pago).
+    where: { status: "active", abandonedEmailSentAt: null, updatedAt: { lte: cutoff }, orders: { none: { status: "pending_payment" } } },
     include: { customer: true, items: { include: { variant: { include: { product: true } }, combo: true } } },
     take: deps.batch ?? 50,
   });

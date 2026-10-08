@@ -111,6 +111,25 @@ export function defaultCheckoutDeps(appUrl: string): CreateCheckoutDeps {
   };
 }
 
+/** Un pago que MP está procesando o ya aprobó puede acreditarse: cancelar ese pedido cobraría dos veces. */
+const PAYMENT_IN_FLIGHT = new Set(["in_process", "approved"]);
+
+async function supersedePendingOrders(db: CheckoutDb, cartId: string): Promise<void> {
+  await db.$transaction(async (tx) => {
+    const previous = await tx.order.findMany({
+      where: { cartId, status: "pending_payment" },
+      select: { id: true, payments: { select: { status: true } } },
+    });
+    if (previous.some((o) => o.payments.some((p) => PAYMENT_IN_FLIGHT.has(p.status)))) {
+      throw new Error("Tu pago anterior se está procesando en Mercado Pago. Esperá el email de confirmación antes de volver a pagar.");
+    }
+    for (const prev of previous) {
+      const res = await tx.order.updateMany({ where: { id: prev.id, status: "pending_payment" }, data: { status: "cancelled" } });
+      if (res.count === 1) await releaseGiftCardReservation(tx, prev.id);
+    }
+  });
+}
+
 export async function createCheckout(input: CreateCheckoutInput, deps: CreateCheckoutDeps): Promise<CreateCheckoutResult> {
   if (input.lines.length === 0) throw new Error("El carrito está vacío.");
   const now = deps.now ?? new Date();
@@ -135,6 +154,12 @@ export async function createCheckout(input: CreateCheckoutInput, deps: CreateChe
     const addressError = validateShippingAddress(input.shippingMethod, input.address);
     if (addressError) throw new Error(addressError);
   }
+
+  // --- Pedido pendiente anterior del mismo carrito ---
+  // El carrito sigue activo hasta que se aprueba el pago. Si la clienta vuelve de MP sin pagar y
+  // reintenta, el pedido pendiente anterior se cancela (misma guarda que el expiry job) y libera su
+  // gift card ANTES de validar el cupón: si no, la misma gift card figura usada y el descuento se pierde.
+  if (input.cartId) await supersedePendingOrders(deps.db, input.cartId);
 
   // --- Cupón (revalidado en server) --- Un pedido digital ignora cualquier cupón (no hay a qué descontarle).
   let discount = 0;
@@ -196,6 +221,7 @@ export async function createCheckout(input: CreateCheckoutInput, deps: CreateChe
       data: {
         orderNumber,
         customerId: input.customerId ?? null,
+        cartId: input.cartId ?? null,
         contactName: input.contactName, contactEmail: input.contactEmail, contactPhone: input.contactPhone,
         shippingAddress: (digitalOnly ? {} : input.address) as unknown as object,
         shippingMethod,
@@ -221,7 +247,6 @@ export async function createCheckout(input: CreateCheckoutInput, deps: CreateChe
       },
       include: { payments: true },
     });
-    if (input.cartId) await tx.cart.update({ where: { id: input.cartId }, data: { status: "ordered" } });
     return created;
   });
 
@@ -247,14 +272,13 @@ export async function createCheckout(input: CreateCheckoutInput, deps: CreateChe
     });
   } catch (e) {
     // Sin preference la clienta no puede pagar: el pedido queda huérfano. Se cancela (con la misma
-    // guarda de estado que el expiry job), se libera la gift card que reservó y el carrito vuelve a
-    // estar activo para que reintente. Best-effort: el error original es el que se propaga.
+    // guarda de estado que el expiry job) y se libera la gift card que reservó; el carrito nunca dejó
+    // de estar activo, así que puede reintentar. Best-effort: el error original es el que se propaga.
     try {
       await deps.db.$transaction(async (tx) => {
         const res = await tx.order.updateMany({ where: { id: order.id, status: "pending_payment" }, data: { status: "cancelled" } });
         if (res.count !== 1) return;
         await releaseGiftCardReservation(tx, order.id);
-        if (input.cartId) await tx.cart.update({ where: { id: input.cartId }, data: { status: "active" } });
       });
     } catch (rollbackError) {
       console.error(`[checkout] no pude cancelar el pedido ${order.orderNumber} tras fallar la preference:`, rollbackError instanceof Error ? rollbackError.message : rollbackError);

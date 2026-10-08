@@ -283,6 +283,7 @@ model Cart {
   recoveryEmailConsent Boolean    @default(false)
   abandonedEmailSentAt DateTime?
   items                CartItem[]
+  orders               Order[]
   createdAt            DateTime   @default(now())
   updatedAt            DateTime   @updatedAt
 
@@ -308,6 +309,9 @@ model Order {
   orderNumber     String         @unique
   customerId      String?        @db.Uuid
   customer        Customer?      @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  // Carrito de origen: queda activo hasta que el pago se aprueba (el webhook lo marca `ordered`).
+  cartId          String?        @db.Uuid
+  cart            Cart?          @relation(fields: [cartId], references: [id], onDelete: SetNull)
   contactName     String
   contactEmail    String
   contactPhone    String
@@ -332,6 +336,7 @@ model Order {
 
   @@index([customerId])
   @@index([status])
+  @@index([cartId])
 }
 
 model OrderItem {
