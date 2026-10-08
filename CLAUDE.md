@@ -85,16 +85,16 @@ Otros: `design-system/MASTER.md` · `docs/LAUNCH.md` (ops/go-live) · `docs/deci
 
 | Situación | Gana | Descartadas (no elegir) |
 |---|---|---|
-| Tarea no trivial — SIEMPRE primero | `protocolo-orquestacion` / `superpowers:brainstorming` | — |
-| Feature nuevo | `entrega-feature` (superpowers brainstorming → writing-plans → TDD) | `lean-build` · `spec` |
-| Bug / comportamiento raro | `superpowers:systematic-debugging` | `investigate-first` · `debug` |
+| Tarea no trivial — SIEMPRE primero | `protocolo-orquestacion` / `entrega-feature` | — |
+| Feature nuevo | `entrega-feature` | `lean-build` · `spec` |
+| Bug / comportamiento raro | agente `sonnet-debugger` | `investigate-first` · `debug` |
 | Fixes de una lista de hallazgos | `protocolo-fixes-general` | — |
-| Revisar PR / diff | `code-review` / `revision-pr` | `review` |
-| Verificar implementación propia | `verificacion-fresca` / `verification-before-completion` | — |
-| Diseñar / ajustar interfaz de usuario (storefront) | `impeccable` + `PRODUCT.md` / `DESIGN.md` / `.impeccable/surfaces/` (rediseño en curso, ADR 0003) | `ux-ui-pro-max` · `MASTER.md` · UI ad-hoc |
-| Correr / arreglar tests | `protocolo-testing` / Vitest + Playwright | — |
-| Tocar DB / Prisma / Migraciones / deploy | `convenciones-stack` + `prisma-best-practices` | `db:push` en prod |
-| Cierre de milestone / release | `cierre-release` + `docs/LAUNCH.md` | `ship` sin DoD |
+| Revisar PR / diff | `/code-review` + agente `sonnet-adversarial-reviewer` | `review` |
+| Verificar implementación propia | agente `sonnet-adversarial-reviewer` | — |
+| Diseñar / ajustar interfaz de usuario (storefront) | `impeccable` + `PRODUCT.md` / `DESIGN.md` / `.impeccable/surfaces/` (rediseño en curso, ADR 0003) | `MASTER.md` · UI ad-hoc |
+| Correr / arreglar tests | Vitest + Playwright | — |
+| Tocar DB / Prisma / Migraciones / deploy | `migracion-segura` | `db:push` en prod |
+| Cierre de milestone / release | agente `sonnet-release-verifier` + `docs/LAUNCH.md` | `ship` sin DoD |
 
 ## UX y Design System
 
