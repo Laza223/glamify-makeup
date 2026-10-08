@@ -30,7 +30,7 @@ pnpm dev                     # http://localhost:3000
 
 ## Deploy (Vercel)
 
-- Repo `Laza223/glamify-makeup-1` conectado a Vercel (proyecto `glamify-makeup-1`, dominio `www.glamifymakeup.site`).
+- Repo `Laza223/glamify-makeup` conectado a Vercel (proyecto `glamify-makeup-1`, dominio `www.glamifymakeup.site`).
 - Cada PR tiene su preview; al mergear a `main` se despliega solo a producción. GitHub Actions corre lint, typecheck, test y build.
 - Variables y secretos: Vercel → Settings → Environment Variables (Production). Después de cambiar una, redeploy.
 - Cron horario: `vercel.json` → `/api/cron` (carrito abandonado, autocancelación de pedidos impagos, seguimiento de envíos). Requiere `CRON_SECRET`.
