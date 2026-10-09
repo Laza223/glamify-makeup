@@ -20,6 +20,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { PageHeader } from "@/components/admin/page-header";
+import { requireAdmin } from "@/lib/admin/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -69,6 +70,7 @@ async function loadCategories(): Promise<CategoryNode[]> {
 }
 
 export default async function CategoriasPage() {
+  await requireAdmin();
   const all = await loadCategories();
   const roots = all.filter((c) => c.parentId === null);
   const childrenOf = (id: string) => all.filter((c) => c.parentId === id);

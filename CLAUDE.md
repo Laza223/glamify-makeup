@@ -72,6 +72,7 @@ Patrón: **Next.js App Router + servicios desacoplados en `src/lib/*`**. La lóg
 ## Seguridad y Permisos
 
 - **Admin:** `requireAdmin()` chequea sesión Supabase Auth + rol `owner`/`admin` en tabla `User`.
+- **Guard en el layout NO protege las pages:** con `RSC: 1` + `Next-Router-State-Tree` armado, Next 15 se saltea los layouts y ejecuta la page sola. Toda page admin/cuenta llama a su guard (`requireAdmin` / `requireCustomer`) como primera sentencia; lo exige `tests/unit/security/page-guards.test.ts`. El middleware además rebota a `/admin/login` a quien no tiene sesión.
 - **MP Webhook:** Valida firma HMAC en header `x-signature` (`validateMpSignature`), re-consulta estado a API MP (`getPayment`), procesa idempotentemente por `mpPaymentId`.
 - **Secretos:** Solo en las variables de entorno de Vercel (Production) y `.env.local`. NUNCA en git ni en cliente (`MP_*`, `SUPABASE_SERVICE_ROLE_KEY`, `RESEND_*`, `MICORREO_*`, `DATABASE_URL`).
 - **Guard de mutación:** `scripts/prod-write-guard.ts` intercepta scripts locales para confirmar host de Supabase por terminal.

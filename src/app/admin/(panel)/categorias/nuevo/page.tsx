@@ -2,6 +2,7 @@ import { FolderPlus } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { PageHeader } from "@/components/admin/page-header";
 import { CategoryForm, type ParentOption } from "@/app/admin/(panel)/categorias/category-form";
+import { requireAdmin } from "@/lib/admin/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +16,7 @@ async function loadRootParents(): Promise<ParentOption[]> {
 }
 
 export default async function NuevaCategoriaPage() {
+  await requireAdmin();
   const parents = await loadRootParents();
   return (
     <div className="stagger space-y-6">

@@ -35,6 +35,7 @@ import { ResendGiftCardButton } from "../resend-gift-card-button";
 import { giftCardStatus, formatGiftCardDate, GIFT_CARD_STATUS_LABELS } from "@/lib/coupons/gift-card";
 import { DEFAULT_ITEM_CM } from "@/lib/shipping/micorreo";
 import type { OrderStatus, ShipmentStatus } from "@prisma/client";
+import { requireAdmin } from "@/lib/admin/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -118,6 +119,7 @@ export default async function PedidoDetallePage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  await requireAdmin();
   const { id } = await params;
   const order = await prisma.order.findUnique({
     where: { id },

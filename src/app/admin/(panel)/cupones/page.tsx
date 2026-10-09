@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/admin/page-header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { requireAdmin } from "@/lib/admin/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +35,7 @@ function dateLabel(d: Date | null): string {
 }
 
 export default async function CuponesPage() {
+  await requireAdmin();
   // Las gift cards (cupones con pedido de origen) se ven en cada pedido, no acá.
   const coupons = await prisma.coupon.findMany({ where: { sourceOrderId: null }, orderBy: { code: "asc" } });
 

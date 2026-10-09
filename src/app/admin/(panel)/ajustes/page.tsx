@@ -2,10 +2,12 @@ import { Settings } from "lucide-react";
 import { PageHeader } from "@/components/admin/page-header";
 import { SettingsForm } from "./settings-form";
 import { prisma } from "@/lib/prisma";
+import { requireAdmin } from "@/lib/admin/auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminAjustesPage() {
+  await requireAdmin();
   const setting = await prisma.setting.findUnique({
     where: { id: "default" },
   });

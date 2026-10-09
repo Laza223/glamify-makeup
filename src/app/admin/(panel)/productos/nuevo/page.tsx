@@ -3,8 +3,10 @@ import { prisma } from "@/lib/prisma";
 import { PageHeader } from "@/components/admin/page-header";
 import { ProductForm, type CategoryOption } from "@/app/admin/(panel)/productos/product-form";
 import { productImagesPublicBase } from "@/lib/images";
+import { requireAdmin } from "@/lib/admin/auth";
 
 export default async function NuevoProductoPage() {
+  await requireAdmin();
   const categories = await prisma.category.findMany({
     where: { active: true },
     orderBy: [{ order: "asc" }, { name: "asc" }],

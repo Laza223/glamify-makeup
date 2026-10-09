@@ -3,10 +3,12 @@ import { PageHeader } from "@/components/admin/page-header";
 import { Badge } from "@/components/ui/badge";
 import { RetractionCard, type RetractionItemView } from "./retraction-card";
 import { prisma } from "@/lib/prisma";
+import { requireAdmin } from "@/lib/admin/auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminArrepentimientoPage() {
+  await requireAdmin();
   const rows = await prisma.retractionRequest.findMany({
     orderBy: { createdAt: "desc" },
   });

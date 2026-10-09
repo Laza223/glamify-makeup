@@ -21,6 +21,7 @@ import { toNumber } from "@/lib/catalog/pricing";
 import { STATUS_LABELS } from "@/lib/admin/orders/service";
 import { cn } from "@/lib/utils";
 import type { OrderStatus } from "@prisma/client";
+import { requireAdmin } from "@/lib/admin/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -74,6 +75,7 @@ export default async function PedidosPage({
 }: {
   searchParams: Promise<{ estado?: string; q?: string }>;
 }) {
+  await requireAdmin();
   const sp = await searchParams;
   const q = sp.q?.trim() ?? "";
   const estado = sp.estado;

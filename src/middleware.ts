@@ -23,11 +23,27 @@ export async function middleware(request: NextRequest) {
     },
   );
 
-  // Refresca la sesión (rota la cookie de auth si hace falta). NO redirige acá:
-  // el gate real es requireAdmin() en el layout y en cada server action.
-  await supabase.auth.getUser();
+  // Refresca la sesión (rota la cookie de auth si hace falta).
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  // Defensa en profundidad: sin sesión, el panel admin ni se renderiza. El rol se
+  // sigue chequeando con requireAdmin() en cada page, layout y server action
+  // (acá no hay prisma); esto solo corta a los anónimos antes de llegar a Next.
+  if (!user && isAdminPanelPath(request.nextUrl.pathname)) {
+    const redirect = NextResponse.redirect(new URL("/admin/login", request.url));
+    response.cookies.getAll().forEach((cookie) => redirect.cookies.set(cookie));
+    return redirect;
+  }
 
   return response;
+}
+
+/** /admin y todo lo que cuelga, salvo el login (que tiene que ser público). */
+export function isAdminPanelPath(pathname: string): boolean {
+  if (pathname === "/admin/login" || pathname.startsWith("/admin/login/")) return false;
+  return pathname === "/admin" || pathname.startsWith("/admin/");
 }
 
 export const config = {

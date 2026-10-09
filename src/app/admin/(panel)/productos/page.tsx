@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/admin/page-header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import { requireAdmin } from "@/lib/admin/auth";
 
 interface SearchParams {
   q?: string;
@@ -17,6 +18,7 @@ interface SearchParams {
 }
 
 export default async function ProductosPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
+  await requireAdmin();
   const sp = await searchParams;
   const q = (sp.q ?? "").trim();
   const categoriaId = (sp.categoria ?? "").trim();
