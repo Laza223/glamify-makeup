@@ -6,8 +6,10 @@ import { PageHeader } from "@/components/admin/page-header";
 import { ProductForm, type CategoryOption } from "@/app/admin/(panel)/productos/product-form";
 import { productImagesPublicBase } from "@/lib/images";
 import type { ProductFormInput } from "@/lib/admin/products/validation";
+import { requireAdmin } from "@/lib/admin/auth";
 
 export default async function EditarProductoPage({ params }: { params: Promise<{ id: string }> }) {
+  await requireAdmin();
   const { id } = await params;
   const [product, categories] = await Promise.all([
     prisma.product.findFirst({

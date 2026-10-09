@@ -15,6 +15,7 @@ import { RatingStars } from "@/components/ui/rating-stars";
 import { Badge } from "@/components/ui/badge";
 import { productImageUrl } from "@/lib/images";
 import { ReviewActionsButtons } from "./review-actions-buttons";
+import { requireAdmin } from "@/lib/admin/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +28,7 @@ function dateLabel(d: Date): string {
 }
 
 export default async function ResenasPage() {
+  await requireAdmin();
   const queue = await getModerationQueue();
 
   return (

@@ -7,10 +7,12 @@ import { PageHeader } from "@/components/admin/page-header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { requireAdmin } from "@/lib/admin/auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function CombosPage() {
+  await requireAdmin();
   const combos = await prisma.combo.findMany({
     orderBy: { createdAt: "desc" },
     select: {

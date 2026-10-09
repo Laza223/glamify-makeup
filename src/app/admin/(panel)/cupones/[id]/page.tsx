@@ -5,6 +5,7 @@ import { toNumber } from "@/lib/catalog/pricing";
 import { PageHeader } from "@/components/admin/page-header";
 import { CouponForm } from "@/app/admin/(panel)/cupones/coupon-form";
 import type { CouponFormInput } from "@/lib/admin/coupons/validation";
+import { requireAdmin } from "@/lib/admin/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +20,7 @@ function numToInput(n: number | null): string {
 }
 
 export default async function EditarCuponPage({ params }: { params: Promise<{ id: string }> }) {
+  await requireAdmin();
   const { id } = await params;
   const coupon = await prisma.coupon.findUnique({ where: { id } });
   if (!coupon) notFound();

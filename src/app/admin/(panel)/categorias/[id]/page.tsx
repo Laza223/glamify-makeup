@@ -7,6 +7,7 @@ import {
   type ParentOption,
   type CategoryFormValues,
 } from "@/app/admin/(panel)/categorias/category-form";
+import { requireAdmin } from "@/lib/admin/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +16,7 @@ export default async function EditarCategoriaPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  await requireAdmin();
   const { id } = await params;
   const category = await prisma.category.findUnique({
     where: { id },

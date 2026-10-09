@@ -15,6 +15,7 @@ import { PageHeader } from "@/components/admin/page-header";
 import { StatCard } from "@/components/admin/stat-card";
 import { getDashboardData } from "@/lib/admin/dashboard/queries";
 import { formatARS } from "@/lib/money";
+import { requireAdmin } from "@/lib/admin/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -51,6 +52,7 @@ function PanelCard({
 }
 
 export default async function AdminDashboardPage() {
+  await requireAdmin();
   const data = await getDashboardData();
 
   return (

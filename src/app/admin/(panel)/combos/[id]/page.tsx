@@ -5,6 +5,7 @@ import { toNumber } from "@/lib/catalog/pricing";
 import { PageHeader } from "@/components/admin/page-header";
 import { ComboForm, type ComboFormInitial } from "../combo-form";
 import { listVariantOptions } from "../actions";
+import { requireAdmin } from "@/lib/admin/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +15,7 @@ function toDateInput(d: Date | null): string | null {
 }
 
 export default async function EditarComboPage({ params }: { params: Promise<{ id: string }> }) {
+  await requireAdmin();
   const { id } = await params;
   const [combo, variantOptions] = await Promise.all([
     prisma.combo.findUnique({
