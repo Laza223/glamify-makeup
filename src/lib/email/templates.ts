@@ -32,8 +32,6 @@ export interface OrderEmailData {
   oversoldLines?: Array<{ name: string }>;
   /** Monto realmente acreditado por MP (para reconciliar contra `total` en la alerta a la dueña). */
   amountPaid?: number;
-  /** Resultado del auto-import a MiCorreo (para avisarle a la dueña si hay que cargarlo a mano). */
-  micorreoImport?: { imported: boolean; detail: string };
   /** Link de WhatsApp de la tienda para el "escribinos" del mail a la clienta (opcional). */
   whatsappUrl?: string | null;
   /** Código del cupón común que ya no tenía usos al confirmarse el pago (aviso a la dueña). */
@@ -193,10 +191,8 @@ export function orderConfirmationEmail(d: OrderEmailData): EmailContent {
 export function newOrderAlertEmail(d: OrderEmailData): EmailContent {
   const oversell = d.oversoldLines && d.oversoldLines.length > 0;
   const amountMismatch = d.amountPaid != null && Math.abs(d.amountPaid - d.total) > 0.01;
-  // Sólo cuenta como "no cargado" si sabemos el resultado y fue negativo. Sin dato → no alarmar.
-  const notImported = d.micorreoImport != null && !d.micorreoImport.imported;
   const digital = d.shippingMethod === "digital";
-  const needsReview = oversell || amountMismatch || notImported || d.couponOverLimit != null;
+  const needsReview = oversell || amountMismatch || d.couponOverLimit != null;
   const subject = needsReview
     ? `Nuevo pedido ${d.orderNumber} — REVISAR`
     : `Nuevo pedido pagado ${d.orderNumber} (${formatARS(d.total)})`;
@@ -210,11 +206,6 @@ export function newOrderAlertEmail(d: OrderEmailData): EmailContent {
         `<strong>Monto:</strong> MP acreditó ${formatARS(d.amountPaid!)} pero el total del pedido es ${formatARS(d.total)}. Revisar antes de despachar.`,
       )
     : "";
-  const importHtml = notImported
-    ? alertBox(
-        `<strong>MiCorreo:</strong> este envío <strong>NO se cargó solo</strong> (${escapeHtml(d.micorreoImport!.detail)}). Entrá al pedido en el panel y tocá "Reintentar carga en MiCorreo", o cargalo a mano.`,
-      )
-    : "";
   const couponHtml = d.couponOverLimit != null
     ? alertBox(`<strong>Cupón:</strong> el cupón ${escapeHtml(d.couponOverLimit)} superó su límite de usos en este pedido. El pago está acreditado; revisalo si querés.`)
     : "";
@@ -226,7 +217,6 @@ export function newOrderAlertEmail(d: OrderEmailData): EmailContent {
       title(`Nuevo pedido ${escapeHtml(d.orderNumber)}`),
       oversellHtml,
       amountHtml,
-      importHtml,
       couponHtml,
       paragraph(`<strong>${escapeHtml(d.contactName)}</strong><br /><a href="mailto:${escapeHtml(d.contactEmail)}" style="color:${COLOR.link};">${escapeHtml(d.contactEmail)}</a>`),
       itemsHtml(d.items),
@@ -234,7 +224,7 @@ export function newOrderAlertEmail(d: OrderEmailData): EmailContent {
       paragraph(digital ? "Pedido de gift card: no requiere envío." : `Envío ${shippingLabel(d.shippingMethod)}.`),
     ].join("\n"),
   });
-  const text = `Nuevo pedido ${d.orderNumber}\nCliente: ${d.contactName} (${d.contactEmail})\nTotal: ${formatARS(d.total)}${oversell ? `\nOVERSELL: ${d.oversoldLines!.map((l) => l.name).join(", ")}` : ""}${amountMismatch ? `\nMONTO: acreditado ${formatARS(d.amountPaid!)} ≠ total ${formatARS(d.total)}` : ""}${notImported ? `\nMiCorreo NO cargó solo: ${d.micorreoImport!.detail}` : ""}${d.couponOverLimit != null ? `\nCUPÓN: ${d.couponOverLimit} superó su límite de usos en este pedido` : ""}${digital ? "\nPedido de gift card: no requiere envío." : ""}`;
+  const text = `Nuevo pedido ${d.orderNumber}\nCliente: ${d.contactName} (${d.contactEmail})\nTotal: ${formatARS(d.total)}${oversell ? `\nOVERSELL: ${d.oversoldLines!.map((l) => l.name).join(", ")}` : ""}${amountMismatch ? `\nMONTO: acreditado ${formatARS(d.amountPaid!)} ≠ total ${formatARS(d.total)}` : ""}${d.couponOverLimit != null ? `\nCUPÓN: ${d.couponOverLimit} superó su límite de usos en este pedido` : ""}${digital ? "\nPedido de gift card: no requiere envío." : ""}`;
   return { subject, html, text };
 }
 
@@ -326,38 +316,51 @@ export interface DispatchEmailData {
   orderNumber: string;
   contactName: string;
   trackingNumber: string;
-  /** Servicio de envío (ej. "Correo Argentino Clásico"), opcional. */
-  service?: string | null;
+  /** Nombre de la empresa con la que despachó la dueña (ej. "Andreani"). */
+  carrier?: string | null;
+  /** El pedido va a sucursal: el mail avisa que se retira ahí. */
+  isSucursal?: boolean;
+  /** Sucursal de retiro (texto libre de la dueña), solo si `isSucursal`. */
+  pickupBranch?: string | null;
   /** Link de WhatsApp de la tienda (opcional). */
   whatsappUrl?: string | null;
 }
 
 /**
- * Email a la clienta cuando su pedido se despacha (la dueña cargó el tracking).
- * Cumple la promesa publicada en el sitio ("recibís el número de seguimiento por email").
- * Linkea la página de rastreo de Correo Argentino y muestra el número para pegar.
+ * Email a la clienta cuando su pedido se despacha (la dueña eligió la empresa y cargó el código).
+ * Muestra empresa y código, y linkea la página de seguimiento de la tienda (empresa + código + link a la empresa).
  */
 export function shipmentDispatchedEmail(d: DispatchEmailData): EmailContent {
   const subject = `¡Tu pedido ${d.orderNumber} está en camino! — Glamify Makeup`;
-  const svc = d.service ? ` por ${escapeHtml(d.service)}` : "";
+  const link = d.trackingUrl ?? CORREO_TRACKING_URL;
+  const pickupHtml = d.isSucursal
+    ? block(
+        d.pickupBranch
+          ? `Lo retirás en: <strong>${escapeHtml(d.pickupBranch)}</strong>. Llevá tu DNI.`
+          : "Es un envío a sucursal: te avisamos dónde retirarlo. Llevá tu DNI.",
+        "16px 32px 0 32px",
+        `font-size:15px;line-height:22px;color:${COLOR.text};`,
+      )
+    : "";
   const html = layout({
-    preheader: `Tu número de seguimiento es ${d.trackingNumber}.`,
+    preheader: `Tu código de seguimiento es ${d.trackingNumber}.`,
     title: "Tu pedido está en camino",
     footer: FOOTER_CUSTOMER,
     body: [
       title(`¡Ya salió, ${escapeHtml(d.contactName)}!`),
-      paragraph(`Despachamos tu pedido <strong>${escapeHtml(d.orderNumber)}</strong>${svc}.`),
-      block("Tu número de seguimiento es", "20px 32px 0 32px", `font-size:14px;color:${COLOR.muted};`),
+      paragraph(`Despachamos tu pedido <strong>${escapeHtml(d.orderNumber)}</strong>${d.carrier ? ` con <strong>${escapeHtml(d.carrier)}</strong>` : ""}.`),
+      block("Tu código de seguimiento es", "20px 32px 0 32px", `font-size:14px;color:${COLOR.muted};`),
       `<tr><td align="center" style="padding:8px 32px 0 32px;"><table role="presentation" cellpadding="0" cellspacing="0" style="background-color:${COLOR.page};border:1px solid ${COLOR.line};border-radius:12px;"><tr><td style="padding:12px 22px;font-family:${FONT_BODY};font-size:20px;font-weight:bold;letter-spacing:1px;color:${COLOR.primary};">${escapeHtml(d.trackingNumber)}</td></tr></table></td></tr>`,
-      button(d.trackingUrl ?? CORREO_TRACKING_URL, "Seguir mi envío"),
-      block(
-        d.trackingUrl
-          ? "Ahí ves el estado de tu envío; se actualiza solo con lo que informa Correo. Los primeros movimientos pueden tardar hasta 24 h."
-          : "Pegá ese número en la página de Correo Argentino. Puede tardar hasta 24 h en aparecer.", "16px 32px 0 32px", `font-size:13px;line-height:20px;color:${COLOR.muted};`),
+      pickupHtml,
+      button(link, "Seguir mi envío"),
+      block("Ahí ves la empresa, el código para copiar y el link a su página de seguimiento. Los primeros movimientos pueden tardar hasta 24 h en aparecer.", "16px 32px 0 32px", `font-size:13px;line-height:20px;color:${COLOR.muted};`),
       helpLine(d.whatsappUrl),
-    ].join("\n"),
+    ].filter(Boolean).join("\n"),
   });
-  const text = `¡Ya salió, ${d.contactName}!\nDespachamos tu pedido ${d.orderNumber}${d.service ? ` por ${d.service}` : ""}.\n\nSeguimiento: ${d.trackingNumber}\nSeguilo en ${d.trackingUrl ?? CORREO_TRACKING_URL} (puede tardar hasta 24 h en aparecer).${d.whatsappUrl ? `\nDudas por WhatsApp: ${d.whatsappUrl}` : ""}`;
+  const pickupText = d.isSucursal
+    ? `\n${d.pickupBranch ? `Lo retirás en: ${d.pickupBranch}. Llevá tu DNI.` : "Es un envío a sucursal: te avisamos dónde retirarlo. Llevá tu DNI."}`
+    : "";
+  const text = `¡Ya salió, ${d.contactName}!\nDespachamos tu pedido ${d.orderNumber}${d.carrier ? ` con ${d.carrier}` : ""}.\n\nCódigo de seguimiento: ${d.trackingNumber}${pickupText}\nSeguilo en ${link} (puede tardar hasta 24 h en aparecer).${d.whatsappUrl ? `\nDudas por WhatsApp: ${d.whatsappUrl}` : ""}`;
   return { subject, html, text };
 }
 

@@ -3,7 +3,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { createHmac } from "node:crypto";
 import { createCheckout, defaultCheckoutDeps } from "../src/lib/orders/checkout-service";
 import { processWebhook } from "../src/lib/orders/webhook-service";
-import { getShippingZonesForQuote, getFreeShippingThreshold } from "../src/lib/orders/checkout-data";
+import { getShippingZonesForQuote, getFreeShippingThreshold, getShippingSurcharge } from "../src/lib/orders/checkout-data";
 import { quoteShipping } from "../src/lib/shipping/index";
 import { sendEmail } from "../src/lib/email/resend";
 import { verifyMpSignature } from "../src/lib/payments/signature";
@@ -47,7 +47,7 @@ async function main(): Promise<void> {
       lockStock: defaultCheckoutDeps(APP_URL).lockStock,
       nextOrderSeq: async (tx: any) => Number((await tx.$queryRawUnsafe("SELECT nextval('order_number_seq') AS seq"))[0].seq),
       createPreference: async () => ({ id: "pref-sim", init_point: "sim", sandbox_init_point: "sim" }),
-      quoteShipping: (i) => quoteShipping(i, { getZones: getShippingZonesForQuote, getThreshold: getFreeShippingThreshold }),
+      quoteShipping: (i) => quoteShipping(i, { getZones: getShippingZonesForQuote, getThreshold: getFreeShippingThreshold, getSurcharge: getShippingSurcharge }),
       appUrl: APP_URL,
       isSandboxToken: process.env.MP_ACCESS_TOKEN?.startsWith("TEST-") ?? false,
     },
@@ -63,8 +63,6 @@ async function main(): Promise<void> {
     db: prisma as any,
     getPayment: async () => ({ id: dataId, status: "approved", external_reference: orderId, transaction_amount: toNumber(order!.total) }),
     sendEmail, verifySignature: verifyMpSignature, secret: SECRET, ownerEmail: process.env.RESEND_OWNER_EMAIL || "",
-    // No-op en la simulación: no crear un envío real en MiCorreo por un pedido de prueba.
-    autoImportShipment: async () => ({ imported: false as const, detail: "simulación" }),
   };
 
   const r1 = await processWebhook(input, deps);

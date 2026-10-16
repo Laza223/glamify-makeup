@@ -30,10 +30,8 @@ import { toNumber } from "@/lib/catalog/pricing";
 import { STATUS_LABELS } from "@/lib/admin/orders/service";
 import { OrderStatusControl } from "../order-status-control";
 import { ShipmentForm, type ShipmentDefaults } from "../shipment-form";
-import { MicorreoPanel } from "../micorreo-panel";
 import { ResendGiftCardButton } from "../resend-gift-card-button";
 import { giftCardStatus, formatGiftCardDate, GIFT_CARD_STATUS_LABELS } from "@/lib/coupons/gift-card";
-import { DEFAULT_ITEM_CM } from "@/lib/shipping/micorreo";
 import type { OrderStatus, ShipmentStatus } from "@prisma/client";
 import { requireAdmin } from "@/lib/admin/auth";
 
@@ -87,8 +85,9 @@ interface AddressSnapshot {
   floorApt?: string | null;
   city?: string;
   notes?: string | null;
-  agencyCode?: string | null;
-  agencyLabel?: string | null;
+  dni?: string;
+  pickupBranch?: string;
+  agencyLabel?: string | null; // pedidos anteriores a ADR 0004: la clienta elegía sucursal de Correo
 }
 
 /** Cabecera de card-sección: medallón chico + título serif + ayuda opcional. */
@@ -138,7 +137,12 @@ export default async function PedidoDetallePage({
   const orderClosed = order.status === "refunded" || order.status === "cancelled";
 
   const addr = (order.shippingAddress ?? {}) as AddressSnapshot;
+  const isSucursal = order.shippingMethod === "sucursal";
   const shipmentDefaults: ShipmentDefaults = {
+    carrier: order.shipment?.carrier ?? "correo_argentino",
+    isSucursal,
+    pickupBranch: addr.pickupBranch ?? addr.agencyLabel ?? "",
+    canResend: order.status === "shipped",
     trackingNumber: order.shipment?.trackingNumber ?? "",
     status: (order.shipment?.status ?? "pending") as ShipmentStatus,
     lastEvent: order.shipment?.trackingLastEvent ?? null,
@@ -148,10 +152,6 @@ export default async function PedidoDetallePage({
 
   const statusPres = ORDER_PRESENTATION[order.status];
   const StatusIcon = statusPres.icon;
-
-  // Panel de instrucciones MiCorreo: sólo tiene sentido una vez pagado el pedido.
-  const showMicorreo = ["paid", "preparing", "shipped", "delivered"].includes(order.status);
-  const isSucursal = order.shippingMethod === "sucursal";
 
   return (
     <div className="stagger space-y-6">
@@ -284,9 +284,16 @@ export default async function PedidoDetallePage({
                 </address>
               ) : (
                 <p className="mt-1 text-sm text-muted-foreground">
-                  CP de referencia: {addr.cp ?? "—"}
+                  {[addr.city, addr.province].filter(Boolean).join(", ")} (CP de referencia: {addr.cp ?? "—"})
+                  {addr.agencyLabel ? <><br />Sucursal que eligió: {addr.agencyLabel}</> : null}
                 </p>
               )}
+              {addr.dni ? (
+                <p className="mt-1 text-sm text-muted-foreground tabular-nums">DNI de quien recibe: {addr.dni}</p>
+              ) : null}
+              <p className="mt-1 text-sm text-muted-foreground tabular-nums">
+                Costo de envío: {formatARS(toNumber(order.shippingCost))}
+              </p>
             </div>
             )}
           </section>
@@ -371,34 +378,13 @@ export default async function PedidoDetallePage({
         </section>
       ) : null}
 
-      {/* Instrucciones MiCorreo (qué hacer con este pedido) */}
-      {showMicorreo && !isDigital ? (
-        <MicorreoPanel
-          orderId={order.id}
-          orderNumber={order.orderNumber}
-          imported={Boolean(order.shipment?.micorreoImportedAt)}
-          trackingLoaded={Boolean(order.shipment?.trackingNumber)}
-          recipientName={order.contactName}
-          recipientEmail={order.contactEmail}
-          recipientPhone={order.contactPhone}
-          isSucursal={isSucursal}
-          address={{
-            ...addr,
-            agencyLabel: addr.agencyLabel ?? (addr.agencyCode ? `Sucursal ${addr.agencyCode}` : null),
-          }}
-          weightGr={order.weightGr}
-          dimensions={`${DEFAULT_ITEM_CM.length} × ${DEFAULT_ITEM_CM.width} × ${DEFAULT_ITEM_CM.height} cm`}
-          declaredValue={toNumber(order.subtotal)}
-        />
-      ) : null}
-
       {/* Envío y seguimiento (un pedido digital no tiene envío) */}
       {!isDigital ? (
       <section className="rounded-2xl border border-border/70 bg-card shadow-soft">
         <SectionHead
           icon={Truck}
           title="Envío y seguimiento"
-          help="Pegá el número de seguimiento de MiCorreo; los estados se actualizan solos."
+          help="Elegí la empresa con la que despachás y pegá el código. La clienta recibe un mail con el seguimiento."
         />
         <div className="p-5">
           <ShipmentForm orderId={order.id} defaults={shipmentDefaults} />

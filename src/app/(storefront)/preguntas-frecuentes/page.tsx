@@ -13,7 +13,7 @@ const faqs: Array<{ q: string; a: React.ReactNode }> = [
     q: "¿Hacen envíos a todo el país?",
     a: (
       <>
-        Sí, enviamos a toda la Argentina por Correo Argentino (a domicilio o sucursal). Mirá zonas, costos y plazos
+        Sí, enviamos a toda la Argentina (a domicilio o sucursal). Mirá zonas, costos y plazos
         en <Link href="/envios-y-pagos">Envíos y pagos</Link>.
       </>
     ),

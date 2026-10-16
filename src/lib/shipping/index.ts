@@ -37,6 +37,8 @@ export interface ShippingQuote {
 export interface QuoteShippingDeps {
   getZones?: () => Promise<Zone[]>;
   getThreshold?: () => Promise<number>;
+  /** Recargo fijo (Setting.shippingSurcharge) que se suma a la cotización en vivo. Default 0. */
+  getSurcharge?: () => Promise<number>;
   liveQuote?: (input: {
     cpDestino: string;
     localidad: string;
@@ -53,10 +55,14 @@ export interface QuoteShippingDeps {
 const DEFAULT_LIVE_QUOTE: NonNullable<QuoteShippingDeps["liveQuote"]> = ({ cpDestino, pesoGr, metodo }) =>
   quoteMicorreo({ cpDestino, pesoGr, metodo });
 
-/** Orquesta el costo de envío: gratis por umbral → cotización en vivo → zona del CP → zona más cara. */
+/**
+ * Orquesta el costo de envío: gratis por umbral → cotización en vivo + recargo → zona del CP →
+ * zona más cara (estas dos sin recargo). Sin zonas devuelve `none` y el checkout no deja pagar.
+ */
 export async function quoteShipping(input: QuoteShippingInput, deps: QuoteShippingDeps = {}): Promise<ShippingQuote> {
   const getZones = deps.getZones ?? (async () => []);
   const getThreshold = deps.getThreshold ?? (async () => 0);
+  const getSurcharge = deps.getSurcharge ?? (async () => 0);
   const liveQuote = deps.liveQuote ?? DEFAULT_LIVE_QUOTE;
 
   const threshold = await getThreshold();
@@ -75,10 +81,12 @@ export async function quoteShipping(input: QuoteShippingInput, deps: QuoteShippi
     valorDeclarado: input.subtotal,
   });
   // Sin methodFactor: un proveedor en vivo cotiza domicilio y sucursal por separado con su
-  // precio real. Aplicarlo encima descontaría dos veces.
+  // precio real (la sucursal se cotiza solo por CP). Aplicarlo encima descontaría dos veces.
+  // El recargo (empaque, etc.) solo se suma a la cotización en vivo, no a la zona de respaldo.
   if (live) {
+    const surcharge = await getSurcharge();
     return {
-      cost: round2(live.cost),
+      cost: round2(live.cost + surcharge),
       free: false,
       zoneId: null,
       source: "live",

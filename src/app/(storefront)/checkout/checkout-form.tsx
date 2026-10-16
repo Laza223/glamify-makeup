@@ -11,7 +11,8 @@ import { CartSummary } from "@/components/cart/cart-summary";
 import { CouponInput } from "@/components/cart/coupon-input";
 import { AR_PROVINCES } from "@/lib/ar-provinces";
 import { cn } from "@/lib/utils";
-import { quoteShippingAction, createCheckoutAction, agenciesAction } from "@/app/(storefront)/actions";
+import { quoteShippingAction, createCheckoutAction } from "@/app/(storefront)/actions";
+import { validateShippingAddress } from "@/lib/shipping/address";
 
 interface ItemView { id: string; name: string; variantName: string | null; qty: number; unitPrice: number }
 interface Props {
@@ -31,7 +32,6 @@ interface Props {
 type Method = "domicilio" | "sucursal";
 
 const QUOTE_FAILED = "No pudimos calcular el envío.";
-const AGENCIES_FAILED = "No pudimos buscar sucursales en este momento.";
 
 const FIELD = "h-12 rounded-2xl bg-white text-[16px] md:text-[16px]";
 const SELECT =
@@ -70,14 +70,9 @@ export function CheckoutForm({ subtotal, discount, couponCode, couponFreeShippin
   const [number, setNumber] = useState("");
   const [floorApt, setFloorApt] = useState("");
   const [city, setCity] = useState("");
+  const [dni, setDni] = useState("");
   const [notes, setNotes] = useState("");
   const [acceptedTerms, setAcceptedTerms] = useState(false);
-
-  // Sucursal: lista de sucursales de MiCorreo (null = todavía no se buscaron) + la elegida.
-  const [agencies, setAgencies] = useState<{ code: string; label: string }[] | null>(null);
-  const [agenciesError, setAgenciesError] = useState<string | null>(null);
-  const [agencyCode, setAgencyCode] = useState("");
-  const [loadingAgencies, startAgencies] = useTransition();
 
   // Una cotización (o su error) vale para el destino y el subtotal con que se pidió: si cambia algo
   // (o el order bump suma un producto) deja de valer y se vuelve a cotizar.
@@ -87,7 +82,6 @@ export function CheckoutForm({ subtotal, discount, couponCode, couponFreeShippin
   const [quoting, startQuote] = useTransition();
   // Cada búsqueda lleva un número: una respuesta que llega después de otra más nueva se descarta.
   const quoteSeq = useRef(0);
-  const agenciesSeq = useRef(0);
   const [submitting, startSubmit] = useTransition();
   // Entre recibir el link de MP y salir de la página el botón sigue bloqueado: un segundo click crearía otro pedido.
   const [redirecting, setRedirecting] = useState(false);
@@ -108,31 +102,6 @@ export function CheckoutForm({ subtotal, discount, couponCode, couponFreeShippin
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // En sucursal, la lista y la sucursal elegida dependen de provincia y localidad: se vuelven a buscar.
-  const resetDestino = () => {
-    agenciesSeq.current++;
-    setAgencies(null); setAgenciesError(null); setAgencyCode("");
-  };
-
-  const loadAgencies = () => {
-    if (method !== "sucursal" || !province || !city.trim()) return;
-    const seq = ++agenciesSeq.current;
-    setAgenciesError(null);
-    startAgencies(async () => {
-      let list: { code: string; label: string }[] = [];
-      let failed: string | null = null;
-      try {
-        const r = await agenciesAction({ province, city });
-        if (r.ok && r.agencies) list = r.agencies;
-        else failed = AGENCIES_FAILED;
-      } catch {
-        failed = AGENCIES_FAILED;
-      }
-      if (seq !== agenciesSeq.current) return;
-      setAgencies(list); setAgenciesError(failed); setAgencyCode("");
-    });
-  };
-
   const quote = () => {
     if (!canQuote) return;
     const seq = ++quoteSeq.current;
@@ -147,7 +116,6 @@ export function CheckoutForm({ subtotal, discount, couponCode, couponFreeShippin
         if (seq === quoteSeq.current) setQuoteError({ message: QUOTE_FAILED, key });
       }
     });
-    if (agencies === null) loadAgencies();
   };
 
   // Cotiza solo cuando CP y localidad están completos (con una pausa para no cotizar a cada tecla).
@@ -164,10 +132,8 @@ export function CheckoutForm({ subtotal, discount, couponCode, couponFreeShippin
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return "Revisá el email: parece que le falta algo.";
     if (!phone.trim()) return "Ingresá un teléfono.";
     if (!digitalOnly) {
-      if (!/^\d{4}$/.test(cp)) return "El código postal tiene 4 números.";
-      if (!city.trim()) return "Ingresá tu localidad.";
-      if (method === "domicilio" && (!street.trim() || !number.trim())) return "Completá calle y número.";
-      if (method === "sucursal" && !agencyCode) return "Elegí una sucursal de Correo.";
+      const addressError = validateShippingAddress(method, { cp, province, city, street, number, dni });
+      if (addressError) return addressError;
       if (shippingCost == null) return quoteErrorMessage ?? "Esperá a que calculemos el envío con tu código postal.";
     }
     if (!acceptedTerms) return "Tenés que aceptar los Términos y Condiciones.";
@@ -186,8 +152,7 @@ export function CheckoutForm({ subtotal, discount, couponCode, couponFreeShippin
           contactName: name, contactEmail: email, contactPhone: phone,
           shippingMethod: method,
           address: {
-            cp, province, street, number, floorApt, city, notes,
-            ...(method === "sucursal" ? { agencyCode, agencyLabel: agencies?.find((a) => a.code === agencyCode)?.label } : {}),
+            cp, province, street, number, floorApt, city, notes, dni,
           },
         });
         if (r.ok && r.initPoint) { setRedirecting(true); window.location.href = r.initPoint; }
@@ -225,13 +190,13 @@ export function CheckoutForm({ subtotal, discount, couponCode, couponFreeShippin
             <StepTitle n={2}>Entrega</StepTitle>
             <RadioGroup
               value={method}
-              onValueChange={(v) => { setMethod(v as Method); resetDestino(); }}
+              onValueChange={(v) => setMethod(v as Method)}
               className="mb-5 grid grid-cols-2 gap-3"
               aria-label="Cómo querés recibirlo"
             >
               {([
                 { value: "domicilio", label: "A domicilio", hint: "Te llega a tu casa", icon: Home },
-                { value: "sucursal", label: "En sucursal", hint: "Lo retirás en el Correo", icon: Store },
+                { value: "sucursal", label: "En sucursal", hint: "Lo retirás en una sucursal", icon: Store },
               ] as const).map(({ value, label, hint, icon: Icon }) => (
                 <label
                   key={value}
@@ -247,7 +212,7 @@ export function CheckoutForm({ subtotal, discount, couponCode, couponFreeShippin
 
             <div className="grid gap-4 sm:grid-cols-2">
               <Field id="co-province" label="Provincia">
-                <select id="co-province" value={province} onChange={(e) => { setProvince(e.target.value); resetDestino(); }} className={SELECT}>
+                <select id="co-province" value={province} onChange={(e) => setProvince(e.target.value)} className={SELECT}>
                   {AR_PROVINCES.map((p) => <option key={p} value={p}>{p}</option>)}
                 </select>
               </Field>
@@ -255,11 +220,7 @@ export function CheckoutForm({ subtotal, discount, couponCode, couponFreeShippin
                 <Input
                   id="co-city"
                   value={city}
-                  onChange={(e) => {
-                    // Un espacio de más no cambia el destino: no se borran ni se vuelven a buscar las sucursales.
-                    if (e.target.value.trim() !== city.trim()) resetDestino();
-                    setCity(e.target.value);
-                  }}
+                  onChange={(e) => setCity(e.target.value)}
                   autoComplete="address-level2"
                   className={FIELD}
                 />
@@ -315,32 +276,23 @@ export function CheckoutForm({ subtotal, discount, couponCode, couponFreeShippin
             )}
 
             {method === "sucursal" && (
-              <div className="mt-4">
-                {loadingAgencies ? (
-                  <p className="flex min-h-12 items-center gap-2 text-[15px] text-muted-foreground"><Loader2 className="size-4 animate-spin" aria-hidden /> Buscando sucursales…</p>
-                ) : agencies && agencies.length > 0 ? (
-                  <Field id="co-agency" label="Sucursal de Correo">
-                    <select id="co-agency" value={agencyCode} onChange={(e) => setAgencyCode(e.target.value)} className={SELECT}>
-                      <option value="">Elegí tu sucursal…</option>
-                      {agencies.map((a) => <option key={a.code} value={a.code}>{a.label}</option>)}
-                    </select>
-                  </Field>
-                ) : agencies ? (
-                  <p role="status" className="rounded-2xl bg-secondary px-4 py-3 text-[15px] text-foreground">
-                    {agenciesError ?? `No encontramos sucursales de Correo en ${city.trim()}.`}{" "}
-                    {agenciesError ? (
-                      <button type="button" onClick={loadAgencies} className="min-h-11 font-semibold text-accent underline underline-offset-4">
-                        Probá de nuevo
-                      </button>
-                    ) : (
-                      "Revisá cómo escribiste la localidad o elegí envío a domicilio."
-                    )}
-                  </p>
-                ) : (
-                  <p className="text-[15px] text-muted-foreground">Cuando completes CP y localidad te mostramos las sucursales cercanas.</p>
-                )}
-              </div>
+              <p className="mt-4 text-[15px] text-muted-foreground">
+                Te avisamos por mail en qué sucursal retirarlo cuando lo despachemos.
+              </p>
             )}
+
+            <Field id="co-dni" label="DNI de quien recibe" className="mt-4">
+              <Input
+                id="co-dni"
+                value={dni}
+                onChange={(e) => setDni(e.target.value.replace(/[^\d.\s-]/g, "").slice(0, 12))}
+                inputMode="numeric"
+                autoComplete="off"
+                placeholder="Ej: 30123456"
+                className={FIELD}
+              />
+              <p className="text-[14px] text-muted-foreground">Lo pide la empresa de envío para entregarte el pedido.</p>
+            </Field>
 
             <Field id="co-notes" label="Notas para la entrega" optional className="mt-4">
               <Input id="co-notes" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Ej: timbre B, dejar en portería" className={FIELD} />

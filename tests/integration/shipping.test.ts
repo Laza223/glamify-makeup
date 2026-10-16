@@ -50,6 +50,38 @@ describe("quoteShipping", () => {
     );
     expect(seen).toEqual({ localidad: "La Plata", provincia: "Buenos Aires" });
   });
+  it("suma el recargo a la cotización en vivo", async () => {
+    const q = await quoteShipping(
+      { ...base, method: "domicilio" },
+      { ...deps, getSurcharge: async () => 2000, liveQuote: async () => ({ cost: 6113.5, carrier: "Correo Argentino", estimatedDelivery: null }) },
+    );
+    expect(q).toMatchObject({ cost: 8113.5, source: "live" });
+  });
+  it("recargo en sucursal: también se suma, sin methodFactor", async () => {
+    const q = await quoteShipping(
+      { ...base, method: "sucursal" },
+      { ...deps, getSurcharge: async () => 500, liveQuote: async () => ({ cost: 5000, carrier: "Correo Argentino", estimatedDelivery: null }) },
+    );
+    expect(q.cost).toBe(5500);
+  });
+  it("sin recargo configurado (default) el costo en vivo queda igual", async () => {
+    const q = await quoteShipping(
+      { ...base, method: "domicilio" },
+      { ...deps, liveQuote: async () => ({ cost: 6113, carrier: "Correo Argentino", estimatedDelivery: null }) },
+    );
+    expect(q.cost).toBe(6113);
+  });
+  it("la zona de respaldo NO lleva recargo", async () => {
+    const q = await quoteShipping({ ...base, method: "domicilio" }, { ...deps, getSurcharge: async () => 2000 });
+    expect(q).toMatchObject({ cost: 9000, source: "zone" });
+  });
+  it("envío gratis: no suma recargo", async () => {
+    const q = await quoteShipping(
+      { ...base, method: "domicilio", lines: [line({ unitPrice: 50000 })], subtotal: 50000 },
+      { ...deps, getSurcharge: async () => 2000 },
+    );
+    expect(q).toMatchObject({ cost: 0, free: true });
+  });
   it("CP que no matchea ninguna zona → cobra la zona activa más cara (× método), nunca $0", async () => {
     const onlyAmba = async () => [zones[0], { ...zones[1], id: "z-sur", cpFrom: "9000", cpTo: "9999", price: 15000 }];
     const q = await quoteShipping({ ...base, cp: "5000", method: "domicilio" }, { ...deps, getZones: onlyAmba });

@@ -2,14 +2,14 @@
 import { prisma, type PrismaTransactionClient } from "@/lib/prisma";
 import { round2 } from "@/lib/money";
 import { cartSubtotal, lineTotal, physicalSubtotal, isDigitalOnly } from "@/lib/cart/totals";
-import { validateShippingAddress } from "@/lib/shipping/address";
+import { validateShippingAddress, sanitizeAddress } from "@/lib/shipping/address";
 import { releaseGiftCardReservation } from "@/lib/coupons/gift-card-service";
 import { validateCoupon, applyCoupon } from "@/lib/coupons/apply";
 import { formatOrderNumber } from "@/lib/orders/order-number";
 import { createPreference as realCreatePreference } from "@/lib/payments/mercadopago";
 import { quoteShipping as realQuoteShipping, type ShippingQuote } from "@/lib/shipping/index";
 import { orderWeightGr } from "@/lib/shipping/quote";
-import { getShippingZonesForQuote, getFreeShippingThreshold } from "@/lib/orders/checkout-data";
+import { getShippingZonesForQuote, getFreeShippingThreshold, getShippingSurcharge } from "@/lib/orders/checkout-data";
 import type { CartLine } from "@/lib/cart/types";
 import { computeStockDecrements } from "@/lib/orders/stock";
 import { lockStock, stockShortfall, holdExpiry, payDeadline, heldMessage, type LockStock } from "@/lib/orders/stock-hold";
@@ -30,9 +30,8 @@ export interface CheckoutAddress {
   floorApt?: string | null;
   city?: string;
   notes?: string | null;
-  /** Sólo método sucursal: código y etiqueta de la sucursal de MiCorreo elegida. */
-  agencyCode?: string | null;
-  agencyLabel?: string | null;
+  /** DNI de quien recibe (lo pide la empresa de envío). Obligatorio para pedidos con envío físico. */
+  dni?: string;
 }
 export interface CreateCheckoutInput {
   contactName: string;
@@ -104,7 +103,7 @@ export function defaultCheckoutDeps(appUrl: string): CreateCheckoutDeps {
     nextOrderSeq: defaultNextOrderSeq,
     lockStock,
     createPreference: realCreatePreference,
-    quoteShipping: (input) => realQuoteShipping(input, { getZones: getShippingZonesForQuote, getThreshold: getFreeShippingThreshold }),
+    quoteShipping: (input) => realQuoteShipping(input, { getZones: getShippingZonesForQuote, getThreshold: getFreeShippingThreshold, getSurcharge: getShippingSurcharge }),
     appUrl,
     isSandboxToken: process.env.MP_ACCESS_TOKEN?.startsWith("TEST-") ?? false,
   };
@@ -239,10 +238,10 @@ export async function createCheckout(input: CreateCheckoutInput, deps: CreateChe
         customerId: input.customerId ?? null,
         cartId: input.cartId ?? null,
         contactName: input.contactName, contactEmail: input.contactEmail, contactPhone: input.contactPhone,
-        shippingAddress: (digitalOnly ? {} : input.address) as unknown as object,
+        shippingAddress: (digitalOnly ? {} : sanitizeAddress(input.address)) as unknown as object,
         shippingMethod,
         shippingZoneId: quote.zoneId,
-        weightGr: orderWeightGr(cartLines), // snapshot para el envío automático a MiCorreo
+        weightGr: orderWeightGr(cartLines), // snapshot del peso del pedido
         subtotal, shippingCost, discountTotal: discount, total,
         couponId,
         status: "pending_payment",

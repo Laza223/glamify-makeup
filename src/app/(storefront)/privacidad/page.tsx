@@ -27,7 +27,10 @@ export default function PrivacidadPage() {
       <h2>2. Datos que recolectamos</h2>
       <ul>
         <li>Datos de contacto: nombre, email, teléfono.</li>
-        <li>Datos de pedido y envío: dirección, localidad, código postal.</li>
+        <li>
+          Datos de pedido y envío: dirección, localidad, código postal y, en los envíos, el DNI de quien recibe (lo
+          pide la empresa de envío para entregar el paquete; no lo usamos para nada más).
+        </li>
         <li>Datos de navegación: páginas vistas y eventos de uso (analítica).</li>
       </ul>
       <p>No recolectamos ni almacenamos datos de tarjetas: el pago lo procesa Mercado Pago.</p>
@@ -46,8 +49,8 @@ export default function PrivacidadPage() {
 
       <h2>5. Destinatarios</h2>
       <p>
-        Compartimos datos solo con proveedores necesarios para operar: Mercado Pago (pagos), Correo Argentino u otro
-        operador logístico (envíos), Resend (emails), Supabase y Cloudflare (infraestructura) y PostHog (analítica).
+        Compartimos datos solo con proveedores necesarios para operar: Mercado Pago (pagos), Correo Argentino, Andreani, OCA,
+        Vía Cargo u otro operador logístico (envíos), Resend (emails), Supabase y Cloudflare (infraestructura) y PostHog (analítica).
         No vendemos tus datos a terceros.
       </p>
 

@@ -11,6 +11,11 @@ export async function getShippingZonesForQuote(): Promise<Zone[]> {
   }));
 }
 
+export async function getShippingSurcharge(): Promise<number> {
+  const setting = await prisma.setting.findUnique({ where: { id: "default" } });
+  return setting ? toNumber(setting.shippingSurcharge) : 0;
+}
+
 export async function getFreeShippingThreshold(): Promise<number> {
   const setting = await prisma.setting.findUnique({ where: { id: "default" } });
   return setting ? toNumber(setting.freeShippingThreshold) : 47500;

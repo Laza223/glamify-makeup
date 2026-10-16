@@ -21,10 +21,10 @@ import { validateCoupon, applyCoupon } from "@/lib/coupons/apply";
 import { toNumber } from "@/lib/catalog/pricing";
 import { prisma } from "@/lib/prisma";
 import { quoteShipping } from "@/lib/shipping/index";
-import { provinceCode, getMicorreoAgencies } from "@/lib/shipping/micorreo";
 import {
   getShippingZonesForQuote,
   getFreeShippingThreshold,
+  getShippingSurcharge,
 } from "@/lib/orders/checkout-data";
 import {
   createCheckout,
@@ -264,29 +264,13 @@ export async function quoteShippingAction(input: {
     {
       getZones: getShippingZonesForQuote,
       getThreshold: getFreeShippingThreshold,
+      getSurcharge: getShippingSurcharge,
     },
   );
   if (quote.source === "none") {
     return { ok: false, error: "No pudimos calcular el envío a ese código postal. Escribinos por WhatsApp y lo resolvemos." };
   }
   return { ok: true, cost: quote.cost, free: quote.free, source: quote.source };
-}
-
-export interface AgenciesResult extends ActionResult {
-  agencies?: { code: string; label: string }[];
-}
-/** Lista sucursales de MiCorreo para la provincia/localidad elegidas (selector de checkout). */
-export async function agenciesAction(input: {
-  province?: string;
-  city?: string;
-}): Promise<AgenciesResult> {
-  const code = provinceCode(input.province);
-  if (!code) return { ok: false, error: "Provincia no reconocida." };
-  const agencies = await getMicorreoAgencies(code, input.city ?? null);
-  return {
-    ok: true,
-    agencies: agencies.map((a) => ({ code: a.code, label: a.label })),
-  };
 }
 
 export interface CheckoutResult extends ActionResult {
@@ -306,8 +290,7 @@ export async function createCheckoutAction(input: {
     floorApt?: string;
     city?: string;
     notes?: string;
-    agencyCode?: string;
-    agencyLabel?: string;
+    dni?: string;
   };
 }): Promise<CheckoutResult> {
   if (isPreviewDeploy()) return { ok: false, error: PREVIEW_PAYMENTS_OFF_MESSAGE };

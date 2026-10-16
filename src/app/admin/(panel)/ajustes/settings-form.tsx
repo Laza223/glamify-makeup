@@ -11,6 +11,7 @@ interface SettingsFormProps {
   initialSettings: {
     storeName: string;
     freeShippingThreshold: number;
+    shippingSurcharge: number;
     originPostalCode: string;
     whatsappNumber: string | null;
     instagramUrl: string | null;
@@ -119,6 +120,29 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
             <p className="text-[11px] text-muted-foreground">
               Si la compra supera este importe, el envío es 100% bonificado en
               el carrito y checkout.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label
+              htmlFor="shippingSurcharge"
+              className="text-xs font-bold uppercase tracking-wider text-foreground"
+            >
+              Recargo de envío (ARS)
+            </Label>
+            <Input
+              id="shippingSurcharge"
+              name="shippingSurcharge"
+              type="number"
+              min="0"
+              step="0.01"
+              defaultValue={initialSettings.shippingSurcharge}
+              placeholder="0"
+              className="rounded-xl bg-surface-alt"
+            />
+            <p className="text-[11px] text-muted-foreground">
+              Se suma a lo que cotiza Correo Argentino en vivo (por ejemplo, para cubrir el
+              empaque). Vacío = $0. No aplica al envío gratis ni a la tabla de zonas de respaldo.
             </p>
           </div>
 

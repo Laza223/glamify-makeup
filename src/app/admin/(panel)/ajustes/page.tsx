@@ -17,6 +17,7 @@ export default async function AdminAjustesPage() {
     freeShippingThreshold: setting
       ? Number(setting.freeShippingThreshold)
       : 47500,
+    shippingSurcharge: setting ? Number(setting.shippingSurcharge) : 0,
     originPostalCode: setting?.originPostalCode ?? "6700",
     whatsappNumber: setting?.whatsappNumber ?? null,
     instagramUrl: setting?.instagramUrl ?? null,
