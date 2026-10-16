@@ -3,14 +3,18 @@ import type { PrismaTransactionClient } from "@/lib/prisma";
 import { checkAvailability } from "@/lib/orders/stock";
 
 // Reserva blanda de stock. El stock se sigue descontando en el webhook al aprobarse el pago; mientras
-// tanto, un pedido pendiente retiene sus unidades STOCK_HOLD_MINUTES (y su preference de MP vence a la
-// misma hora), así dos personas no pueden pagar la misma última unidad.
+// tanto, un pedido pendiente retiene sus unidades, así dos personas no pueden pagar la misma última unidad.
+// La preference de MP vence a los PAY_WINDOW_MINUTES y la reserva dura unos minutos más: un pago hecho
+// en el último segundo tiene margen para que llegue su webhook antes de liberar la unidad.
 
-export const STOCK_HOLD_MINUTES = 30;
+export const PAY_WINDOW_MINUTES = 30;
+const HOLD_GRACE_MINUTES = 5;
 
-export function holdExpiry(now: Date): Date {
-  return new Date(now.getTime() + STOCK_HOLD_MINUTES * 60_000);
-}
+const addMinutes = (d: Date, min: number) => new Date(d.getTime() + min * 60_000);
+/** Hasta cuándo se puede pagar la preference. */
+export const payDeadline = (now: Date): Date => addMinutes(now, PAY_WINDOW_MINUTES);
+/** Hasta cuándo el pedido retiene sus unidades. */
+export const holdExpiry = (now: Date): Date => addMinutes(now, PAY_WINDOW_MINUTES + HOLD_GRACE_MINUTES);
 
 export interface UnitsItem {
   variantId: string | null;
@@ -74,5 +78,5 @@ export function stockShortfall(needed: Map<string, number>, stock: Map<string, V
 }
 
 export function heldMessage(names: string[]): string {
-  return `Justo se agotó ${names.join(", ")}: otra persona lo está pagando. Si no completa la compra, vuelve a estar disponible en menos de ${STOCK_HOLD_MINUTES} minutos.`;
+  return `Justo se agotó ${names.join(", ")}: otra persona lo está pagando. Si esa compra no se completa, vuelve a aparecer disponible en la tienda.`;
 }

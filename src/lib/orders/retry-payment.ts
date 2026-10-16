@@ -2,7 +2,7 @@ import { prisma, type PrismaTransactionClient } from "@/lib/prisma";
 import { createPreference as realCreatePreference } from "@/lib/payments/mercadopago";
 import { toNumber } from "@/lib/catalog/pricing";
 import type { Money } from "@/lib/catalog/types";
-import { lockStock, stockShortfall, holdExpiry, heldMessage, unitsByVariant, type LockStock, type UnitsItem } from "@/lib/orders/stock-hold";
+import { lockStock, stockShortfall, holdExpiry, payDeadline, heldMessage, unitsByVariant, type LockStock, type UnitsItem } from "@/lib/orders/stock-hold";
 import { CustomerFacingError } from "@/lib/orders/customer-error";
 
 const RETRY_INCLUDE = { items: { include: { combo: { select: { items: { select: { variantId: true, qty: true } } } } } } } as const;
@@ -59,7 +59,11 @@ export async function retryOrderPayment(orderId: string, deps: RetryPaymentDeps)
   const now = deps.now ?? new Date();
   const reservedUntil = holdExpiry(now);
   const needed = unitsByVariant(order.items);
+  // Primero la fila del pedido y después las variantes: mismo orden de locks que el webhook. Si no hay
+  // stock, el rollback deshace la renovación.
   await deps.db.$transaction(async (tx) => {
+    const res = await tx.order.updateMany({ where: { id: order.id, status: "pending_payment" }, data: { reservedUntil } });
+    if (res.count !== 1) throw new CustomerFacingError("Este pedido ya no está pendiente de pago.");
     if (needed.size > 0) {
       const shortfall = stockShortfall(needed, await deps.lockStock(tx, [...needed.keys()], { now, excludeOrderId: order.id }));
       if (shortfall.kind !== "ok") {
@@ -70,8 +74,6 @@ export async function retryOrderPayment(orderId: string, deps: RetryPaymentDeps)
         );
       }
     }
-    const res = await tx.order.updateMany({ where: { id: order.id, status: "pending_payment" }, data: { reservedUntil } });
-    if (res.count !== 1) throw new CustomerFacingError("Este pedido ya no está pendiente de pago.");
   });
 
   const shippingCost = toNumber(order.shippingCost);
@@ -92,7 +94,7 @@ export async function retryOrderPayment(orderId: string, deps: RetryPaymentDeps)
     payerEmail: order.contactEmail,
     appUrl: deps.appUrl,
     notificationUrl: `${deps.appUrl}/api/webhooks/mercadopago`,
-    expiresAt: reservedUntil,
+    expiresAt: payDeadline(now),
   });
   await deps.db.payment.updateMany({ where: { orderId: order.id, status: "pending" }, data: { mpPreferenceId: preference.id } });
 

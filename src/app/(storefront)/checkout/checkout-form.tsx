@@ -79,11 +79,13 @@ export function CheckoutForm({ subtotal, discount, couponCode, couponFreeShippin
   const [agencyCode, setAgencyCode] = useState("");
   const [loadingAgencies, startAgencies] = useTransition();
 
-  // La cotización vale para el subtotal con el que se pidió: si el order bump suma algo, se recotiza.
-  const [shipping, setShipping] = useState<{ cost: number; free: boolean; subtotal: number } | null>(null);
-  const [quoteError, setQuoteError] = useState<string | null>(null);
+  // Una cotización (o su error) vale para el destino y el subtotal con que se pidió: si cambia algo
+  // (o el order bump suma un producto) deja de valer y se vuelve a cotizar.
+  const quoteKey = `${cp}|${city.trim()}|${province}|${method}|${subtotal}`;
+  const [shipping, setShipping] = useState<{ cost: number; free: boolean; key: string } | null>(null);
+  const [quoteError, setQuoteError] = useState<{ message: string; key: string } | null>(null);
   const [quoting, startQuote] = useTransition();
-  // Cada búsqueda lleva un número: una respuesta que llega tarde (el destino ya cambió) se descarta.
+  // Cada búsqueda lleva un número: una respuesta que llega después de otra más nueva se descarta.
   const quoteSeq = useRef(0);
   const agenciesSeq = useRef(0);
   const [submitting, startSubmit] = useTransition();
@@ -91,7 +93,8 @@ export function CheckoutForm({ subtotal, discount, couponCode, couponFreeShippin
   const [redirecting, setRedirecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const quoted = shipping && shipping.subtotal === subtotal ? shipping : null;
+  const quoted = shipping?.key === quoteKey ? shipping : null;
+  const quoteErrorMessage = quoteError?.key === quoteKey ? quoteError.message : null;
   const shippingCost = digitalOnly || couponFreeShipping ? 0 : quoted?.free ? 0 : quoted?.cost ?? null;
   const total = round2(subtotal - discount + (shippingCost ?? 0));
   const canQuote = /^\d{4}$/.test(cp) && city.trim().length >= 3;
@@ -105,10 +108,8 @@ export function CheckoutForm({ subtotal, discount, couponCode, couponFreeShippin
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const invalidateQuote = () => { quoteSeq.current++; setShipping(null); setQuoteError(null); };
-  // Resetea la cotización (y, en sucursal, la sucursal elegida) cuando cambia un dato del destino.
+  // En sucursal, la lista y la sucursal elegida dependen de provincia y localidad: se vuelven a buscar.
   const resetDestino = () => {
-    invalidateQuote();
     agenciesSeq.current++;
     setAgencies(null); setAgenciesError(null); setAgencyCode("");
   };
@@ -133,18 +134,17 @@ export function CheckoutForm({ subtotal, discount, couponCode, couponFreeShippin
   };
 
   const quote = () => {
-    if (!canQuote) { setShipping(null); return; }
+    if (!canQuote) return;
     const seq = ++quoteSeq.current;
-    const forSubtotal = subtotal;
-    setQuoteError(null);
+    const key = quoteKey;
     startQuote(async () => {
       try {
         const r = await quoteShippingAction({ cp, province, city, method });
         if (seq !== quoteSeq.current) return;
-        if (r.ok) setShipping({ cost: r.cost ?? 0, free: Boolean(r.free), subtotal: forSubtotal });
-        else { setShipping(null); setQuoteError(r.error ?? QUOTE_FAILED); }
+        if (r.ok) setShipping({ cost: r.cost ?? 0, free: Boolean(r.free), key });
+        else setQuoteError({ message: r.error ?? QUOTE_FAILED, key });
       } catch {
-        if (seq === quoteSeq.current) { setShipping(null); setQuoteError(QUOTE_FAILED); }
+        if (seq === quoteSeq.current) setQuoteError({ message: QUOTE_FAILED, key });
       }
     });
     if (agencies === null) loadAgencies();
@@ -157,7 +157,7 @@ export function CheckoutForm({ subtotal, discount, couponCode, couponFreeShippin
     if (digitalOnly || !canQuote) return;
     const t = setTimeout(() => quoteRef.current(), 700);
     return () => clearTimeout(t);
-  }, [cp, city, province, method, canQuote, digitalOnly, subtotal]);
+  }, [quoteKey, canQuote, digitalOnly]);
 
   const validate = (): string | null => {
     if (!name.trim()) return "Ingresá tu nombre.";
@@ -168,7 +168,7 @@ export function CheckoutForm({ subtotal, discount, couponCode, couponFreeShippin
       if (!city.trim()) return "Ingresá tu localidad.";
       if (method === "domicilio" && (!street.trim() || !number.trim())) return "Completá calle y número.";
       if (method === "sucursal" && !agencyCode) return "Elegí una sucursal de Correo.";
-      if (shippingCost == null) return "Esperá a que calculemos el envío con tu código postal.";
+      if (shippingCost == null) return quoteErrorMessage ?? "Esperá a que calculemos el envío con tu código postal.";
     }
     if (!acceptedTerms) return "Tenés que aceptar los Términos y Condiciones.";
     return null;
@@ -258,7 +258,7 @@ export function CheckoutForm({ subtotal, discount, couponCode, couponFreeShippin
                 <Input
                   id="co-cp"
                   value={cp}
-                  onChange={(e) => { setCp(e.target.value.replace(/\D/g, "").slice(0, 4)); invalidateQuote(); }}
+                  onChange={(e) => setCp(e.target.value.replace(/\D/g, "").slice(0, 4))}
                   inputMode="numeric"
                   autoComplete="postal-code"
                   placeholder="Ej: 6700"
@@ -270,15 +270,15 @@ export function CheckoutForm({ subtotal, discount, couponCode, couponFreeShippin
               <div className="flex items-end" aria-live="polite">
                 <div className="flex min-h-12 w-full items-center gap-3 rounded-2xl bg-secondary px-4 py-2 text-[15px]">
                   <Truck className="size-5 shrink-0 text-primary" aria-hidden />
-                  {quoting || (canQuote && !quoted && !quoteError) ? (
+                  {quoting || (canQuote && !quoted && !quoteErrorMessage) ? (
                     <span className="flex items-center gap-2 text-muted-foreground"><Loader2 className="size-4 animate-spin" aria-hidden /> Calculando envío…</span>
                   ) : quoted ? (
                     <span>
                       Envío: <strong className={cn(quoted.free && "text-success")}>{quoted.free ? "¡Gratis!" : formatPrice(shippingCost ?? 0)}</strong>
                     </span>
-                  ) : quoteError ? (
+                  ) : quoteErrorMessage ? (
                     <span>
-                      {quoteError}{" "}
+                      {quoteErrorMessage}{" "}
                       <button type="button" onClick={quote} className="min-h-11 font-semibold text-accent underline underline-offset-4">
                         Probá de nuevo
                       </button>

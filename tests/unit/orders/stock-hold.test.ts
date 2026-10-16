@@ -1,13 +1,15 @@
 import { describe, it, expect, vi } from "vitest";
-import { holdExpiry, unitsByVariant, stockShortfall, lockStock, STOCK_HOLD_MINUTES } from "@/lib/orders/stock-hold";
+import { holdExpiry, payDeadline, unitsByVariant, stockShortfall, lockStock } from "@/lib/orders/stock-hold";
 import type { PrismaTransactionClient } from "@/lib/prisma";
 
 // Reserva blanda: el stock se sigue descontando en el webhook al aprobarse el pago; mientras tanto,
 // cada pedido pendiente "retiene" sus unidades 30 minutos para que nadie más pueda pagarlas.
 
-describe("holdExpiry", () => {
-  it(`vence ${STOCK_HOLD_MINUTES} minutos después`, () => {
-    expect(holdExpiry(new Date("2026-10-16T12:00:00Z")).toISOString()).toBe("2026-10-16T12:30:00.000Z");
+describe("payDeadline / holdExpiry", () => {
+  it("se puede pagar 30 minutos; la reserva dura 5 más para que llegue el webhook de un pago de último momento", () => {
+    const now = new Date("2026-10-16T12:00:00Z");
+    expect(payDeadline(now).toISOString()).toBe("2026-10-16T12:30:00.000Z");
+    expect(holdExpiry(now).toISOString()).toBe("2026-10-16T12:35:00.000Z");
   });
 });
 

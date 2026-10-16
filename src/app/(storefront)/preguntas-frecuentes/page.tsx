@@ -39,7 +39,7 @@ const faqs: Array<{ q: string; a: React.ReactNode }> = [
   },
   {
     q: "¿El stock es real?",
-    a: "Sí. Lo que ves disponible es lo que tenemos y, cuando queda poco, te lo mostramos en la ficha del producto. Cuando pasás a pagar te guardamos las unidades 30 minutos; si algo se agota antes, te avisamos antes de cobrarte.",
+    a: "Sí. Lo que ves disponible es lo que tenemos y, cuando queda poco, te lo mostramos en la ficha del producto. Cuando pasás a pagar te guardamos las unidades 30 minutos, así nadie más puede comprarlas mientras pagás.",
   },
   {
     q: "¿Cómo sé si un tono me queda?",

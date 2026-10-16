@@ -14,12 +14,12 @@ const line = (over: Partial<CartLine> = {}): CartLine => ({
 const lip: CheckoutLineInput = { line: line(), productNameSnapshot: "Labial", variantNameSnapshot: "Rojo", skuSnapshot: "LAB-0001", title: "Labial — Rojo" };
 const now = new Date("2026-10-16T12:00:00Z");
 
-function makeDeps(stock: Record<string, VariantStock>, over: Partial<CreateCheckoutDeps> = {}) {
+function makeDeps(stock: Record<string, VariantStock>, over: Partial<CreateCheckoutDeps> = {}, previousPending: Array<{ id: string; payments: Array<{ status: string }> }> = []) {
   const calls: string[] = [];
   const tx = {
     order: {
-      findMany: vi.fn(async () => []),
-      updateMany: vi.fn(async () => ({ count: 1 })),
+      findMany: vi.fn(async () => previousPending),
+      updateMany: vi.fn(async ({ where }: { where: { id: string } }) => { calls.push(`cancel:${where.id}`); return { count: 1 }; }),
       create: vi.fn(async ({ data }: { data: Record<string, unknown> }) => { calls.push("create"); return { id: "ord-1", ...data, payments: [{ id: "pay-1" }] }; }),
     },
     payment: { update: vi.fn(async () => ({})) },
@@ -38,7 +38,7 @@ function makeDeps(stock: Record<string, VariantStock>, over: Partial<CreateCheck
     nextOrderSeq: vi.fn(async () => 7),
     lockStock,
     createPreference: vi.fn(async () => ({ id: "pref-1", init_point: "https://mp/ip" })),
-    quoteShipping: vi.fn(async () => ({ cost: 2500, free: false, zoneId: "z1", source: "zone" as const })),
+    quoteShipping: vi.fn(async () => { calls.push("quote"); return { cost: 2500, free: false, zoneId: "z1", source: "zone" as const }; }),
     appUrl: "https://app.test",
     isSandboxToken: false,
     now,
@@ -59,16 +59,29 @@ describe("createCheckout — reserva de stock", () => {
   it("bloquea y chequea el stock dentro de la tx que crea el pedido, antes de crearlo", async () => {
     const { deps, calls, lockStock } = makeDeps({ v1: { stock: 1, held: 0 } });
     await createCheckout(input, deps);
-    expect(calls).toEqual(["lock:in-tx", "create"]);
+    expect(calls).toEqual(["quote", "lock:in-tx", "create"]);
     expect(lockStock).toHaveBeenCalledWith(expect.anything(), ["v1"], { now });
   });
 
-  it("el pedido retiene la unidad 30 minutos y la preference de MP vence a la misma hora", async () => {
+  it("la preference de MP vence a los 30 min y la reserva 5 min después (margen para el webhook)", async () => {
     const { deps, tx } = makeDeps({ v1: { stock: 1, held: 0 } });
     await createCheckout(input, deps);
-    const until = new Date("2026-10-16T12:30:00Z");
-    expect(tx.order.create.mock.calls[0][0].data).toMatchObject({ reservedUntil: until });
-    expect(deps.createPreference).toHaveBeenCalledWith(expect.objectContaining({ expiresAt: until }));
+    expect(tx.order.create.mock.calls[0][0].data).toMatchObject({ reservedUntil: new Date("2026-10-16T12:35:00Z") });
+    expect(deps.createPreference).toHaveBeenCalledWith(expect.objectContaining({ expiresAt: new Date("2026-10-16T12:30:00Z") }));
+  });
+
+  it("re-click en Pagar: cotiza ANTES de cancelar el pedido anterior y re-chequea el stock en la misma tx de la cancelación", async () => {
+    const { deps, calls } = makeDeps({ v1: { stock: 1, held: 0 } }, {}, [{ id: "ord-old", payments: [{ status: "pending" }] }]);
+    await createCheckout(input, deps);
+    // quote (red) → cancelación + lock en la misma tx → lock + create en la tx final
+    expect(calls).toEqual(["quote", "cancel:ord-old", "lock:in-tx", "lock:in-tx", "create"]);
+  });
+
+  it("re-click sin stock: falla en la tx de la cancelación (el rollback deja vigente la reserva anterior)", async () => {
+    const { deps, tx, calls } = makeDeps({ v1: { stock: 1, held: 1 } }, {}, [{ id: "ord-old", payments: [{ status: "pending" }] }]);
+    await expect(createCheckout(input, deps)).rejects.toThrow(/^Justo se agotó/);
+    expect(calls).toEqual(["quote", "cancel:ord-old", "lock:in-tx"]);
+    expect(tx.order.create).not.toHaveBeenCalled();
   });
 
   it("si la última unidad la está pagando otra persona: 'Justo se agotó', sin pedido ni preference", async () => {
@@ -97,12 +110,14 @@ describe("createCheckout — reserva de stock", () => {
 });
 
 describe("createCheckout — envío sin cotización", () => {
-  it("si no se pudo cotizar el envío no crea el pedido (nunca cobra envío $0 por error)", async () => {
+  it("si no se pudo cotizar el envío no crea el pedido ni cancela el anterior (nunca cobra envío $0 por error)", async () => {
     const { deps, tx } = makeDeps(
       { v1: { stock: 1, held: 0 } },
       { quoteShipping: vi.fn(async () => ({ cost: 0, free: false, zoneId: null, source: "none" as const })) },
+      [{ id: "ord-old", payments: [{ status: "pending" }] }],
     );
     await expect(createCheckout(input, deps)).rejects.toThrow(/No pudimos calcular el envío/);
+    expect(tx.order.updateMany).not.toHaveBeenCalled();
     expect(tx.order.create).not.toHaveBeenCalled();
   });
 

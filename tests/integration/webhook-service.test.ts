@@ -238,6 +238,16 @@ describe("processWebhook", () => {
     expect(ownerEmail[0].subject).toContain("REVISAR");
   });
 
+  it("descuenta las variantes en orden de id (mismo orden que el FOR UPDATE del checkout: sin deadlocks)", async () => {
+    const { db, state } = makeFakeDb();
+    state.order.items = [
+      { variantId: "v9", comboId: null, productNameSnapshot: "B", variantNameSnapshot: null, qty: 1, lineTotal: 1, combo: null },
+      { variantId: "v1", comboId: null, productNameSnapshot: "A", variantNameSnapshot: null, qty: 1, lineTotal: 1, combo: null },
+    ];
+    state.variants.set("v9", 5);
+    await processWebhook({ dataId: "mp-pay-1", xSignature: "ok", xRequestId: "r" }, makeDeps({ db }));
+    expect(db.productVariant.updateMany.mock.calls.map((c: any) => c[0].where.id)).toEqual(["v1", "v9"]);
+  });
   it("idempotente: el mismo webhook 2× descuenta stock una sola vez", async () => {
     const { db, state } = makeFakeDb();
     const deps = makeDeps({ db });
