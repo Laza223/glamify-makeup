@@ -37,7 +37,7 @@ function makeDeps(over: Partial<CreateCheckoutDeps> = {}): { deps: CreateCheckou
 const baseInput = {
   contactName: "Ana", contactEmail: "ana@example.com", contactPhone: "1122334455",
   shippingMethod: "domicilio" as const,
-  address: { cp: "1414", province: "CABA", street: "Calle", number: "123", city: "CABA" },
+  address: { cp: "1414", province: "CABA", street: "Calle", number: "123", city: "CABA", dni: "30123456" },
   lines: [checkoutLine()],
   couponCode: null as string | null,
 };
@@ -140,5 +140,44 @@ describe("createCheckout — stock antes de cobrar", () => {
   it("con stock suficiente crea el pedido normalmente", async () => {
     const { deps } = makeDeps({ getVariantStock: vi.fn(async () => new Map([["v1", 2]])) });
     await expect(createCheckout(baseInput, deps)).resolves.toMatchObject({ orderNumber: "GLM-000001" });
+  });
+});
+
+describe("createCheckout — DNI y dirección", () => {
+  const withAddress = (address: Record<string, unknown>) => ({ ...baseInput, address: { cp: "1414", province: "CABA", street: "Calle", number: "123", city: "CABA", ...address } });
+
+  it("el DNI es obligatorio para pedidos con envío físico (domicilio y sucursal)", async () => {
+    const { deps } = makeDeps();
+    await expect(createCheckout(withAddress({ dni: undefined }), deps)).rejects.toThrow(/DNI/);
+    await expect(createCheckout({ ...withAddress({ dni: "12345" }), shippingMethod: "sucursal" }, deps)).rejects.toThrow(/DNI/);
+    expect((deps as any)._tx.order.create).not.toHaveBeenCalled();
+  });
+
+  it("guarda el DNI normalizado en Order.shippingAddress.dni", async () => {
+    const { deps } = makeDeps();
+    await createCheckout(withAddress({ dni: "30.123.456" }), deps);
+    const data = (deps as any)._tx.order.create.mock.calls[0][0].data;
+    expect(data.shippingAddress.dni).toBe("30123456");
+  });
+
+  it("sucursal: pide CP, localidad y provincia, no calle ni sucursal elegida", async () => {
+    const { deps } = makeDeps();
+    const suc = { ...baseInput, shippingMethod: "sucursal" as const, address: { cp: "1414", province: "CABA", city: "CABA", dni: "30123456" } };
+    await expect(createCheckout(suc, deps)).resolves.toMatchObject({ orderNumber: "GLM-000001" });
+    await expect(createCheckout({ ...suc, address: { ...suc.address, province: "" } }, makeDeps().deps)).rejects.toThrow(/provincia/i);
+  });
+
+  it("solo gift cards: no pide DNI ni dirección", async () => {
+    const { deps } = makeDeps();
+    const gift = checkoutLine({ line: cartLine({ isGiftCard: true, unitPrice: 20000, qty: 1 }) });
+    await expect(createCheckout({ ...baseInput, address: { cp: "" }, lines: [gift] }, deps)).resolves.toBeDefined();
+    expect((deps as any)._tx.order.create.mock.calls[0][0].data.shippingAddress).toEqual({});
+  });
+
+  it("whitelist: solo se guardan las claves de dirección conocidas (nada de lo que mande el cliente)", async () => {
+    const { deps } = makeDeps();
+    await createCheckout(withAddress({ dni: "30123456", floorApt: "2B", notes: "timbre", agency: "S1", isAdmin: true, pickupBranch: "inyectada" }), deps);
+    const saved = (deps as any)._tx.order.create.mock.calls[0][0].data.shippingAddress;
+    expect(Object.keys(saved).sort()).toEqual(["city", "cp", "dni", "floorApt", "notes", "number", "province", "street"]);
   });
 });

@@ -21,10 +21,10 @@ import { validateCoupon, applyCoupon } from "@/lib/coupons/apply";
 import { toNumber } from "@/lib/catalog/pricing";
 import { prisma } from "@/lib/prisma";
 import { quoteShipping } from "@/lib/shipping/index";
-import { provinceCode, getMicorreoAgencies } from "@/lib/shipping/micorreo";
 import {
   getShippingZonesForQuote,
   getFreeShippingThreshold,
+  getShippingSurcharge,
 } from "@/lib/orders/checkout-data";
 import {
   createCheckout,
@@ -251,38 +251,27 @@ export async function quoteShippingAction(input: {
   if (lines.length === 0) return { ok: false, error: "El carrito está vacío." };
   if (isDigitalOnly(lines)) return { ok: true, cost: 0, free: false, source: "none" };
   const subtotal = physicalSubtotal(lines); // las gift cards no cuentan para el envío gratis
-  const quote = await quoteShipping(
-    {
-      cp: input.cp,
-      province: input.province ?? null,
-      city: input.city ?? null,
-      method: input.method,
-      lines,
-      subtotal,
-    },
-    {
-      getZones: getShippingZonesForQuote,
-      getThreshold: getFreeShippingThreshold,
-    },
-  );
-  return { ok: true, cost: quote.cost, free: quote.free, source: quote.source };
-}
-
-export interface AgenciesResult extends ActionResult {
-  agencies?: { code: string; label: string }[];
-}
-/** Lista sucursales de MiCorreo para la provincia/localidad elegidas (selector de checkout). */
-export async function agenciesAction(input: {
-  province?: string;
-  city?: string;
-}): Promise<AgenciesResult> {
-  const code = provinceCode(input.province);
-  if (!code) return { ok: false, error: "Provincia no reconocida." };
-  const agencies = await getMicorreoAgencies(code, input.city ?? null);
-  return {
-    ok: true,
-    agencies: agencies.map((a) => ({ code: a.code, label: a.label })),
-  };
+  try {
+    const quote = await quoteShipping(
+      {
+        cp: input.cp,
+        province: input.province ?? null,
+        city: input.city ?? null,
+        method: input.method,
+        lines,
+        subtotal,
+      },
+      {
+        getZones: getShippingZonesForQuote,
+        getThreshold: getFreeShippingThreshold,
+        getSurcharge: getShippingSurcharge,
+      },
+    );
+    return { ok: true, cost: quote.cost, free: quote.free, source: quote.source };
+  } catch (e) {
+    // Sin cotización ni zona para ese CP: se le muestra el mensaje en vez de cobrar $0.
+    return { ok: false, error: e instanceof Error ? e.message : "No pudimos calcular el envío." };
+  }
 }
 
 export interface CheckoutResult extends ActionResult {
@@ -302,8 +291,7 @@ export async function createCheckoutAction(input: {
     floorApt?: string;
     city?: string;
     notes?: string;
-    agencyCode?: string;
-    agencyLabel?: string;
+    dni?: string;
   };
 }): Promise<CheckoutResult> {
   if (isPreviewDeploy()) return { ok: false, error: PREVIEW_PAYMENTS_OFF_MESSAGE };

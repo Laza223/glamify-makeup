@@ -44,7 +44,7 @@ function makeDeps(opts: { coupon?: CouponRow | null; reserveCount?: number } = {
 const base = {
   contactName: "Ana", contactEmail: "ana@example.com", contactPhone: "1122334455",
   shippingMethod: "domicilio" as const,
-  address: { cp: "1414", province: "CABA", street: "Calle", number: "1", city: "CABA" },
+  address: { cp: "1414", province: "CABA", street: "Calle", number: "1", city: "CABA", dni: "30123456" },
   couponCode: null as string | null,
 };
 

@@ -11,7 +11,8 @@ import { CartSummary } from "@/components/cart/cart-summary";
 import { CouponInput } from "@/components/cart/coupon-input";
 import { AR_PROVINCES } from "@/lib/ar-provinces";
 import { cn } from "@/lib/utils";
-import { quoteShippingAction, createCheckoutAction, agenciesAction } from "@/app/(storefront)/actions";
+import { quoteShippingAction, createCheckoutAction } from "@/app/(storefront)/actions";
+import { validateShippingAddress } from "@/lib/shipping/address";
 
 interface ItemView { id: string; name: string; variantName: string | null; qty: number; unitPrice: number }
 interface Props {
@@ -67,16 +68,14 @@ export function CheckoutForm({ subtotal, discount, couponCode, couponFreeShippin
   const [number, setNumber] = useState("");
   const [floorApt, setFloorApt] = useState("");
   const [city, setCity] = useState("");
+  const [dni, setDni] = useState("");
   const [notes, setNotes] = useState("");
   const [acceptedTerms, setAcceptedTerms] = useState(false);
 
-  // Sucursal: lista de sucursales de MiCorreo + la elegida.
-  const [agencies, setAgencies] = useState<{ code: string; label: string }[]>([]);
-  const [agencyCode, setAgencyCode] = useState("");
-  const [loadingAgencies, startAgencies] = useTransition();
-
   const [shipping, setShipping] = useState<{ cost: number; free: boolean } | null>(null);
   const [quoteFailed, setQuoteFailed] = useState(false);
+  /** Mensaje del server cuando no hay cotización posible para ese CP (se muestra tal cual). */
+  const [quoteError, setQuoteError] = useState<string | null>(null);
   const [quoting, startQuote] = useTransition();
   const [submitting, startSubmit] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -90,26 +89,16 @@ export function CheckoutForm({ subtotal, discount, couponCode, couponFreeShippin
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Resetea la cotización (y, en sucursal, la sucursal elegida) cuando cambia un dato del destino.
-  const resetDestino = () => { setShipping(null); setQuoteFailed(false); setAgencies([]); setAgencyCode(""); };
-
-  const loadAgencies = () => {
-    if (method !== "sucursal" || !province || !city.trim()) return;
-    startAgencies(async () => {
-      const r = await agenciesAction({ province, city });
-      setAgencies(r.ok && r.agencies ? r.agencies : []);
-      setAgencyCode("");
-    });
-  };
+  // Resetea la cotización cuando cambia un dato del destino.
+  const resetDestino = () => { setShipping(null); setQuoteFailed(false); setQuoteError(null); };
 
   const quote = () => {
     if (!canQuote) { setShipping(null); return; }
     startQuote(async () => {
       const r = await quoteShippingAction({ cp, province, city, method });
-      if (r.ok) { setShipping({ cost: r.cost ?? 0, free: Boolean(r.free) }); setQuoteFailed(false); }
-      else { setShipping(null); setQuoteFailed(true); }
+      if (r.ok) { setShipping({ cost: r.cost ?? 0, free: Boolean(r.free) }); setQuoteFailed(false); setQuoteError(null); }
+      else { setShipping(null); setQuoteFailed(true); setQuoteError(r.error ?? null); }
     });
-    loadAgencies();
   };
 
   // Cotiza solo cuando CP y localidad están completos (con una pausa para no cotizar a cada tecla).
@@ -126,10 +115,8 @@ export function CheckoutForm({ subtotal, discount, couponCode, couponFreeShippin
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return "Revisá el email: parece que le falta algo.";
     if (!phone.trim()) return "Ingresá un teléfono.";
     if (!digitalOnly) {
-      if (!/^\d{4}$/.test(cp)) return "El código postal tiene 4 números.";
-      if (!city.trim()) return "Ingresá tu localidad.";
-      if (method === "domicilio" && (!street.trim() || !number.trim())) return "Completá calle y número.";
-      if (method === "sucursal" && !agencyCode) return "Elegí una sucursal de Correo.";
+      const addressError = validateShippingAddress(method, { cp, province, city, street, number, dni });
+      if (addressError) return addressError;
       if (shippingCost == null) return "Esperá a que calculemos el envío con tu código postal.";
     }
     if (!acceptedTerms) return "Tenés que aceptar los Términos y Condiciones.";
@@ -146,8 +133,7 @@ export function CheckoutForm({ subtotal, discount, couponCode, couponFreeShippin
         contactName: name, contactEmail: email, contactPhone: phone,
         shippingMethod: method,
         address: {
-          cp, province, street, number, floorApt, city, notes,
-          ...(method === "sucursal" ? { agencyCode, agencyLabel: agencies.find((a) => a.code === agencyCode)?.label } : {}),
+          cp, province, street, number, floorApt, city, notes, dni,
         },
       });
       if (r.ok && r.initPoint) window.location.href = r.initPoint;
@@ -188,7 +174,7 @@ export function CheckoutForm({ subtotal, discount, couponCode, couponFreeShippin
             >
               {([
                 { value: "domicilio", label: "A domicilio", hint: "Te llega a tu casa", icon: Home },
-                { value: "sucursal", label: "En sucursal", hint: "Lo retirás en el Correo", icon: Store },
+                { value: "sucursal", label: "En sucursal", hint: "Lo retirás en una sucursal", icon: Store },
               ] as const).map(({ value, label, hint, icon: Icon }) => (
                 <label
                   key={value}
@@ -215,7 +201,7 @@ export function CheckoutForm({ subtotal, discount, couponCode, couponFreeShippin
                 <Input
                   id="co-cp"
                   value={cp}
-                  onChange={(e) => { setCp(e.target.value.replace(/\D/g, "").slice(0, 4)); setShipping(null); setQuoteFailed(false); }}
+                  onChange={(e) => { setCp(e.target.value.replace(/\D/g, "").slice(0, 4)); resetDestino(); }}
                   inputMode="numeric"
                   autoComplete="postal-code"
                   placeholder="Ej: 6700"
@@ -234,9 +220,13 @@ export function CheckoutForm({ subtotal, discount, couponCode, couponFreeShippin
                       Envío: <strong className={cn(shipping.free && "text-success")}>{shipping.free ? "¡Gratis!" : formatPrice(shippingCost ?? 0)}</strong>
                     </span>
                   ) : quoteFailed ? (
-                    <button type="button" onClick={quote} className="min-h-11 text-left font-semibold text-accent underline underline-offset-4">
-                      No pudimos calcularlo. Probá de nuevo
-                    </button>
+                    quoteError ? (
+                      <span role="alert" className="text-destructive">{quoteError}</span>
+                    ) : (
+                      <button type="button" onClick={quote} className="min-h-11 text-left font-semibold text-accent underline underline-offset-4">
+                        No pudimos calcularlo. Probá de nuevo
+                      </button>
+                    )
                   ) : (
                     <span className="text-muted-foreground">Completá CP y localidad para ver el envío</span>
                   )}
@@ -259,21 +249,23 @@ export function CheckoutForm({ subtotal, discount, couponCode, couponFreeShippin
             )}
 
             {method === "sucursal" && (
-              <div className="mt-4">
-                {loadingAgencies ? (
-                  <p className="flex min-h-12 items-center gap-2 text-[15px] text-muted-foreground"><Loader2 className="size-4 animate-spin" aria-hidden /> Buscando sucursales…</p>
-                ) : agencies.length > 0 ? (
-                  <Field id="co-agency" label="Sucursal de Correo">
-                    <select id="co-agency" value={agencyCode} onChange={(e) => setAgencyCode(e.target.value)} className={SELECT}>
-                      <option value="">Elegí tu sucursal…</option>
-                      {agencies.map((a) => <option key={a.code} value={a.code}>{a.label}</option>)}
-                    </select>
-                  </Field>
-                ) : (
-                  <p className="text-[15px] text-muted-foreground">Cuando completes CP y localidad te mostramos las sucursales cercanas.</p>
-                )}
-              </div>
+              <p className="mt-4 text-[15px] text-muted-foreground">
+                Te avisamos por mail en qué sucursal retirarlo cuando lo despachemos.
+              </p>
             )}
+
+            <Field id="co-dni" label="DNI de quien recibe" className="mt-4">
+              <Input
+                id="co-dni"
+                value={dni}
+                onChange={(e) => setDni(e.target.value.replace(/[^\d.\s-]/g, "").slice(0, 12))}
+                inputMode="numeric"
+                autoComplete="off"
+                placeholder="Ej: 30123456"
+                className={FIELD}
+              />
+              <p className="text-[14px] text-muted-foreground">Lo pide la empresa de envío para entregarte el pedido.</p>
+            </Field>
 
             <Field id="co-notes" label="Notas para la entrega" optional className="mt-4">
               <Input id="co-notes" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Ej: timbre B, dejar en portería" className={FIELD} />

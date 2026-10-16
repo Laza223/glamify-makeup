@@ -37,7 +37,7 @@ describe("createCheckout — perCustomerLimit", () => {
     const { deps, createOrder } = makeDeps(1);
     await createCheckout({
       contactName: "Ana", contactEmail: "ana@x.com", contactPhone: "11", shippingMethod: "domicilio",
-      address: { cp: "1414", city: "CABA", street: "Calle", number: "1" }, lines: [{ line, productNameSnapshot: "P", variantNameSnapshot: "V", skuSnapshot: "S", title: "P—V" }],
+      address: { cp: "1414", city: "CABA", street: "Calle", number: "1", dni: "30123456" }, lines: [{ line, productNameSnapshot: "P", variantNameSnapshot: "V", skuSnapshot: "S", title: "P—V" }],
       couponCode: "RECOMPRA", customerId: "u1", cartId: "cart1",
     }, deps);
     expect(createOrder).toHaveBeenCalledWith(expect.objectContaining({
@@ -49,7 +49,7 @@ describe("createCheckout — perCustomerLimit", () => {
     const { deps, createOrder } = makeDeps(0);
     await createCheckout({
       contactName: "Ana", contactEmail: "ana@x.com", contactPhone: "11", shippingMethod: "domicilio",
-      address: { cp: "1414", city: "CABA", street: "Calle", number: "1" }, lines: [{ line, productNameSnapshot: "P", variantNameSnapshot: "V", skuSnapshot: "S", title: "P—V" }],
+      address: { cp: "1414", city: "CABA", street: "Calle", number: "1", dni: "30123456" }, lines: [{ line, productNameSnapshot: "P", variantNameSnapshot: "V", skuSnapshot: "S", title: "P—V" }],
       couponCode: "RECOMPRA", customerId: "u1", cartId: "cart1",
     }, deps);
     const call = createOrder.mock.calls[0][0] as { data: { couponId: string | null; discountTotal: number } };

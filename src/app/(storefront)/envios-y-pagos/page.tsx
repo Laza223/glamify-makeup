@@ -19,13 +19,14 @@ export default async function EnviosYPagosPage() {
 
       <h2>Envíos</h2>
       <p>
-        Enviamos a toda la Argentina a través de Correo Argentino, con opción de entrega a domicilio o retiro en
-        sucursal. El costo se calcula según tu código postal al momento del checkout.
+        Enviamos a toda la Argentina con Correo Argentino, Andreani, OCA o Vía Cargo, con opción de entrega a domicilio o retiro en
+        sucursal (te avisamos por mail cuál sucursal). Pedimos el DNI de quien recibe porque lo exige la empresa de
+        envío. El costo se calcula según tu código postal al momento del checkout.
       </p>
       <ul>
         <li>El costo final se muestra en el carrito y el checkout antes de pagar.</li>
         <li>Despacho dentro de las 24 a 72 horas hábiles de acreditado el pago.</li>
-        <li>Recibís el número de seguimiento por email cuando despachamos.</li>
+        <li>Recibís por email la empresa y el código de seguimiento cuando despachamos.</li>
       </ul>
 
       <h2>Envío gratis</h2>
