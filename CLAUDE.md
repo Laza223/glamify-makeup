@@ -32,7 +32,7 @@ Resto:
 - **PostgreSQL vía Supabase** (Auth + Storage) · **Prisma ORM** con driver adapter (`@prisma/adapter-pg`).
 - **Cliente DB (`src/lib/prisma.ts`):** singleton de módulo **perezoso** (Proxy que crea el cliente en el primer uso), con `process.env.DATABASE_URL`. Perezoso porque `next build` importa las rutas sin env de DB.
 - **MercadoPago Checkout Pro:** pagos instantáneos (tarjeta y dinero en cuenta; efectivo/offline EXCLUIDO). `webhook-service.ts` valida firma HMAC `x-signature` (`validateMpSignature`) y re-consulta el pago por API a MP. Idempotencia por `mpPaymentId`.
-- **Envíos:** Correo Argentino (MiCorreo / PaqAr v2 REST + JWT) cotización en vivo por CP/peso desde Luján (6700). Tabla de zonas `ShippingZone` como fallback/override. (*Zipnova descartado por markup ~2x*).
+- **Envíos (ADR 0004):** cotización en vivo MiCorreo (PaqAr v2 REST + JWT) por CP/peso desde Luján (6700) **+ recargo editable** (`Setting.shippingSurcharge`); tabla de zonas `ShippingZone` como fallback (sin recargo; sin zona = error, nunca $0). **Despacho manual** con empresa a elección (Correo Argentino, Andreani, OCA, Vía Cargo) y código pegado por la dueña; **sin precarga en MiCorreo**; DNI de quien recibe obligatorio en el checkout. El cron de seguimiento solo consulta Correo. (*Zipnova descartado por markup ~2x*).
 - **Resend:** email transaccional (alertas de compra/arrepentimiento a dueña; confirmación/despacho/abandono a clientas).
 - **PostHog:** analítica de eventos y conversión · **Cron:** Vercel Cron horario → `/api/cron` (`vercel.json`, protegido con `CRON_SECRET`): `runAbandonedCartJob`, `runOrderExpiryJob` (24h) y `runShipmentTrackingJob` (seguimiento MiCorreo).
 
@@ -43,7 +43,7 @@ Patrón: **Next.js App Router + servicios desacoplados en `src/lib/*`**. La lóg
 - `src/app/(storefront)/*` — Storefront: home, `/tienda`, `/producto/[slug]`, `/carrito`, `/checkout` (un paso), `/cuenta`, `/ingresar`, `/arrepentimiento` (botón legal), páginas institucionales y legales (`/terminos`, `/privacidad`, `/envios-y-pagos`, `/preguntas-frecuentes`, `/contacto`, `/nosotras`).
 - `src/app/admin/*` — Panel admin: `/admin/login`, `/admin/(panel)` (`/pedidos`, `/productos`, `/categorias`, `/combos`, `/cupones`, `/resenas`, métricas).
 - `src/app/api/*` — Route Handlers exclusivamente para webhooks (`/api/webhooks/mercadopago`), callbacks de auth (`/auth/*`), sitemap y robots.
-- `src/lib/*` — Dominios: `orders/` (checkout, máquina de estados, auto-shipment, expiry job, stock), `payments/` (adapter MP, firma HMAC, webhook effects), `cart/` (servicio, cookies, merge, job abandono), `catalog/`, `shipping/` (MiCorreo adapter, quote, zonas), `admin/` (`requireAdmin`, CRUDs, SKU generator), `customer/`, `coupons/` (`perCustomerLimit`), `reviews/` (moderación), `email/` (Resend templates), `prisma.ts` (cliente DB perezoso).
+- `src/lib/*` — Dominios: `orders/` (checkout, máquina de estados, expiry job, stock), `payments/` (adapter MP, firma HMAC, webhook effects), `cart/` (servicio, cookies, merge, job abandono), `catalog/`, `shipping/` (MiCorreo adapter, quote, zonas), `admin/` (`requireAdmin`, CRUDs, SKU generator), `customer/`, `coupons/` (`perCustomerLimit`), `reviews/` (moderación), `email/` (Resend templates), `prisma.ts` (cliente DB perezoso).
 - **Guards y Auth:** Staff: Supabase Auth → verificación en tabla `User` (`role = 'owner' | 'admin'`). `requireAdmin()` en layouts y Server Actions. Clientas: Supabase Auth (email/Google) → `Customer` (uid = `Customer.id`). Compras de invitadas guardan contacto/dirección en `Order`. `middleware.ts`: refresca sesión.
 
 ## Invariantes de dominio
@@ -80,7 +80,7 @@ Patrón: **Next.js App Router + servicios desacoplados en `src/lib/*`**. La lóg
 ## Documentación
 
 `blueprints/` (00–09) es la fuente de verdad: `00` visión/alcance · `01` modelo datos/Prisma · `02` storefront/UX · `03` admin · `04` checkout/MP · `05` envíos/MiCorreo · `06` conversión/growth · `07` arquitectura (escrito para Workers; el deploy hoy es Vercel) · `08` roadmap M0–M5 · `09` playbook.
-Otros: `design-system/MASTER.md` · `docs/LAUNCH.md` (ops/go-live) · `docs/decisions/` (ADR 0001, 0002) · `SETUP.md` · `TODO.md` (diferidos).
+Otros: `design-system/MASTER.md` · `docs/LAUNCH.md` (ops/go-live) · `docs/decisions/` (ADR 0001–0004) · `SETUP.md` · `TODO.md` (diferidos).
 
 ## Skill routing
 

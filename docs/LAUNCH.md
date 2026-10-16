@@ -9,9 +9,9 @@
 ## Ya hecho y verificado
 
 - [x] Sitio en producción en `www.glamifymakeup.site`; páginas legales responden 200; CUIT, condición fiscal, email y WhatsApp cargados.
-- [x] Compra real de punta a punta (Mercado Pago PROD → webhook → pedido pagado → carga en MiCorreo): 28/8 y 13/9.
-- [x] Envíos: despacho **manual** en la plataforma de MiCorreo. En el pedido del admin se carga el seguimiento → pasa a "enviado" → mail a la clienta con el número y el link de Correo Argentino. La carga automática a MiCorreo es best-effort: si falla, no rompe nada.
-- [ ] **Seguimiento automático (por confirmar con el primer envío real).** La dueña sólo pega el número de seguimiento ("Guardar y avisar a la clienta"). El cron horario consulta MiCorreo (`GET /shipping/tracking`) y actualiza solo: en camino, esperando en sucursal (mail a la clienta), entregado (pedido → entregado + mail con link a reseña) y devuelto (alerta a la dueña). **Falta confirmar** que la API ve los envíos precargados (con uno cargado a mano responde "No existe el cliente o pedido") y el formato real de la respuesta: con el primer envío pagado, correr el seguimiento contra ese número y ajustar el parser si hace falta. Si Correo no informa, el pedido se puede marcar entregado a mano desde su estado.
+- [x] Compra real de punta a punta (Mercado Pago PROD → webhook → pedido pagado): 28/8 y 13/9.
+- [x] Envíos (ADR 0004): cotización en vivo de MiCorreo + recargo editable en Ajustes (default $0). Despacho **manual** con la empresa que elija la dueña (Correo Argentino, Andreani, OCA, Vía Cargo): en el pedido del admin elige la empresa y pega el código → pasa a "enviado" → mail a la clienta con empresa, código y link a `/seguimiento`. **Sin precarga en MiCorreo.** Se pide el DNI de quien recibe en el checkout.
+- [ ] **Seguimiento automático (por confirmar con el primer envío real).** Solo para envíos con **Correo Argentino**: la dueña elige la empresa y pega el código ("Marcar despachado"). El cron horario consulta MiCorreo (`GET /shipping/tracking`) y actualiza solo: en camino, esperando en sucursal (mail a la clienta), entregado (pedido → entregado + mail con link a reseña) y devuelto (alerta a la dueña). **Falta confirmar** que la API ve los envíos despachados a mano (sin precarga es probable que responda "No existe el cliente o pedido"; en ese caso el pedido queda en `shipped` y se saca el cron) y el formato real de la respuesta: con el primer envío pagado, correr el seguimiento contra ese número y ajustar el parser si hace falta. Con Andreani/OCA/Vía Cargo no hay seguimiento automático: la dueña marca el pedido como entregado a mano. Si Correo no informa, también.
 - [x] Resend: dominio `glamifymakeup.site` verificado (SPF/DKIM/DMARC), remitente `hola@glamifymakeup.site`.
 - [x] Auditoría pre-lanzamiento: guard de escritura a prod en scripts, timeout a Mercado Pago, email best-effort en el webhook, checkbox de T&C en checkout.
 - [x] Cron horario (`/api/cron`: carrito abandonado + cancelación de pedidos vencidos) registrado y activo en Vercel.
@@ -48,7 +48,7 @@ Hoy `NEXT_PUBLIC_APP_URL` apunta a `glamify-makeup-1.vercel.app`: sitemap, robot
 
 ## Bloque 5 — Operativo
 
-- [ ] **5.1 (Vos)** Tener saldo o medio de pago cargado en MiCorreo antes de la primera venta (el envío se paga al generar la etiqueta).
+- [ ] **5.1 (Vos)** Despachar y pagar el envío en la plataforma de la empresa elegida (MiCorreo, Andreani, OCA o Vía Cargo) y pegar el código en el pedido del admin. Revisar en Ajustes el "Recargo de envío" (default $0; sirve para cubrir el empaque).
 - [ ] **5.2 (Vos)** Supabase Auth con SMTP propio (Resend), según `docs/auth-email-setup.md`: sin eso el SMTP compartido corta los mails a las 2–3 por hora.
 
 ## Bloque 6 — Compra de prueba final (Vos + Yo)
