@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getCustomer } from "@/lib/customer/auth";
+import { PageTitle } from "@/components/ui/page-title";
 import { IngresarForm } from "./ingresar-form";
 
 export const metadata: Metadata = { title: "Ingresar" };
@@ -18,8 +19,10 @@ export default async function IngresarPage({ searchParams }: IngresarPageProps) 
     errorParam === "oauth" ? "No pudimos ingresar con Google. Intentá de nuevo." : null;
   const googleEnabled = process.env.NEXT_PUBLIC_GOOGLE_OAUTH_ENABLED === "true";
   return (
-    <section className="py-8">
-      <h1 className="mb-6 text-center font-display text-2xl font-bold">Tu cuenta Glamify</h1>
+    <section className="mx-auto max-w-md space-y-8 py-8 md:py-14">
+      <PageTitle lead="Hola," accent="reina" center>
+        Entrá para ver tus pedidos y guardar tus favoritos.
+      </PageTitle>
       <IngresarForm initialError={initialError} googleEnabled={googleEnabled} />
     </section>
   );

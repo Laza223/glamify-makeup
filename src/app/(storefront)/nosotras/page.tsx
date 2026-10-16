@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 export default function NosotrasPage() {
   return (
     <Prose>
-      <h1>Nosotras</h1>
+      <h1>Somos <em>Glamify</em></h1>
       <p>
         Glamify Makeup nació para acercar maquillaje y accesorios lindos, en tendencia y a un precio real. Creemos en
         el <strong>maquillaje bueno, bonito y barato</strong>: productos de calidad que te hacen sentir bien, sin
@@ -27,7 +27,7 @@ export default function NosotrasPage() {
       <ul>
         <li>Stock real y precios claros, sin letra chica.</li>
         <li>Atención cercana por WhatsApp y redes.</li>
-        <li>Envíos a todo el país y devoluciones simples.</li>
+        <li>Envíos a todo el país con número de seguimiento.</li>
       </ul>
 
       <p>

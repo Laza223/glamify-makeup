@@ -1,9 +1,10 @@
-import Link from "next/link";
+import { Heart } from "lucide-react";
 import { requireCustomer } from "@/lib/customer/auth";
 import { prisma } from "@/lib/prisma";
-import { ProductCard } from "@/components/catalog/product-card";
+import { ProductGrid } from "@/components/catalog/product-grid";
 import { PRODUCT_INCLUDE } from "@/lib/catalog/queries";
 import { toCatalogProduct } from "@/lib/catalog/dto";
+import { AccountEmpty } from "../account-empty";
 
 export default async function FavoritosPage() {
   const customer = await requireCustomer();
@@ -18,17 +19,8 @@ export default async function FavoritosPage() {
     .map(toCatalogProduct);
 
   if (products.length === 0) {
-    return (
-      <div className="rounded-2xl border border-dashed border-border p-8 text-center text-muted-foreground">
-        <p>Todavía no guardaste favoritos.</p>
-        <Link href="/tienda" className="mt-3 inline-block text-primary underline">Explorar la tienda</Link>
-      </div>
-    );
+    return <AccountEmpty icon={Heart} lead="Tu lista está" accent="vacía" text="Tocá el corazón de los productos que te gusten y los encontrás acá cuando quieras." />;
   }
 
-  return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-      {products.map((p) => <ProductCard key={p.id} product={p} />)}
-    </div>
-  );
+  return <ProductGrid products={products} />;
 }

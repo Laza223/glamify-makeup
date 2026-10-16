@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,22 +22,29 @@ export function DatosForm({ initial }: { initial: { name: string; phone: string;
   }
 
   return (
-    <form onSubmit={onSubmit} className="max-w-sm space-y-4">
-      <div className="space-y-1">
+    <form onSubmit={onSubmit} className="max-w-md space-y-5 rounded-[20px] bg-secondary p-5 md:p-6">
+      <div className="space-y-2">
         <Label htmlFor="name">Nombre</Label>
         <Input id="name" name="name" defaultValue={initial.name} required />
       </div>
-      <div className="space-y-1">
+      <div className="space-y-2">
         <Label htmlFor="phone">Teléfono</Label>
         <Input id="phone" name="phone" type="tel" inputMode="tel" defaultValue={initial.phone} />
       </div>
-      <div className="space-y-1">
+      <div className="space-y-2">
         <Label htmlFor="email">Email</Label>
-        <Input id="email" value={initial.email} readOnly disabled />
+        <Input id="email" value={initial.email} readOnly disabled aria-describedby="email-hint" />
+        <p id="email-hint" className="text-[14px] text-muted-foreground">Es el mail con el que entrás; no se puede cambiar desde acá.</p>
       </div>
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-      {saved && <p className="text-sm text-primary">Guardado ✓</p>}
-      <Button type="submit" disabled={pending}>Guardar</Button>
+      {saved && (
+        <p role="status" className="flex items-center gap-2 text-[15px] font-semibold text-[#0E6B45]">
+          <Check className="size-4" aria-hidden /> Guardado
+        </p>
+      )}
+      <Button type="submit" variant="ink" size="lg" disabled={pending} className="w-full sm:w-auto">
+        {pending ? "Guardando…" : "Guardar cambios"}
+      </Button>
     </form>
   );
 }

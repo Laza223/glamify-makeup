@@ -11,7 +11,7 @@ export default async function ArmaTuKitPage() {
   const data = await getKitBuilderData();
 
   return (
-    <div className="py-2 sm:py-6">
+    <div className="py-8 md:py-12">
       <KitBuilder
         labios={data.labios}
         ojos={data.ojos}

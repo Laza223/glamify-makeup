@@ -15,7 +15,7 @@ export default async function EnviosYPagosPage() {
 
   return (
     <Prose>
-      <h1>Envíos y pagos</h1>
+      <h1>Envíos y <em>pagos</em></h1>
 
       <h2>Envíos</h2>
       <p>

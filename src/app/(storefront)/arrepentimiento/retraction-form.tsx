@@ -35,9 +35,9 @@ export function RetractionForm() {
 
   if (ticket) {
     return (
-      <div role="status" className="rounded-2xl border border-border bg-surface-alt p-4">
-        <p className="font-semibold text-foreground">Recibimos tu solicitud de arrepentimiento.</p>
-        <p className="mt-1 text-sm text-foreground/90">
+      <div role="status" className="rounded-[20px] bg-secondary p-6">
+        <p className="text-[17px] font-semibold text-foreground">Recibimos tu solicitud de arrepentimiento.</p>
+        <p className="mt-2 text-[15px] leading-relaxed text-muted-foreground">
           Tu número de constancia es <strong>{ticket}</strong>
           {date ? <> del {date}</> : null}. Te enviamos una copia por email y te vamos a contactar para coordinar la
           devolución y el reintegro.
@@ -47,24 +47,24 @@ export function RetractionForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4 rounded-2xl border border-border p-4">
-      <div className="space-y-1">
+    <form onSubmit={onSubmit} className="space-y-5 rounded-[20px] bg-secondary p-5 md:p-6">
+      <div className="space-y-2">
         <Label htmlFor="contactName">Nombre y apellido</Label>
         <Input id="contactName" name="contactName" required minLength={2} maxLength={80} autoComplete="name" />
       </div>
-      <div className="space-y-1">
+      <div className="space-y-2">
         <Label htmlFor="contactEmail">Email</Label>
         <Input id="contactEmail" name="contactEmail" type="email" required autoComplete="email" inputMode="email" />
       </div>
-      <div className="space-y-1">
+      <div className="space-y-2">
         <Label htmlFor="contactPhone">Teléfono (opcional)</Label>
         <Input id="contactPhone" name="contactPhone" type="tel" maxLength={40} autoComplete="tel" inputMode="tel" />
       </div>
-      <div className="space-y-1">
+      <div className="space-y-2">
         <Label htmlFor="orderNumber">Número de pedido (opcional)</Label>
         <Input id="orderNumber" name="orderNumber" maxLength={40} placeholder="GLM-000123" />
       </div>
-      <div className="space-y-1">
+      <div className="space-y-2">
         <Label htmlFor="reason">Motivo (opcional)</Label>
         <Textarea id="reason" name="reason" maxLength={1000} rows={3} />
       </div>
@@ -75,7 +75,7 @@ export function RetractionForm() {
           {error}
         </p>
       )}
-      <Button type="submit" disabled={pending}>
+      <Button type="submit" variant="ink" size="lg" disabled={pending} className="w-full sm:w-auto">
         {pending ? "Enviando…" : "Enviar solicitud"}
       </Button>
     </form>
