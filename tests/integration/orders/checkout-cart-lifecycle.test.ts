@@ -57,7 +57,7 @@ function makeDeps(opts: { previousPending?: PrevOrder[]; coupon?: CouponRow | nu
       $transaction: vi.fn(async (fn: (t: unknown) => unknown) => fn(tx)),
     } as unknown as CreateCheckoutDeps["db"],
     nextOrderSeq: vi.fn(async () => 2),
-    getVariantStock: vi.fn(async (ids: string[]) => new Map(ids.map((id) => [id, 99]))),
+    lockStock: vi.fn(async (_tx: unknown, ids: string[]) => new Map(ids.map((id) => [id, { stock: 99, held: 0 }]))),
     createPreference: vi.fn(async () => ({ id: "pref-1", init_point: "https://mp/ip", sandbox_init_point: "https://mp/sbx" })),
     quoteShipping: vi.fn(async () => ({ cost: 2500, free: false, zoneId: "z1", source: "zone" as const })),
     appUrl: "https://app.test",

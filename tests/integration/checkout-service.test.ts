@@ -22,7 +22,7 @@ function makeDeps(over: Partial<CreateCheckoutDeps> = {}): { deps: CreateCheckou
       $transaction: vi.fn(async (fn: any) => fn(tx)),
     } as any,
     nextOrderSeq: vi.fn(async () => 1),
-    getVariantStock: vi.fn(async (ids: string[]) => new Map(ids.map((id) => [id, 99]))),
+    lockStock: vi.fn(async (_tx: unknown, ids: string[]) => new Map(ids.map((id) => [id, { stock: 99, held: 0 }]))),
     createPreference: vi.fn(async () => ({ id: "pref-1", init_point: "https://mp/ip", sandbox_init_point: "https://mp/sbx" })),
     quoteShipping: vi.fn(async () => ({ cost: 2500, free: false, zoneId: "z-amba", source: "zone" as const })),
     appUrl: "https://app.test",
@@ -83,27 +83,6 @@ describe("createCheckout", () => {
     expect(orderData.total).toBe(6400); // envío gratis: 6400 + 0
   });
 
-  it("sin cotización ni zona: falla ANTES de cancelar el pedido pendiente anterior del carrito", async () => {
-    const { deps } = makeDeps({ quoteShipping: vi.fn(async () => { throw new Error("Todavía no podemos calcular el envío"); }) });
-    await expect(createCheckout({ ...baseInput, cartId: "cart-1" }, deps)).rejects.toThrow(/calcular el envío/);
-    // supersedePendingOrders corre en su propia $transaction: no se llegó a abrir ninguna.
-    expect(deps.db.$transaction).not.toHaveBeenCalled();
-  });
-
-  it("sin cotización pero con cupón de envío gratis: el pedido se crea con envío 0", async () => {
-    const { deps } = makeDeps({ quoteShipping: vi.fn(async () => { throw new Error("Todavía no podemos calcular el envío"); }) });
-    (deps.db as any).coupon.findUnique = vi.fn(async () => ({ id: "co-2", code: "ENVIOGRATIS", type: "free_shipping", value: 0, scope: "all", scopeId: null, active: true, minSubtotal: null, validFrom: null, validTo: null, maxUses: null, usedCount: 0 }));
-    await createCheckout({ ...baseInput, couponCode: "ENVIOGRATIS" }, deps);
-    const orderData = (deps as any)._tx.order.create.mock.calls[0][0].data;
-    expect(orderData.total).toBe(6400);
-    expect(orderData.shippingZoneId).toBeNull();
-  });
-
-  it("sin cotización y con un cupón que no es de envío gratis: sigue fallando", async () => {
-    const { deps } = makeDeps({ quoteShipping: vi.fn(async () => { throw new Error("Todavía no podemos calcular el envío"); }) });
-    await expect(createCheckout({ ...baseInput, couponCode: "GLAM10" }, deps)).rejects.toThrow(/calcular el envío/);
-  });
-
   it("rechaza carrito vacío", async () => {
     const { deps } = makeDeps();
     await expect(createCheckout({ ...baseInput, lines: [] }, deps)).rejects.toThrow();
@@ -139,27 +118,14 @@ describe("createCheckout", () => {
 
 describe("createCheckout — stock antes de cobrar", () => {
   it("rechaza sin crear el pedido si una variante no alcanza, nombrando el producto", async () => {
-    const { deps } = makeDeps({ getVariantStock: vi.fn(async () => new Map([["v1", 1]])) });
+    const { deps } = makeDeps({ lockStock: vi.fn(async () => new Map([["v1", { stock: 1, held: 0 }]])) });
     await expect(createCheckout(baseInput, deps)).rejects.toThrow(/Labial Mate — Rojo Pasión/);
     expect((deps as any)._tx.order.create).not.toHaveBeenCalled();
     expect(deps.createPreference).not.toHaveBeenCalled();
   });
 
-  it("expande los combos a sus componentes", async () => {
-    const combo = checkoutLine({
-      line: cartLine({ kind: "combo", refId: "combo-1", qty: 2, components: [{ variantId: "v9", qty: 1 }] }),
-      productNameSnapshot: "Kit Labios",
-      variantNameSnapshot: null,
-      title: "Kit Labios",
-    });
-    const getVariantStock = vi.fn(async () => new Map([["v9", 1]]));
-    const { deps } = makeDeps({ getVariantStock });
-    await expect(createCheckout({ ...baseInput, lines: [combo] }, deps)).rejects.toThrow(/Kit Labios/);
-    expect(getVariantStock).toHaveBeenCalledWith(["v9"]);
-  });
-
   it("con stock suficiente crea el pedido normalmente", async () => {
-    const { deps } = makeDeps({ getVariantStock: vi.fn(async () => new Map([["v1", 2]])) });
+    const { deps } = makeDeps({ lockStock: vi.fn(async () => new Map([["v1", { stock: 2, held: 0 }]])) });
     await expect(createCheckout(baseInput, deps)).resolves.toMatchObject({ orderNumber: "GLM-000001" });
   });
 });

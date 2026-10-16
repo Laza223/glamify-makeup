@@ -28,7 +28,8 @@ export interface ShippingQuote {
   cost: number;
   free: boolean;
   zoneId: string | null;
-  source: "free" | "live" | "zone";
+  /** `fallback`: el CP no matchea ninguna zona → se cobra la más cara. `none`: no hay con qué cotizar. */
+  source: "free" | "live" | "zone" | "fallback" | "none";
   /** Sólo con cotización en vivo: operador y fecha estimada. */
   carrier?: string;
   estimatedDelivery?: string | null;
@@ -54,13 +55,9 @@ export interface QuoteShippingDeps {
 const DEFAULT_LIVE_QUOTE: NonNullable<QuoteShippingDeps["liveQuote"]> = ({ cpDestino, pesoGr, metodo }) =>
   quoteMicorreo({ cpDestino, pesoGr, metodo });
 
-/** Mensaje para la clienta cuando no hay cotización en vivo ni zona que matchee el CP. */
-export const NO_QUOTE_MESSAGE =
-  "Todavía no podemos calcular el envío a ese código postal. Escribinos por WhatsApp y lo resolvemos.";
-
 /**
- * Orquesta el costo de envío: gratis por umbral → cotización en vivo + recargo → tabla de zonas (sin recargo).
- * Sin cotización ni zona NO se cobra $0: se lanza NO_QUOTE_MESSAGE.
+ * Orquesta el costo de envío: gratis por umbral → cotización en vivo + recargo → zona del CP →
+ * zona más cara (estas dos sin recargo). Sin zonas devuelve `none` y el checkout no deja pagar.
  */
 export async function quoteShipping(input: QuoteShippingInput, deps: QuoteShippingDeps = {}): Promise<ShippingQuote> {
   const getZones = deps.getZones ?? (async () => []);
@@ -106,5 +103,11 @@ export async function quoteShipping(input: QuoteShippingInput, deps: QuoteShippi
     return { cost: round2(Number(zone.price) * methodFactor(input.method)), free: false, zoneId: zone.id, source: "zone" };
   }
 
-  throw new Error(NO_QUOTE_MESSAGE);
+  // CP sin zona (decisión de la dueña, 2026-10-16): se cobra la zona activa más cara, nunca $0.
+  const priciest = zones.filter((z) => z.active).sort((a, b) => Number(b.price) - Number(a.price))[0];
+  if (priciest) {
+    return { cost: round2(Number(priciest.price) * methodFactor(input.method)), free: false, zoneId: null, source: "fallback" };
+  }
+
+  return { cost: 0, free: false, zoneId: null, source: "none" };
 }

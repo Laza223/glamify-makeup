@@ -28,11 +28,18 @@ export interface CreatePreferenceInput {
   payerEmail: string;
   appUrl: string;
   notificationUrl: string;
+  /** Hasta cuándo se puede pagar (vence con la reserva de stock del pedido). */
+  expiresAt?: Date;
 }
 export interface MpPreference {
   id: string;
   init_point: string;
   sandbox_init_point?: string;
+}
+
+/** ISO 8601 con offset de Argentina (UTC−3, sin horario de verano): el formato de los ejemplos de MP. */
+export function mpDate(d: Date): string {
+  return new Date(d.getTime() - 3 * 3_600_000).toISOString().replace("Z", "-03:00");
 }
 
 /** Crea una preference de Checkout Pro (efectivo excluido, auto_return approved). */
@@ -52,6 +59,12 @@ export async function createPreference(input: CreatePreferenceInput, deps: MpDep
     payment_methods: { excluded_payment_types: [{ id: "ticket" }, { id: "atm" }], installments: 12 },
     statement_descriptor: "GLAMIFY",
     metadata: { order_number: input.orderNumber },
+    // `from` con 5 min de margen: un reloj nuestro adelantado no debe dejarla "todavía no activa".
+    ...(input.expiresAt && {
+      expires: true,
+      expiration_date_from: mpDate(new Date(Date.now() - 5 * 60_000)),
+      expiration_date_to: mpDate(input.expiresAt),
+    }),
   };
   const res = await fetchFn(`${MP_API}/checkout/preferences`, {
     method: "POST",

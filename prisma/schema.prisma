@@ -331,6 +331,8 @@ model Order {
   coupon          Coupon?        @relation(fields: [couponId], references: [id])
   issuedGiftCards Coupon[]       @relation("IssuedGiftCards")
   status          OrderStatus    @default(pending_payment)
+  // Reserva blanda de stock: mientras esté vigente, sus unidades no se le venden a otra persona.
+  reservedUntil   DateTime?
   items           OrderItem[]
   payments        Payment[]
   shipment        Shipment?

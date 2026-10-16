@@ -22,7 +22,7 @@ function makeDeps(redemptions: number): { deps: CreateCheckoutDeps; createOrder:
   const deps: CreateCheckoutDeps = {
     db,
     nextOrderSeq: vi.fn(async () => 1),
-    getVariantStock: vi.fn(async (ids: string[]) => new Map(ids.map((id) => [id, 99]))),
+    lockStock: vi.fn(async (_tx: unknown, ids: string[]) => new Map(ids.map((id) => [id, { stock: 99, held: 0 }]))),
     createPreference: vi.fn(async () => ({ id: "pref1", init_point: "http://mp", sandbox_init_point: "http://mp" })) as never,
     quoteShipping: vi.fn(async () => ({ cost: 2500, free: false, source: "zone" as const, zoneId: "z1" })),
     appUrl: "http://localhost:3000",

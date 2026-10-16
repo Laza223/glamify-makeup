@@ -31,6 +31,7 @@ import {
   defaultCheckoutDeps,
 } from "@/lib/orders/checkout-service";
 import { retryOrderPayment, defaultRetryPaymentDeps } from "@/lib/orders/retry-payment";
+import { paymentErrorMessage } from "@/lib/orders/customer-error";
 import { getCustomer } from "@/lib/customer/auth";
 import type { ActionResult } from "@/lib/forms/action-result";
 import { isPreviewDeploy, PREVIEW_PAYMENTS_OFF_MESSAGE } from "@/lib/http/deploy-env";
@@ -251,27 +252,25 @@ export async function quoteShippingAction(input: {
   if (lines.length === 0) return { ok: false, error: "El carrito está vacío." };
   if (isDigitalOnly(lines)) return { ok: true, cost: 0, free: false, source: "none" };
   const subtotal = physicalSubtotal(lines); // las gift cards no cuentan para el envío gratis
-  try {
-    const quote = await quoteShipping(
-      {
-        cp: input.cp,
-        province: input.province ?? null,
-        city: input.city ?? null,
-        method: input.method,
-        lines,
-        subtotal,
-      },
-      {
-        getZones: getShippingZonesForQuote,
-        getThreshold: getFreeShippingThreshold,
-        getSurcharge: getShippingSurcharge,
-      },
-    );
-    return { ok: true, cost: quote.cost, free: quote.free, source: quote.source };
-  } catch (e) {
-    // Sin cotización ni zona para ese CP: se le muestra el mensaje en vez de cobrar $0.
-    return { ok: false, error: e instanceof Error ? e.message : "No pudimos calcular el envío." };
+  const quote = await quoteShipping(
+    {
+      cp: input.cp,
+      province: input.province ?? null,
+      city: input.city ?? null,
+      method: input.method,
+      lines,
+      subtotal,
+    },
+    {
+      getZones: getShippingZonesForQuote,
+      getThreshold: getFreeShippingThreshold,
+      getSurcharge: getShippingSurcharge,
+    },
+  );
+  if (quote.source === "none") {
+    return { ok: false, error: "No pudimos calcular el envío a ese código postal. Escribinos por WhatsApp y lo resolvemos." };
   }
+  return { ok: true, cost: quote.cost, free: quote.free, source: quote.source };
 }
 
 export interface CheckoutResult extends ActionResult {
@@ -323,21 +322,7 @@ export async function createCheckoutAction(input: {
       orderNumber: result.orderNumber,
     };
   } catch (e) {
-    // AbortSignal.timeout() en mercadopago.ts tira un DOMException técnico en inglés — no mostrárselo a la clienta.
-    if (
-      e instanceof DOMException &&
-      (e.name === "TimeoutError" || e.name === "AbortError")
-    ) {
-      return {
-        ok: false,
-        error:
-          "No pudimos conectar con Mercado Pago. Probá de nuevo en unos segundos.",
-      };
-    }
-    return {
-      ok: false,
-      error: e instanceof Error ? e.message : "No se pudo iniciar el pago.",
-    };
+    return { ok: false, error: paymentErrorMessage(e, "checkout") };
   }
 }
 
@@ -348,9 +333,6 @@ export async function retryPaymentAction(orderId: string): Promise<CheckoutResul
     const { initPoint } = await retryOrderPayment(orderId, defaultRetryPaymentDeps(appUrl()));
     return { ok: true, initPoint };
   } catch (e) {
-    if (e instanceof DOMException && (e.name === "TimeoutError" || e.name === "AbortError")) {
-      return { ok: false, error: "No pudimos conectar con Mercado Pago. Probá de nuevo en unos segundos." };
-    }
-    return { ok: false, error: e instanceof Error ? e.message : "No se pudo iniciar el pago." };
+    return { ok: false, error: paymentErrorMessage(e, "retry-payment") };
   }
 }
