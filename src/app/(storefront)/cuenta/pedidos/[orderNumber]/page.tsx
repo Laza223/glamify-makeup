@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { formatPrice } from "@/lib/money";
 import { OrderStatusPill } from "@/components/orders/order-status-pill";
 import { RetryPaymentButton } from "@/components/orders/retry-payment-button";
-import { CORREO_TRACKING_URL } from "@/lib/shipping/tracking";
+import { carrierLabel, carrierTrackingUrl } from "@/lib/shipping/carriers";
 
 /** Estado del envío según Correo (lo actualiza solo el cron de seguimiento). */
 const SHIPMENT_LABEL: Partial<Record<string, string>> = {
@@ -61,22 +61,22 @@ export default async function PedidoDetallePage({ params }: { params: Promise<{ 
             <Truck className="size-[18px]" aria-hidden />
           </span>
           <div className="min-w-0 flex-1 text-[15px] leading-relaxed">
-            {SHIPMENT_LABEL[order.shipment.status] && (
+            {order.shipment.carrier === "correo_argentino" && SHIPMENT_LABEL[order.shipment.status] && (
               <p className="font-semibold text-foreground">
                 {SHIPMENT_LABEL[order.shipment.status]}
                 {order.shipment.trackingLastEvent ? <span className="font-normal text-muted-foreground"> · {order.shipment.trackingLastEvent}</span> : null}
               </p>
             )}
             <p className="text-muted-foreground">
-              Seguimiento: <strong className="font-semibold text-foreground tabular-nums">{order.shipment.trackingNumber}</strong>
+              {carrierLabel(order.shipment.carrier)} · Seguimiento: <strong className="font-semibold text-foreground tabular-nums">{order.shipment.trackingNumber}</strong>
             </p>
             <a
-              href={CORREO_TRACKING_URL}
+              href={carrierTrackingUrl(order.shipment.carrier)}
               target="_blank"
               rel="noopener noreferrer"
               className="mt-1 inline-flex min-h-11 items-center gap-1 rounded-[10px] font-semibold text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              Rastrear en Correo Argentino
+              Rastrear en {carrierLabel(order.shipment.carrier)}
               <ArrowUpRight className="size-4" aria-hidden />
             </a>
           </div>

@@ -48,29 +48,37 @@ describe("newOrderAlertEmail", () => {
     const m = newOrderAlertEmail({ ...data, amountPaid: 10900 });
     expect(m.subject.toLowerCase()).not.toContain("revisar");
   });
-  it("avisa cuando el envío NO se cargó solo en MiCorreo", () => {
-    const m = newOrderAlertEmail({ ...data, micorreoImport: { imported: false, detail: "dirección incompleta en el pedido" } });
-    expect(m.subject.toLowerCase()).toContain("revisar");
-    expect(m.html).toContain("NO se cargó");
-    expect(m.html).toContain("dirección incompleta en el pedido");
-    expect(m.text.toLowerCase()).toContain("micorreo");
-  });
-  it("no flaggea cuando el envío SÍ se cargó solo", () => {
-    const m = newOrderAlertEmail({ ...data, micorreoImport: { imported: true, detail: "importado (ok)" } });
-    expect(m.subject.toLowerCase()).not.toContain("revisar");
-    expect(m.html).not.toContain("NO se cargó");
-  });
 });
 
 describe("shipmentDispatchedEmail", () => {
-  it("incluye nº de pedido, tracking y link de rastreo", () => {
-    const m = shipmentDispatchedEmail({ orderNumber: "GLM-000123", contactName: "Ana", trackingNumber: "CA123456789AR", service: "Correo Argentino Clásico" });
+  it("muestra empresa, código y el botón a la página de seguimiento de la tienda", () => {
+    const m = shipmentDispatchedEmail({ orderNumber: "GLM-000123", contactName: "Ana", trackingNumber: "AND123456789", carrier: "Andreani", trackingUrl: "https://tienda.test/seguimiento/ord-1" });
     expect(m.subject).toContain("GLM-000123");
-    expect(m.html).toContain("CA123456789AR");
-    expect(m.html).toContain(CORREO_TRACKING_URL);
+    expect(m.html).toContain("Andreani");
+    expect(m.html).toContain("AND123456789");
+    expect(m.html).toContain("https://tienda.test/seguimiento/ord-1");
     expect(m.html).toContain("Ana");
-    expect(m.text).toContain("CA123456789AR");
-    expect(m.text).toContain(CORREO_TRACKING_URL);
+    expect(m.text).toContain("Andreani");
+    expect(m.text).toContain("AND123456789");
+    expect(m.text).toContain("https://tienda.test/seguimiento/ord-1");
+  });
+  it("sin trackingUrl cae a la página de Correo", () => {
+    const m = shipmentDispatchedEmail({ orderNumber: "GLM-1", contactName: "Ana", trackingNumber: "CA1" });
+    expect(m.html).toContain(CORREO_TRACKING_URL);
+  });
+  it("sucursal: avisa que retira ahí (con la sucursal si la cargó la dueña, si no promete avisar)", () => {
+    const base = { orderNumber: "GLM-1", contactName: "Ana", trackingNumber: "CA1", carrier: "Correo Argentino", isSucursal: true };
+    const sin = shipmentDispatchedEmail(base);
+    expect(sin.html).toContain("te avisamos dónde retirarlo");
+    expect(sin.text).toContain("te avisamos dónde retirarlo");
+    const con = shipmentDispatchedEmail({ ...base, pickupBranch: "Sucursal Luján, Mitre 123" });
+    expect(con.html).toContain("Sucursal Luján, Mitre 123");
+    expect(con.text).toContain("Sucursal Luján, Mitre 123");
+  });
+  it("domicilio: no habla de retirar en sucursal", () => {
+    const m = shipmentDispatchedEmail({ orderNumber: "GLM-1", contactName: "Ana", trackingNumber: "CA1", carrier: "OCA", isSucursal: false, pickupBranch: "ignorada" });
+    expect(m.html).not.toContain("retirar");
+    expect(m.html).not.toContain("ignorada");
   });
   it("escapa el nombre para no inyectar HTML", () => {
     const m = shipmentDispatchedEmail({ orderNumber: "GLM-1", contactName: "<script>x</script>", trackingNumber: "T1" });

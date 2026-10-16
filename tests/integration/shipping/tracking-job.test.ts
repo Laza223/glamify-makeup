@@ -63,6 +63,7 @@ describe("runShipmentTrackingJob", () => {
     await runShipmentTrackingJob(deps);
     const args = (db.shipment.findMany.mock.calls[0] as unknown[])[0] as { where: Record<string, unknown>; take: number };
     expect(args.where).toMatchObject({
+      carrier: "correo_argentino", // las otras empresas (Andreani, OCA, Vía Cargo) las maneja la dueña a mano
       trackingNumber: { not: null },
       status: { in: ["dispatched", "in_transit"] },
       order: { status: "shipped" },
@@ -127,13 +128,13 @@ describe("runShipmentTrackingJob", () => {
     expect(mail.subject).toContain("REVISAR");
   });
 
-  it("si MiCorreo no encuentra el número, reintenta con el número de pedido (extOrderId de la precarga)", async () => {
-    const { deps, getTracking, tx } = makeDeps([shipment()], (id) =>
-      id === "GLM-000123" ? { ok: true, events: [ev("INGRESO AL CORREO")] } : { ok: false, notFound: true, error: "No existe el cliente o pedido" },
-    );
-    await runShipmentTrackingJob(deps);
-    expect(getTracking.mock.calls.map((c) => c[0])).toEqual(["CA123", "GLM-000123"]);
-    expect(tx.shipment.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: "in_transit" }) }));
+  it("si MiCorreo no encuentra el número NO reintenta por número de pedido (no hay precarga): solo marca la consulta", async () => {
+    const { deps, getTracking, tx, db } = makeDeps([shipment()], () => ({ ok: false, notFound: true, error: "No existe el cliente o pedido" }));
+    const r = await runShipmentTrackingJob(deps);
+    expect(getTracking.mock.calls.map((c) => c[0])).toEqual(["CA123"]);
+    expect(tx.shipment.update).not.toHaveBeenCalled();
+    expect(db.shipment.update).toHaveBeenCalledWith({ where: { id: "shp-1" }, data: { trackingCheckedAt: NOW } });
+    expect(r.errors).toBe(1);
   });
 
   it("Correo caído: marca la consulta, no cambia el estado y sigue con el resto", async () => {

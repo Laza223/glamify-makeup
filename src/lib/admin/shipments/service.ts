@@ -4,14 +4,26 @@ import { sendEmail as realSendEmail } from "@/lib/email/resend";
 import { shipmentDispatchedEmail } from "@/lib/email/templates";
 import { storeWhatsappUrl } from "@/lib/email/whatsapp-url";
 import { absoluteUrl } from "@/lib/seo/url";
-import { autoImportShipment } from "@/lib/orders/auto-shipment";
+import { carrierLabel, isCarrier, type CarrierId } from "@/lib/shipping/carriers";
 import { toNumber } from "@/lib/catalog/pricing";
 import type { Money } from "@/lib/catalog/types";
 import type { ShipmentStatus, OrderStatus } from "@prisma/client";
 
-/** Lo único que carga la dueña: el número de seguimiento que le da MiCorreo al despachar. */
+/** Lo que carga la dueña al despachar: empresa (de la lista) y código de seguimiento. */
 export interface ShipmentInput {
+  carrier: string;
   trackingNumber: string;
+  /** Solo pedidos a sucursal: dónde retira la clienta (texto libre, opcional). Va en el mail. */
+  pickupBranch?: string;
+}
+
+const MAX_TRACKING_LENGTH = 80;
+const MAX_PICKUP_BRANCH_LENGTH = 160;
+
+/** Shipment ya guardado (si existe) del pedido. */
+interface ExistingShipmentRow {
+  carrier: CarrierId;
+  trackingNumber: string | null;
 }
 
 /** Campos del pedido que necesita el upsert (status + datos para el mail de despacho). */
@@ -23,10 +35,12 @@ interface ShipmentOrderRow {
   contactEmail: string;
   shippingMethod: string;
   shippingCost: Money;
+  shippingAddress: unknown;
+  shipment: ExistingShipmentRow | null;
 }
 
 export interface ShipmentsDb {
-  order: { findUnique: (args: { where: { id: string } }) => Promise<ShipmentOrderRow | null> };
+  order: { findUnique: (args: { where: { id: string }; include: { shipment: true } }) => Promise<ShipmentOrderRow | null> };
   $transaction: <T>(fn: (tx: PrismaTransactionClient) => Promise<T>) => Promise<T>;
 }
 
@@ -48,13 +62,44 @@ const DIGITAL_ORDER_NO_SHIPPING = "Los pedidos digitales no llevan envío.";
 /** Pedidos en los que tiene sentido cargar el seguimiento (ya pagados). */
 const TRACKING_ALLOWED_STATUSES: OrderStatus[] = ["paid", "preparing", "shipped", "delivered"];
 
+function addressObject(address: unknown): Record<string, unknown> {
+  return address !== null && typeof address === "object" ? (address as Record<string, unknown>) : {};
+}
+
+/** Sucursal de retiro guardada en el snapshot de dirección (trackingLastEvent la pisaría el cron de Correo). */
+function readPickupBranch(address: unknown): string | null {
+  const v = addressObject(address).pickupBranch;
+  return typeof v === "string" && v.trim() ? v : null;
+}
+
+async function buildDispatchMail(
+  order: Pick<ShipmentOrderRow, "id" | "orderNumber" | "contactName" | "shippingMethod">,
+  carrier: CarrierId,
+  trackingNumber: string,
+  pickupBranch: string | null,
+  deps: ShipmentsDeps,
+) {
+  const isSucursal = order.shippingMethod === "sucursal";
+  return shipmentDispatchedEmail({
+    orderNumber: order.orderNumber,
+    contactName: order.contactName,
+    carrier: carrierLabel(carrier),
+    trackingNumber,
+    isSucursal,
+    pickupBranch: isSucursal ? pickupBranch : null,
+    trackingUrl: absoluteUrl(`/seguimiento/${order.id}`),
+    whatsappUrl: deps.getWhatsappUrl ? await deps.getWhatsappUrl(`¡Hola! Tengo una consulta sobre mi pedido ${order.orderNumber}`) : null,
+  });
+}
+
 /**
- * Guarda el número de seguimiento del pedido (Order 0..1 Shipment, orderId @unique).
- * - El envío pasa a `dispatched` (si todavía no había salido); de ahí en adelante los estados
- *   los actualiza solo el cron de seguimiento (`src/lib/shipping/tracking-job.ts`).
- * - El pedido pasa a `shipped` y la clienta recibe el mail de despacho, una sola vez:
- *   corregir el número de un pedido ya `shipped` no re-dispara el mail.
- * - Si el número cambia, se borra lo consultado del número anterior.
+ * Despacho manual (ADR 0004): guarda empresa + código de seguimiento del pedido (Order 0..1 Shipment, orderId @unique).
+ * - El envío pasa a `dispatched` (si todavía no había salido). Para Correo Argentino los estados siguientes
+ *   los actualiza el cron de seguimiento (`src/lib/shipping/tracking-job.ts`); para las otras empresas, la dueña.
+ * - El pedido pasa a `shipped` con precondición atómica sobre el status.
+ * - La clienta recibe el mail de despacho en el primer despacho (pedido recién pasado a shipped) o cuando
+ *   cambia el código o la empresa. Guardar sin cambios no reenvía.
+ * - Si cambia el código o la empresa, se borra lo consultado antes.
  * El upsert va en una transacción; el email es best-effort fuera de ella.
  */
 export async function upsertShipment(
@@ -62,35 +107,51 @@ export async function upsertShipment(
   input: ShipmentInput,
   deps: ShipmentsDeps,
 ): Promise<{ id: string }> {
+  if (!isCarrier(input.carrier)) throw new Error("Elegí la empresa de envío.");
+  const carrier = input.carrier;
   const trackingNumber = input.trackingNumber.trim();
   if (!trackingNumber) throw new Error("Cargá el número de seguimiento.");
-  const order = await deps.db.order.findUnique({ where: { id: orderId } });
+  if (trackingNumber.length > MAX_TRACKING_LENGTH) throw new Error("El código de seguimiento es demasiado largo.");
+  const branchInput = (input.pickupBranch ?? "").trim();
+  if (branchInput.length > MAX_PICKUP_BRANCH_LENGTH) throw new Error("La sucursal de retiro es demasiado larga.");
+
+  const order = await deps.db.order.findUnique({ where: { id: orderId }, include: { shipment: true } });
   if (!order) throw new Error("El pedido no existe.");
   if (order.shippingMethod === "digital") throw new Error(DIGITAL_ORDER_NO_SHIPPING);
   if (!TRACKING_ALLOWED_STATUSES.includes(order.status)) {
     throw new Error("El pedido todavía no está pagado.");
   }
 
+  const isSucursal = order.shippingMethod === "sucursal";
+  const prev = order.shipment;
+  const changed = !prev || prev.trackingNumber !== trackingNumber || prev.carrier !== carrier;
   let movedToShipped = false;
-  let service: string | null = null;
   await deps.db.$transaction(async (tx) => {
     const existing = await tx.shipment.findUnique({ where: { orderId } });
-    service = existing?.service ?? null;
     if (existing) {
       const notYetOut = existing.status === "pending" || existing.status === "ready";
-      const changed = existing.trackingNumber !== trackingNumber;
+      const changedInTx = existing.trackingNumber !== trackingNumber || existing.carrier !== carrier;
       await tx.shipment.update({
         where: { orderId },
         data: {
+          carrier,
           trackingNumber,
           ...(notYetOut ? { status: "dispatched" as ShipmentStatus } : {}),
-          ...(changed ? { trackingLastEvent: null, trackingCheckedAt: null } : {}),
+          ...(changedInTx ? { trackingLastEvent: null, trackingCheckedAt: null } : {}),
         },
       });
     } else {
       // Pedido marcado pagado a mano (sin fila de Shipment del webhook): se crea acá.
       await tx.shipment.create({
-        data: { orderId, trackingNumber, status: "dispatched", cost: toNumber(order.shippingCost) },
+        data: { orderId, carrier, trackingNumber, status: "dispatched", cost: toNumber(order.shippingCost) },
+      });
+    }
+    if (isSucursal) {
+      const rest = { ...addressObject(order.shippingAddress) };
+      delete rest.pickupBranch;
+      await tx.order.update({
+        where: { id: orderId },
+        data: { shippingAddress: (branchInput ? { ...rest, pickupBranch: branchInput } : rest) as object },
       });
     }
     if (order.status !== "shipped" && canTransition(order.status, "shipped")) {
@@ -102,18 +163,11 @@ export async function upsertShipment(
     }
   });
 
-  // Aviso a la clienta: "tu pedido salió" con el número de seguimiento. Best-effort: si el mail
-  // falla, el envío ya se guardó igual. Solo cuando el pedido RECIÉN pasó a shipped en esta llamada.
-  if (movedToShipped && deps.sendEmail) {
+  // Aviso a la clienta. Best-effort: si el mail falla, el envío ya se guardó igual (hay botón de reenvío).
+  const alreadyOut = order.status === "shipped" || order.status === "delivered";
+  if ((movedToShipped || (alreadyOut && changed)) && deps.sendEmail) {
     try {
-      const mail = shipmentDispatchedEmail({
-        orderNumber: order.orderNumber,
-        contactName: order.contactName,
-        trackingNumber,
-        service,
-        trackingUrl: absoluteUrl(`/seguimiento/${order.id}`),
-        whatsappUrl: deps.getWhatsappUrl ? await deps.getWhatsappUrl(`¡Hola! Tengo una consulta sobre mi pedido ${order.orderNumber}`) : null,
-      });
+      const mail = await buildDispatchMail(order, carrier, trackingNumber, branchInput || null, deps);
       await deps.sendEmail({ to: order.contactEmail, subject: mail.subject, html: mail.html, text: mail.text });
     } catch (e) {
       console.error(`[shipment] no pude avisar a la clienta del pedido ${order.orderNumber}:`, e instanceof Error ? e.message : e);
@@ -123,101 +177,23 @@ export async function upsertShipment(
   return { id: orderId };
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Reintento manual de la carga en MiCorreo desde el panel.
-//
-// El auto-import corre en el webhook al pagar. Si ahí falló (API caída, dirección
-// incompleta, etc.) o el pedido es viejo, la dueña puede reintentar desde el detalle
-// del pedido. Es idempotente: MiCorreo rechaza el `extOrderId` duplicado y eso se
-// trata como éxito (ver auto-shipment.ts).
-// ─────────────────────────────────────────────────────────────────────────────
-
-/** Estados en los que tiene sentido cargar/pre-imponer un envío (ya pagado). */
-const RETRY_ALLOWED_STATUSES: OrderStatus[] = ["paid", "preparing", "shipped", "delivered"];
-
-/** Campos del pedido que necesita el reintento de import (+ el Shipment para no duplicar). */
-interface RetryImportOrderRow {
-  status: OrderStatus;
-  orderNumber: string;
-  contactName: string;
-  contactEmail: string;
-  contactPhone: string;
-  shippingMethod: string;
-  shippingAddress: unknown;
-  weightGr: number;
-  subtotal: Money;
-  shippingCost: Money;
-  shipment: { trackingNumber: string | null; micorreoImportedAt: Date | null } | null;
-}
-
-export interface RetryImportDb {
-  order: { findUnique: (args: { where: { id: string }; include?: unknown }) => Promise<RetryImportOrderRow | null> };
-  shipment: {
-    upsert: (args: {
-      where: { orderId: string };
-      update: { service: string; micorreoImportedAt: Date };
-      create: { orderId: string; cost: number; status: ShipmentStatus; service: string; micorreoImportedAt: Date };
-    }) => Promise<unknown>;
-  };
-}
-
-export interface RetryImportDeps {
-  db: RetryImportDb;
-  /** Inyectable para tests; default = auto-import real contra MiCorreo. */
-  autoImport?: typeof autoImportShipment;
-  now?: Date;
-}
-
-export function defaultRetryImportDeps(): RetryImportDeps {
-  return { db: prisma as unknown as RetryImportDb };
-}
-
 /**
- * Reintenta la pre-imposición en MiCorreo y, si sale, marca el Shipment como importado.
- * Defensas contra duplicar un envío real:
- *  - Sólo pedidos pagados (RETRY_ALLOWED_STATUSES).
- *  - Si el pedido YA tiene tracking (despachado) o YA está importado, no le pega de nuevo a la API.
- *  - `upsert`: crea el Shipment si no existía (pedido marcado pagado a mano, sin fila).
+ * Reenvía el mail de despacho con los datos ya guardados (cuando el primer envío falló).
+ * A diferencia del alta, acá el fallo de Resend SÍ se propaga: la dueña lo pidió a mano.
  */
-export async function retryMicorreoImport(
-  orderId: string,
-  deps: RetryImportDeps,
-): Promise<{ imported: boolean; detail: string }> {
+export async function resendDispatchEmail(orderId: string, deps: ShipmentsDeps): Promise<{ id: string }> {
   const order = await deps.db.order.findUnique({ where: { id: orderId }, include: { shipment: true } });
-  if (!order) return { imported: false, detail: "El pedido no existe." };
-  if (order.shippingMethod === "digital") throw new Error(DIGITAL_ORDER_NO_SHIPPING);
-  if (!RETRY_ALLOWED_STATUSES.includes(order.status)) {
-    return { imported: false, detail: "El pedido todavía no está pagado." };
+  if (!order) throw new Error("El pedido no existe.");
+  const sh = order.shipment;
+  if (order.status !== "shipped" || !sh?.trackingNumber || !deps.sendEmail) {
+    throw new Error("El pedido no tiene un despacho cargado para reenviar.");
   }
-  // Ya despachado: no re-importar (evita duplicar un envío que ya salió, incluso si se cargó a mano).
-  if (order.shipment?.trackingNumber) {
-    return { imported: true, detail: "El pedido ya está despachado (tiene número de seguimiento)." };
+  try {
+    const mail = await buildDispatchMail(order, sh.carrier, sh.trackingNumber, readPickupBranch(order.shippingAddress), deps);
+    await deps.sendEmail({ to: order.contactEmail, subject: mail.subject, html: mail.html, text: mail.text });
+  } catch (e) {
+    console.error(`[shipment] no pude reenviar el mail de despacho del pedido ${order.orderNumber}:`, e instanceof Error ? e.message : e);
+    throw new Error("No se pudo enviar el mail. Probá de nuevo en un rato.");
   }
-  // Ya pre-impuesto antes: no repegarle a la API.
-  if (order.shipment?.micorreoImportedAt) {
-    return { imported: true, detail: "Este pedido ya estaba cargado en MiCorreo." };
-  }
-
-  const now = deps.now ?? new Date();
-  const autoImport = deps.autoImport ?? autoImportShipment;
-  const outcome = await autoImport({
-    orderNumber: order.orderNumber,
-    contactName: order.contactName,
-    contactEmail: order.contactEmail,
-    contactPhone: order.contactPhone,
-    shippingMethod: order.shippingMethod,
-    shippingAddress: order.shippingAddress,
-    weightGr: order.weightGr,
-    declaredValue: toNumber(order.subtotal),
-  });
-
-  if (outcome.imported) {
-    // upsert: si el pedido se marcó pagado a mano no hay Shipment todavía; lo creamos.
-    await deps.db.shipment.upsert({
-      where: { orderId },
-      update: { service: outcome.service, micorreoImportedAt: now },
-      create: { orderId, cost: toNumber(order.shippingCost), status: "pending", service: outcome.service, micorreoImportedAt: now },
-    });
-  }
-  return { imported: outcome.imported, detail: outcome.detail };
+  return { id: orderId };
 }

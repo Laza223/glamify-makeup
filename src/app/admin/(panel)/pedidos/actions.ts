@@ -5,7 +5,7 @@ import { requireAdmin } from "@/lib/admin/auth";
 import type { AdminResult } from "@/lib/admin/result";
 import { changeOrderStatus, cancelOrder, defaultOrdersDeps } from "@/lib/admin/orders/service";
 import { resendGiftCardEmail, defaultGiftCardMailDeps } from "@/lib/admin/orders/gift-cards";
-import { upsertShipment, defaultShipmentsDeps, retryMicorreoImport, defaultRetryImportDeps } from "@/lib/admin/shipments/service";
+import { upsertShipment, resendDispatchEmail, defaultShipmentsDeps } from "@/lib/admin/shipments/service";
 import type { OrderStatus } from "@prisma/client";
 
 /** Aviso cuando el pedido tenía gift cards ya usadas: no se pueden anular. */
@@ -40,11 +40,14 @@ export async function cancelOrderAction(orderId: string): Promise<AdminResult> {
   }
 }
 
-/** Guarda el número de seguimiento: el pedido pasa a Enviado y se avisa a la clienta. */
-export async function upsertShipmentAction(orderId: string, trackingNumber: string): Promise<AdminResult> {
+/** Despacho manual: empresa + código. El pedido pasa a Enviado y se avisa a la clienta. */
+export async function upsertShipmentAction(
+  orderId: string,
+  input: { carrier: string; trackingNumber: string; pickupBranch?: string },
+): Promise<AdminResult> {
   try {
     await requireAdmin();
-    const r = await upsertShipment(orderId, { trackingNumber }, defaultShipmentsDeps());
+    const r = await upsertShipment(orderId, input, defaultShipmentsDeps());
     revalidatePath("/admin/pedidos");
     revalidatePath(`/admin/pedidos/${orderId}`);
     return { ok: true, id: r.id };
@@ -53,20 +56,14 @@ export async function upsertShipmentAction(orderId: string, trackingNumber: stri
   }
 }
 
-/**
- * Reintenta cargar el pedido en MiCorreo (pre-imposición) desde el panel.
- * `ok:true` = quedó cargado (o ya lo estaba); `ok:false` trae el motivo para mostrarle a la dueña.
- */
-export async function retryMicorreoImportAction(orderId: string): Promise<AdminResult> {
+/** Reenvía a la clienta el mail de despacho con los datos ya guardados. */
+export async function resendDispatchEmailAction(orderId: string): Promise<AdminResult> {
   try {
     await requireAdmin();
-    const r = await retryMicorreoImport(orderId, defaultRetryImportDeps());
-    if (!r.imported) return { ok: false, error: r.detail };
-    revalidatePath("/admin/pedidos");
-    revalidatePath(`/admin/pedidos/${orderId}`);
+    await resendDispatchEmail(orderId, defaultShipmentsDeps());
     return { ok: true, id: orderId };
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : "No se pudo cargar en MiCorreo." };
+    return { ok: false, error: e instanceof Error ? e.message : "No se pudo reenviar el mail." };
   }
 }
 

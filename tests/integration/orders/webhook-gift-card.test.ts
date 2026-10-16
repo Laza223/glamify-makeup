@@ -106,7 +106,6 @@ function makeFake(opts: {
     },
     couponRedemption: { upsert: vi.fn(async () => ({})), updateMany: vi.fn(async () => ({ count: 1 })), findUnique: vi.fn(async () => null), create: vi.fn() },
   };
-  const autoImportShipment = vi.fn(async () => ({ imported: true, detail: "ok", service: "CP" }) as any);
   const sendEmail = vi.fn(async (_input: { to: string; subject: string; html: string; text?: string }) => ({ id: null, logged: true }));
   const deps: ProcessWebhookDeps = {
     db: {
@@ -119,22 +118,20 @@ function makeFake(opts: {
     verifySignature: vi.fn(async () => true),
     secret: "s",
     ownerEmail: "duena@glamify.test",
-    autoImportShipment,
     getWhatsappUrl: vi.fn(async () => null),
     now: NOW,
   };
-  return { deps, tx, state, autoImportShipment, sendEmail };
+  return { deps, tx, state, sendEmail };
 }
 const run = (deps: ProcessWebhookDeps) => processWebhook({ dataId: "9001", xSignature: null, xRequestId: null }, deps);
 const mails = (sendEmail: ReturnType<typeof makeFake>["sendEmail"]) => sendEmail.mock.calls.map((c) => c[0]);
 
 describe("processWebhook — gift cards (pedido digital)", () => {
-  it("sin shipment ni auto-import; el pedido queda delivered; emite un cupón por unidad", async () => {
-    const { deps, tx, state, autoImportShipment } = makeFake({ order: { items: [giftItem(2), giftItem(1, 10000)] } });
+  it("sin shipment; el pedido queda delivered; emite un cupón por unidad", async () => {
+    const { deps, tx, state } = makeFake({ order: { items: [giftItem(2), giftItem(1, 10000)] } });
     const r = await run(deps);
     expect(r.detail).toBe("paid");
     expect(tx.shipment.create).not.toHaveBeenCalled();
-    expect(autoImportShipment).not.toHaveBeenCalled();
     expect(state.order.status).toBe("delivered");
     expect(state.created).toHaveLength(3);
     const validTo = new Date("2027-04-07T12:00:00.000Z");
@@ -185,13 +182,12 @@ describe("processWebhook — gift cards (pedido digital)", () => {
 });
 
 describe("processWebhook — gift cards (carrito mixto)", () => {
-  it("flujo normal con shipment y auto-import, y además emite las gift cards; no pasa a delivered", async () => {
-    const { deps, tx, state, autoImportShipment } = makeFake({
+  it("flujo normal con shipment, y además emite las gift cards; no pasa a delivered", async () => {
+    const { deps, tx, state } = makeFake({
       order: { shippingMethod: "domicilio", shippingAddress: { cp: "1414" }, weightGr: 100, subtotal: 23000, shippingCost: 2500, total: 25500, items: [labial, giftItem(1)] },
     });
     await run(deps);
     expect(tx.shipment.create).toHaveBeenCalledTimes(1);
-    expect(autoImportShipment).toHaveBeenCalledTimes(1);
     expect(state.order.status).toBe("paid");
     expect(state.created).toHaveLength(1);
     expect(state.created[0].value).toBe(20000);

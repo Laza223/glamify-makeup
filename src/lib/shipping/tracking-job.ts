@@ -64,7 +64,7 @@ export interface TrackingJobResult {
 type NoticeKey = "awaiting_pickup" | "delivered" | "returned_alert";
 
 /**
- * Consulta en MiCorreo el seguimiento de los pedidos enviados y actualiza solos los estados:
+ * Consulta en MiCorreo el seguimiento de los pedidos enviados con Correo Argentino y actualiza solos los estados:
  * envío en camino / entregado / devuelto, y el pedido a `delivered` cuando Correo lo entrega.
  * Avisos (una sola vez cada uno, por `trackingNotified`): clienta cuando el paquete la espera en
  * la sucursal y cuando llega; dueña cuando vuelve al remitente. Un error de Correo o de mail en
@@ -78,6 +78,7 @@ export async function runShipmentTrackingJob(deps: TrackingJobDeps): Promise<Tra
 
   const shipments = await deps.db.shipment.findMany({
     where: {
+      carrier: "correo_argentino", // solo Correo tiene seguimiento automático; las otras empresas las maneja la dueña
       trackingNumber: { not: null },
       status: { in: ["dispatched", "in_transit"] },
       createdAt: { gte: oldest },
@@ -104,12 +105,7 @@ export async function runShipmentTrackingJob(deps: TrackingJobDeps): Promise<Tra
     result.checked++;
     const { order } = s;
     try {
-      // Por número de seguimiento; si MiCorreo no lo encuentra, por el extOrderId de la precarga (= número de pedido).
-      let tracking = await getTracking(s.trackingNumber);
-      if (!tracking.ok && tracking.notFound) {
-        const byOrder = await getTracking(order.orderNumber);
-        if (byOrder.ok) tracking = byOrder;
-      }
+      const tracking = await getTracking(s.trackingNumber);
       if (!tracking.ok) {
         result.errors++;
         console.warn(`[tracking] ${order.orderNumber}: ${tracking.error}`);
