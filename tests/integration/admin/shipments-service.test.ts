@@ -187,6 +187,18 @@ describe("upsertShipment · aviso de despacho a la clienta", () => {
     expect(sendEmail.mock.calls[0][0].html).toContain("Andreani");
   });
 
+  it("ya shipped, sucursal, y cambia solo la sucursal de retiro: re-manda el mail con la nueva", async () => {
+    const { deps, sendEmail } = makeDeps({
+      orderStatus: "shipped",
+      shippingMethod: "sucursal",
+      shippingAddress: { cp: "1900", pickupBranch: "Sucursal vieja" },
+      existingShipment: { id: "shp-1", status: "dispatched", carrier: "correo_argentino", trackingNumber: "CA123456789AR" },
+    });
+    await upsertShipment("ord-1", { ...baseInput, pickupBranch: "Sucursal La Plata Centro" }, deps);
+    expect(sendEmail).toHaveBeenCalledTimes(1);
+    expect(sendEmail.mock.calls[0][0].html).toContain("Sucursal La Plata Centro");
+  });
+
   it("ya shipped y no cambia nada: NO manda mail", async () => {
     const { deps, sendEmail } = makeDeps({
       orderStatus: "shipped",

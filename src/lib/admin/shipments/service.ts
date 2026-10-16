@@ -124,7 +124,10 @@ export async function upsertShipment(
 
   const isSucursal = order.shippingMethod === "sucursal";
   const prev = order.shipment;
-  const changed = !prev || prev.trackingNumber !== trackingNumber || prev.carrier !== carrier;
+  const prevBranch = String(addressObject(order.shippingAddress).pickupBranch ?? "");
+  const changed =
+    !prev || prev.trackingNumber !== trackingNumber || prev.carrier !== carrier ||
+    (isSucursal && prevBranch !== branchInput);
   let movedToShipped = false;
   await deps.db.$transaction(async (tx) => {
     const existing = await tx.shipment.findUnique({ where: { orderId } });

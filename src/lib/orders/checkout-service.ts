@@ -154,6 +154,24 @@ export async function createCheckout(input: CreateCheckoutInput, deps: CreateChe
     if (addressError) throw new Error(addressError);
   }
 
+  // --- Envío --- (pedido digital: sin cotizar, sin dirección). Se cotiza ANTES de cancelar el
+  // pedido pendiente anterior: si no hay cotización, el pedido viejo (y su link de MP) sigue vivo.
+  // Con cupón el error se difiere: un cupón de envío gratis lo vuelve irrelevante.
+  let quote: { cost: number; zoneId: string | null } = { cost: 0, zoneId: null };
+  let quoteError: unknown = null;
+  if (!digitalOnly) {
+    try {
+      quote = await deps.quoteShipping({
+        cp: input.address.cp, province: input.address.province ?? null, city: input.address.city ?? null,
+        method: input.shippingMethod, lines: cartLines,
+        subtotal: physicalSubtotal(cartLines), // las gift cards no cuentan para el envío gratis
+      });
+    } catch (e) {
+      if (!input.couponCode) throw e;
+      quoteError = e;
+    }
+  }
+
   // --- Pedido pendiente anterior del mismo carrito ---
   // El carrito sigue activo hasta que se aprueba el pago. Si la clienta vuelve de MP sin pagar y
   // reintenta, el pedido pendiente anterior se cancela (misma guarda que el expiry job) y libera su
@@ -191,14 +209,7 @@ export async function createCheckout(input: CreateCheckoutInput, deps: CreateChe
     }
   }
 
-  // --- Envío --- (pedido digital: sin cotizar, sin dirección)
-  const quote = digitalOnly
-    ? { cost: 0, zoneId: null }
-    : await deps.quoteShipping({
-        cp: input.address.cp, province: input.address.province ?? null, city: input.address.city ?? null,
-        method: input.shippingMethod, lines: cartLines,
-        subtotal: physicalSubtotal(cartLines), // las gift cards no cuentan para el envío gratis
-      });
+  if (quoteError && !freeShippingByCoupon) throw quoteError;
   const shippingCost = freeShippingByCoupon ? 0 : quote.cost;
   const total = round2(subtotal - discount + shippingCost);
   if (total <= 0) throw new Error("El total no puede ser $0.");

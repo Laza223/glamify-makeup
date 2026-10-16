@@ -87,6 +87,7 @@ interface AddressSnapshot {
   notes?: string | null;
   dni?: string;
   pickupBranch?: string;
+  agencyLabel?: string | null; // pedidos anteriores a ADR 0004: la clienta elegía sucursal de Correo
 }
 
 /** Cabecera de card-sección: medallón chico + título serif + ayuda opcional. */
@@ -140,7 +141,7 @@ export default async function PedidoDetallePage({
   const shipmentDefaults: ShipmentDefaults = {
     carrier: order.shipment?.carrier ?? "correo_argentino",
     isSucursal,
-    pickupBranch: addr.pickupBranch ?? "",
+    pickupBranch: addr.pickupBranch ?? addr.agencyLabel ?? "",
     canResend: order.status === "shipped",
     trackingNumber: order.shipment?.trackingNumber ?? "",
     status: (order.shipment?.status ?? "pending") as ShipmentStatus,
@@ -284,6 +285,7 @@ export default async function PedidoDetallePage({
               ) : (
                 <p className="mt-1 text-sm text-muted-foreground">
                   {[addr.city, addr.province].filter(Boolean).join(", ")} (CP de referencia: {addr.cp ?? "—"})
+                  {addr.agencyLabel ? <><br />Sucursal que eligió: {addr.agencyLabel}</> : null}
                 </p>
               )}
               {addr.dni ? (

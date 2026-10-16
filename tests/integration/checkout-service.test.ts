@@ -83,6 +83,27 @@ describe("createCheckout", () => {
     expect(orderData.total).toBe(6400); // envío gratis: 6400 + 0
   });
 
+  it("sin cotización ni zona: falla ANTES de cancelar el pedido pendiente anterior del carrito", async () => {
+    const { deps } = makeDeps({ quoteShipping: vi.fn(async () => { throw new Error("Todavía no podemos calcular el envío"); }) });
+    await expect(createCheckout({ ...baseInput, cartId: "cart-1" }, deps)).rejects.toThrow(/calcular el envío/);
+    // supersedePendingOrders corre en su propia $transaction: no se llegó a abrir ninguna.
+    expect(deps.db.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("sin cotización pero con cupón de envío gratis: el pedido se crea con envío 0", async () => {
+    const { deps } = makeDeps({ quoteShipping: vi.fn(async () => { throw new Error("Todavía no podemos calcular el envío"); }) });
+    (deps.db as any).coupon.findUnique = vi.fn(async () => ({ id: "co-2", code: "ENVIOGRATIS", type: "free_shipping", value: 0, scope: "all", scopeId: null, active: true, minSubtotal: null, validFrom: null, validTo: null, maxUses: null, usedCount: 0 }));
+    await createCheckout({ ...baseInput, couponCode: "ENVIOGRATIS" }, deps);
+    const orderData = (deps as any)._tx.order.create.mock.calls[0][0].data;
+    expect(orderData.total).toBe(6400);
+    expect(orderData.shippingZoneId).toBeNull();
+  });
+
+  it("sin cotización y con un cupón que no es de envío gratis: sigue fallando", async () => {
+    const { deps } = makeDeps({ quoteShipping: vi.fn(async () => { throw new Error("Todavía no podemos calcular el envío"); }) });
+    await expect(createCheckout({ ...baseInput, couponCode: "GLAM10" }, deps)).rejects.toThrow(/calcular el envío/);
+  });
+
   it("rechaza carrito vacío", async () => {
     const { deps } = makeDeps();
     await expect(createCheckout({ ...baseInput, lines: [] }, deps)).rejects.toThrow();
