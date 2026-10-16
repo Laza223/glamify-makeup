@@ -252,7 +252,17 @@ export function CheckoutForm({ subtotal, discount, couponCode, couponFreeShippin
                 </select>
               </Field>
               <Field id="co-city" label="Localidad">
-                <Input id="co-city" value={city} onChange={(e) => { setCity(e.target.value); resetDestino(); }} autoComplete="address-level2" className={FIELD} />
+                <Input
+                  id="co-city"
+                  value={city}
+                  onChange={(e) => {
+                    // Un espacio de más no cambia el destino: no se borran ni se vuelven a buscar las sucursales.
+                    if (e.target.value.trim() !== city.trim()) resetDestino();
+                    setCity(e.target.value);
+                  }}
+                  autoComplete="address-level2"
+                  className={FIELD}
+                />
               </Field>
               <Field id="co-cp" label="Código postal">
                 <Input

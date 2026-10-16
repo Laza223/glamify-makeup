@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { createPreference, getPayment, mpStatusToPaymentStatus } from "@/lib/payments/mercadopago";
+import { createPreference, getPayment, mpStatusToPaymentStatus, mpDate } from "@/lib/payments/mercadopago";
 
 function jsonResponse(body: unknown, ok = true, status = 200): Response {
   return { ok, status, json: async () => body, text: async () => JSON.stringify(body) } as Response;
@@ -27,19 +27,20 @@ describe("createPreference", () => {
     expect(body.notification_url).toContain("/api/webhooks/mercadopago");
     expect(body.auto_return).toBe("approved");
   });
-  it("con expiresAt la preference vence a esa hora (ISO con offset de Argentina)", async () => {
+  it("mpDate: ISO 8601 con offset de Argentina, el formato de los ejemplos de MP", () => {
+    expect(mpDate(new Date("2026-10-16T15:30:00.000Z"))).toBe("2026-10-16T12:30:00.000-03:00");
+  });
+  it("con expiresAt la preference vence a esa hora y ya está activa al crearse", async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ id: "pref-1", init_point: "https://mp/ip" }));
+    const expiresAt = new Date(Date.now() + 30 * 60_000);
     await createPreference(
-      {
-        orderId: "o", orderNumber: "n", items: [], payerEmail: "e", appUrl: "u", notificationUrl: "w",
-        expiresAt: new Date("2026-10-16T15:30:00.000Z"),
-      },
+      { orderId: "o", orderNumber: "n", items: [], payerEmail: "e", appUrl: "u", notificationUrl: "w", expiresAt },
       { fetch: fetchMock, accessToken: "t" },
     );
     const body = JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string);
     expect(body.expires).toBe(true);
-    expect(body.expiration_date_to).toBe("2026-10-16T12:30:00.000-03:00");
-    expect(body.expiration_date_from < body.expiration_date_to).toBe(true);
+    expect(body.expiration_date_to).toBe(mpDate(expiresAt));
+    expect(body.expiration_date_from < mpDate(new Date())).toBe(true); // margen contra un reloj adelantado
   });
   it("sin expiresAt no manda vencimiento", async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ id: "pref-1", init_point: "https://mp/ip" }));
