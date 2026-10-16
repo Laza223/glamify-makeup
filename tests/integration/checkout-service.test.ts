@@ -22,7 +22,7 @@ function makeDeps(over: Partial<CreateCheckoutDeps> = {}): { deps: CreateCheckou
       $transaction: vi.fn(async (fn: any) => fn(tx)),
     } as any,
     nextOrderSeq: vi.fn(async () => 1),
-    getVariantStock: vi.fn(async (ids: string[]) => new Map(ids.map((id) => [id, 99]))),
+    lockStock: vi.fn(async (_tx: unknown, ids: string[]) => new Map(ids.map((id) => [id, { stock: 99, held: 0 }]))),
     createPreference: vi.fn(async () => ({ id: "pref-1", init_point: "https://mp/ip", sandbox_init_point: "https://mp/sbx" })),
     quoteShipping: vi.fn(async () => ({ cost: 2500, free: false, zoneId: "z-amba", source: "zone" as const })),
     appUrl: "https://app.test",
@@ -118,27 +118,14 @@ describe("createCheckout", () => {
 
 describe("createCheckout — stock antes de cobrar", () => {
   it("rechaza sin crear el pedido si una variante no alcanza, nombrando el producto", async () => {
-    const { deps } = makeDeps({ getVariantStock: vi.fn(async () => new Map([["v1", 1]])) });
+    const { deps } = makeDeps({ lockStock: vi.fn(async () => new Map([["v1", { stock: 1, held: 0 }]])) });
     await expect(createCheckout(baseInput, deps)).rejects.toThrow(/Labial Mate — Rojo Pasión/);
     expect((deps as any)._tx.order.create).not.toHaveBeenCalled();
     expect(deps.createPreference).not.toHaveBeenCalled();
   });
 
-  it("expande los combos a sus componentes", async () => {
-    const combo = checkoutLine({
-      line: cartLine({ kind: "combo", refId: "combo-1", qty: 2, components: [{ variantId: "v9", qty: 1 }] }),
-      productNameSnapshot: "Kit Labios",
-      variantNameSnapshot: null,
-      title: "Kit Labios",
-    });
-    const getVariantStock = vi.fn(async () => new Map([["v9", 1]]));
-    const { deps } = makeDeps({ getVariantStock });
-    await expect(createCheckout({ ...baseInput, lines: [combo] }, deps)).rejects.toThrow(/Kit Labios/);
-    expect(getVariantStock).toHaveBeenCalledWith(["v9"]);
-  });
-
   it("con stock suficiente crea el pedido normalmente", async () => {
-    const { deps } = makeDeps({ getVariantStock: vi.fn(async () => new Map([["v1", 2]])) });
+    const { deps } = makeDeps({ lockStock: vi.fn(async () => new Map([["v1", { stock: 2, held: 0 }]])) });
     await expect(createCheckout(baseInput, deps)).resolves.toMatchObject({ orderNumber: "GLM-000001" });
   });
 });

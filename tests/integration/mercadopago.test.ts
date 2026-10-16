@@ -27,6 +27,26 @@ describe("createPreference", () => {
     expect(body.notification_url).toContain("/api/webhooks/mercadopago");
     expect(body.auto_return).toBe("approved");
   });
+  it("con expiresAt la preference vence a esa hora (ISO con offset de Argentina)", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ id: "pref-1", init_point: "https://mp/ip" }));
+    await createPreference(
+      {
+        orderId: "o", orderNumber: "n", items: [], payerEmail: "e", appUrl: "u", notificationUrl: "w",
+        expiresAt: new Date("2026-10-16T15:30:00.000Z"),
+      },
+      { fetch: fetchMock, accessToken: "t" },
+    );
+    const body = JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string);
+    expect(body.expires).toBe(true);
+    expect(body.expiration_date_to).toBe("2026-10-16T12:30:00.000-03:00");
+    expect(body.expiration_date_from < body.expiration_date_to).toBe(true);
+  });
+  it("sin expiresAt no manda vencimiento", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ id: "pref-1", init_point: "https://mp/ip" }));
+    await createPreference({ orderId: "o", orderNumber: "n", items: [], payerEmail: "e", appUrl: "u", notificationUrl: "w" }, { fetch: fetchMock, accessToken: "t" });
+    const body = JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string);
+    expect(body.expires).toBeUndefined();
+  });
   it("lanza si MP responde error", async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ message: "bad" }, false, 400));
     await expect(

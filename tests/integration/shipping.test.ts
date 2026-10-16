@@ -50,7 +50,19 @@ describe("quoteShipping", () => {
     );
     expect(seen).toEqual({ localidad: "La Plata", provincia: "Buenos Aires" });
   });
-  it("sin zona ni cotización en vivo → source none, cost 0", async () => {
+  it("CP que no matchea ninguna zona → cobra la zona activa más cara (× método), nunca $0", async () => {
+    const onlyAmba = async () => [zones[0], { ...zones[1], id: "z-sur", cpFrom: "9000", cpTo: "9999", price: 15000 }];
+    const q = await quoteShipping({ ...base, cp: "5000", method: "domicilio" }, { ...deps, getZones: onlyAmba });
+    expect(q).toMatchObject({ cost: 15000, free: false, zoneId: null, source: "fallback" });
+    const s = await quoteShipping({ ...base, cp: "5000", method: "sucursal" }, { ...deps, getZones: onlyAmba });
+    expect(s.cost).toBe(10500); // 15000 * 0.7
+  });
+  it("ignora zonas inactivas al elegir la más cara", async () => {
+    const z = async () => [zones[0], { ...zones[1], id: "z-off", cpFrom: "9000", cpTo: "9999", price: 99000, active: false }];
+    const q = await quoteShipping({ ...base, cp: "5000", method: "domicilio" }, { ...deps, getZones: z });
+    expect(q).toMatchObject({ cost: 9000, source: "fallback" });
+  });
+  it("sin ninguna zona cargada ni cotización en vivo → source none (el checkout no deja pagar)", async () => {
     const q = await quoteShipping({ ...base, method: "domicilio" }, { ...deps, getZones: async () => [] });
     expect(q).toMatchObject({ source: "none", cost: 0 });
   });

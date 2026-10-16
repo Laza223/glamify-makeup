@@ -44,7 +44,7 @@ async function main(): Promise<void> {
     },
     {
       db: prisma as any,
-      getVariantStock: defaultCheckoutDeps(APP_URL).getVariantStock,
+      lockStock: defaultCheckoutDeps(APP_URL).lockStock,
       nextOrderSeq: async (tx: any) => Number((await tx.$queryRawUnsafe("SELECT nextval('order_number_seq') AS seq"))[0].seq),
       createPreference: async () => ({ id: "pref-sim", init_point: "sim", sandbox_init_point: "sim" }),
       quoteShipping: (i) => quoteShipping(i, { getZones: getShippingZonesForQuote, getThreshold: getFreeShippingThreshold }),

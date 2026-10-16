@@ -11,7 +11,9 @@ import { quoteShipping as realQuoteShipping, type ShippingQuote } from "@/lib/sh
 import { orderWeightGr } from "@/lib/shipping/quote";
 import { getShippingZonesForQuote, getFreeShippingThreshold } from "@/lib/orders/checkout-data";
 import type { CartLine } from "@/lib/cart/types";
-import { computeStockDecrements, checkAvailability } from "@/lib/orders/stock";
+import { computeStockDecrements } from "@/lib/orders/stock";
+import { lockStock, stockShortfall, holdExpiry, heldMessage, type LockStock } from "@/lib/orders/stock-hold";
+import { CustomerFacingError } from "@/lib/orders/customer-error";
 
 export interface CheckoutLineInput {
   line: CartLine;
@@ -75,8 +77,8 @@ export interface CheckoutDb {
 export interface CreateCheckoutDeps {
   db: CheckoutDb;
   nextOrderSeq: (tx: PrismaTransactionClient) => Promise<number>;
-  /** Stock actual por variante. Se chequea antes de crear el pedido para no cobrar algo que no hay. */
-  getVariantStock: (variantIds: string[]) => Promise<Map<string, number>>;
+  /** Bloquea las variantes en la tx de creación y devuelve stock y unidades retenidas por otros pedidos. */
+  lockStock: LockStock;
   createPreference: typeof realCreatePreference;
   quoteShipping: (input: Parameters<typeof realQuoteShipping>[0]) => Promise<ShippingQuote>;
   appUrl: string;
@@ -100,10 +102,7 @@ export function defaultCheckoutDeps(appUrl: string): CreateCheckoutDeps {
   return {
     db: prisma as unknown as CheckoutDb,
     nextOrderSeq: defaultNextOrderSeq,
-    getVariantStock: async (ids) => {
-      const rows = await prisma.productVariant.findMany({ where: { id: { in: ids } }, select: { id: true, stock: true } });
-      return new Map(rows.map((r) => [r.id, r.stock]));
-    },
+    lockStock,
     createPreference: realCreatePreference,
     quoteShipping: (input) => realQuoteShipping(input, { getZones: getShippingZonesForQuote, getThreshold: getFreeShippingThreshold }),
     appUrl,
@@ -121,7 +120,7 @@ async function supersedePendingOrders(db: CheckoutDb, cartId: string): Promise<v
       select: { id: true, payments: { select: { status: true } } },
     });
     if (previous.some((o) => o.payments.some((p) => PAYMENT_IN_FLIGHT.has(p.status)))) {
-      throw new Error("Tu pago anterior se está procesando en Mercado Pago. Esperá el email de confirmación antes de volver a pagar.");
+      throw new CustomerFacingError("Tu pago anterior se está procesando en Mercado Pago. Esperá el email de confirmación antes de volver a pagar.");
     }
     for (const prev of previous) {
       const res = await tx.order.updateMany({ where: { id: prev.id, status: "pending_payment" }, data: { status: "cancelled" } });
@@ -131,20 +130,10 @@ async function supersedePendingOrders(db: CheckoutDb, cartId: string): Promise<v
 }
 
 export async function createCheckout(input: CreateCheckoutInput, deps: CreateCheckoutDeps): Promise<CreateCheckoutResult> {
-  if (input.lines.length === 0) throw new Error("El carrito está vacío.");
+  if (input.lines.length === 0) throw new CustomerFacingError("El carrito está vacío.");
   const now = deps.now ?? new Date();
   const cartLines = input.lines.map((l) => l.line);
-
-  // Stock antes de cobrar: el webhook lo descuenta al acreditarse el pago, y un faltante descubierto ahí ya está
-  // cobrado. No reserva (dos compras simultáneas del último ítem siguen resolviéndose en el webhook).
   const decrements = computeStockDecrements(cartLines);
-  const { shortages } = checkAvailability(decrements, await deps.getVariantStock([...decrements.keys()]));
-  if (shortages.length > 0) {
-    const short = new Set(shortages.map((s) => s.variantId));
-    const touches = (l: CartLine) => (l.kind === "variant" ? [l.refId] : (l.components ?? []).map((c) => c.variantId));
-    const names = input.lines.filter((l) => touches(l.line).some((id) => short.has(id))).map((l) => l.title);
-    throw new Error(`No hay stock suficiente de ${names.join(", ")}. Actualizá tu carrito y probá de nuevo.`);
-  }
 
   const subtotal = cartSubtotal(cartLines);
   // El server decide si el pedido es digital (solo gift cards): nunca se confía en el cliente.
@@ -152,7 +141,7 @@ export async function createCheckout(input: CreateCheckoutInput, deps: CreateChe
   const shippingMethod = digitalOnly ? "digital" : input.shippingMethod;
   if (!digitalOnly) {
     const addressError = validateShippingAddress(input.shippingMethod, input.address);
-    if (addressError) throw new Error(addressError);
+    if (addressError) throw new CustomerFacingError(addressError);
   }
 
   // --- Pedido pendiente anterior del mismo carrito ---
@@ -200,12 +189,28 @@ export async function createCheckout(input: CreateCheckoutInput, deps: CreateChe
         method: input.shippingMethod, lines: cartLines,
         subtotal: physicalSubtotal(cartLines), // las gift cards no cuentan para el envío gratis
       });
+  // Sin cotización en vivo ni zonas cargadas: nunca cobrar envío $0 por error (salvo que un cupón lo pague).
+  if ("source" in quote && quote.source === "none" && !freeShippingByCoupon) {
+    throw new CustomerFacingError("No pudimos calcular el envío a ese código postal. Escribinos por WhatsApp y lo resolvemos.");
+  }
   const shippingCost = freeShippingByCoupon ? 0 : quote.cost;
   const total = round2(subtotal - discount + shippingCost);
-  if (total <= 0) throw new Error("El total no puede ser $0.");
+  if (total <= 0) throw new CustomerFacingError("El total no puede ser $0.");
 
   // --- Persistencia (tx) ---
+  // El stock se chequea acá, con las variantes bloqueadas hasta crear el pedido: quien llega primero
+  // retiene las unidades hasta `reservedUntil` y el siguiente ve que se agotaron. El webhook las
+  // descuenta al aprobarse el pago (y avisa a la dueña si igual faltara).
+  const reservedUntil = holdExpiry(now);
   const order = await deps.db.$transaction(async (tx) => {
+    const shortfall = stockShortfall(decrements, await deps.lockStock(tx, [...decrements.keys()], { now }));
+    if (shortfall.kind !== "ok") {
+      const touches = (l: CartLine) => (l.kind === "variant" ? [l.refId] : (l.components ?? []).map((c) => c.variantId));
+      const names = input.lines.filter((l) => touches(l.line).some((id) => shortfall.variantIds.has(id))).map((l) => l.title);
+      throw new CustomerFacingError(
+        shortfall.kind === "held" ? heldMessage(names) : `No hay stock suficiente de ${names.join(", ")}. Actualizá tu carrito y probá de nuevo.`,
+      );
+    }
     if (giftCardCoupon) {
       // Reserva atómica: dos pedidos que compiten por la misma gift card → solo uno obtiene count 1.
       // El webhook NO la vuelve a incrementar; se libera si el pedido se cancela sin pagarse.
@@ -213,7 +218,7 @@ export async function createCheckout(input: CreateCheckoutInput, deps: CreateChe
         where: { id: giftCardCoupon.id, active: true, usedCount: { lt: giftCardCoupon.maxUses ?? 1 } },
         data: { usedCount: { increment: 1 } },
       });
-      if (res.count !== 1) throw new Error("Esta gift card ya fue usada.");
+      if (res.count !== 1) throw new CustomerFacingError("Esta gift card ya fue usada.");
     }
     const seq = await deps.nextOrderSeq(tx);
     const orderNumber = formatOrderNumber(seq);
@@ -230,6 +235,7 @@ export async function createCheckout(input: CreateCheckoutInput, deps: CreateChe
         subtotal, shippingCost, discountTotal: discount, total,
         couponId,
         status: "pending_payment",
+        reservedUntil,
         items: {
           create: input.lines.map((l) => ({
             variantId: l.line.kind === "variant" ? l.line.refId : null,
@@ -269,6 +275,7 @@ export async function createCheckout(input: CreateCheckoutInput, deps: CreateChe
       payerEmail: input.contactEmail,
       appUrl: deps.appUrl,
       notificationUrl: `${deps.appUrl}/api/webhooks/mercadopago`,
+      expiresAt: reservedUntil,
     });
   } catch (e) {
     // Sin preference la clienta no puede pagar: el pedido queda huérfano. Se cancela (con la misma
