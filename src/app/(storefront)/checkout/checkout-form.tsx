@@ -30,6 +30,9 @@ interface Props {
 
 type Method = "domicilio" | "sucursal";
 
+const QUOTE_FAILED = "No pudimos calcular el envío.";
+const AGENCIES_FAILED = "No pudimos buscar sucursales en este momento.";
+
 const FIELD = "h-12 rounded-2xl bg-white text-[16px] md:text-[16px]";
 const SELECT =
   "h-12 w-full rounded-2xl border border-input bg-white px-3 text-[16px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
@@ -70,46 +73,81 @@ export function CheckoutForm({ subtotal, discount, couponCode, couponFreeShippin
   const [notes, setNotes] = useState("");
   const [acceptedTerms, setAcceptedTerms] = useState(false);
 
-  // Sucursal: lista de sucursales de MiCorreo + la elegida.
-  const [agencies, setAgencies] = useState<{ code: string; label: string }[]>([]);
+  // Sucursal: lista de sucursales de MiCorreo (null = todavía no se buscaron) + la elegida.
+  const [agencies, setAgencies] = useState<{ code: string; label: string }[] | null>(null);
+  const [agenciesError, setAgenciesError] = useState<string | null>(null);
   const [agencyCode, setAgencyCode] = useState("");
   const [loadingAgencies, startAgencies] = useTransition();
 
-  const [shipping, setShipping] = useState<{ cost: number; free: boolean } | null>(null);
-  const [quoteFailed, setQuoteFailed] = useState(false);
+  // Una cotización (o su error) vale para el destino y el subtotal con que se pidió: si cambia algo
+  // (o el order bump suma un producto) deja de valer y se vuelve a cotizar.
+  const quoteKey = `${cp}|${city.trim()}|${province}|${method}|${subtotal}`;
+  const [shipping, setShipping] = useState<{ cost: number; free: boolean; key: string } | null>(null);
+  const [quoteError, setQuoteError] = useState<{ message: string; key: string } | null>(null);
   const [quoting, startQuote] = useTransition();
+  // Cada búsqueda lleva un número: una respuesta que llega después de otra más nueva se descarta.
+  const quoteSeq = useRef(0);
+  const agenciesSeq = useRef(0);
   const [submitting, startSubmit] = useTransition();
+  // Entre recibir el link de MP y salir de la página el botón sigue bloqueado: un segundo click crearía otro pedido.
+  const [redirecting, setRedirecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const shippingCost = digitalOnly || couponFreeShipping ? 0 : shipping?.free ? 0 : shipping?.cost ?? null;
+  const quoted = shipping?.key === quoteKey ? shipping : null;
+  const quoteErrorMessage = quoteError?.key === quoteKey ? quoteError.message : null;
+  const shippingCost = digitalOnly || couponFreeShipping ? 0 : quoted?.free ? 0 : quoted?.cost ?? null;
   const total = round2(subtotal - discount + (shippingCost ?? 0));
   const canQuote = /^\d{4}$/.test(cp) && city.trim().length >= 3;
 
   useEffect(() => {
     track("begin_checkout", { subtotal, items: items.length });
+    // Volver con "atrás" desde MP restaura la página del bfcache con el botón bloqueado: se libera.
+    const onShow = (e: PageTransitionEvent) => { if (e.persisted) setRedirecting(false); };
+    window.addEventListener("pageshow", onShow);
+    return () => window.removeEventListener("pageshow", onShow);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Resetea la cotización (y, en sucursal, la sucursal elegida) cuando cambia un dato del destino.
-  const resetDestino = () => { setShipping(null); setQuoteFailed(false); setAgencies([]); setAgencyCode(""); };
+  // En sucursal, la lista y la sucursal elegida dependen de provincia y localidad: se vuelven a buscar.
+  const resetDestino = () => {
+    agenciesSeq.current++;
+    setAgencies(null); setAgenciesError(null); setAgencyCode("");
+  };
 
   const loadAgencies = () => {
     if (method !== "sucursal" || !province || !city.trim()) return;
+    const seq = ++agenciesSeq.current;
+    setAgenciesError(null);
     startAgencies(async () => {
-      const r = await agenciesAction({ province, city });
-      setAgencies(r.ok && r.agencies ? r.agencies : []);
-      setAgencyCode("");
+      let list: { code: string; label: string }[] = [];
+      let failed: string | null = null;
+      try {
+        const r = await agenciesAction({ province, city });
+        if (r.ok && r.agencies) list = r.agencies;
+        else failed = AGENCIES_FAILED;
+      } catch {
+        failed = AGENCIES_FAILED;
+      }
+      if (seq !== agenciesSeq.current) return;
+      setAgencies(list); setAgenciesError(failed); setAgencyCode("");
     });
   };
 
   const quote = () => {
-    if (!canQuote) { setShipping(null); return; }
+    if (!canQuote) return;
+    const seq = ++quoteSeq.current;
+    const key = quoteKey;
     startQuote(async () => {
-      const r = await quoteShippingAction({ cp, province, city, method });
-      if (r.ok) { setShipping({ cost: r.cost ?? 0, free: Boolean(r.free) }); setQuoteFailed(false); }
-      else { setShipping(null); setQuoteFailed(true); }
+      try {
+        const r = await quoteShippingAction({ cp, province, city, method });
+        if (seq !== quoteSeq.current) return;
+        if (r.ok) setShipping({ cost: r.cost ?? 0, free: Boolean(r.free), key });
+        else setQuoteError({ message: r.error ?? QUOTE_FAILED, key });
+      } catch {
+        if (seq === quoteSeq.current) setQuoteError({ message: QUOTE_FAILED, key });
+      }
     });
-    loadAgencies();
+    if (agencies === null) loadAgencies();
   };
 
   // Cotiza solo cuando CP y localidad están completos (con una pausa para no cotizar a cada tecla).
@@ -119,7 +157,7 @@ export function CheckoutForm({ subtotal, discount, couponCode, couponFreeShippin
     if (digitalOnly || !canQuote) return;
     const t = setTimeout(() => quoteRef.current(), 700);
     return () => clearTimeout(t);
-  }, [cp, city, province, method, canQuote, digitalOnly]);
+  }, [quoteKey, canQuote, digitalOnly]);
 
   const validate = (): string | null => {
     if (!name.trim()) return "Ingresá tu nombre.";
@@ -130,7 +168,7 @@ export function CheckoutForm({ subtotal, discount, couponCode, couponFreeShippin
       if (!city.trim()) return "Ingresá tu localidad.";
       if (method === "domicilio" && (!street.trim() || !number.trim())) return "Completá calle y número.";
       if (method === "sucursal" && !agencyCode) return "Elegí una sucursal de Correo.";
-      if (shippingCost == null) return "Esperá a que calculemos el envío con tu código postal.";
+      if (shippingCost == null) return quoteErrorMessage ?? "Esperá a que calculemos el envío con tu código postal.";
     }
     if (!acceptedTerms) return "Tenés que aceptar los Términos y Condiciones.";
     return null;
@@ -138,20 +176,25 @@ export function CheckoutForm({ subtotal, discount, couponCode, couponFreeShippin
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting || redirecting) return;
     const v = validate();
     if (v) { setError(v); return; }
     setError(null);
     startSubmit(async () => {
-      const r = await createCheckoutAction({
-        contactName: name, contactEmail: email, contactPhone: phone,
-        shippingMethod: method,
-        address: {
-          cp, province, street, number, floorApt, city, notes,
-          ...(method === "sucursal" ? { agencyCode, agencyLabel: agencies.find((a) => a.code === agencyCode)?.label } : {}),
-        },
-      });
-      if (r.ok && r.initPoint) window.location.href = r.initPoint;
-      else setError(r.error ?? "No se pudo iniciar el pago.");
+      try {
+        const r = await createCheckoutAction({
+          contactName: name, contactEmail: email, contactPhone: phone,
+          shippingMethod: method,
+          address: {
+            cp, province, street, number, floorApt, city, notes,
+            ...(method === "sucursal" ? { agencyCode, agencyLabel: agencies?.find((a) => a.code === agencyCode)?.label } : {}),
+          },
+        });
+        if (r.ok && r.initPoint) { setRedirecting(true); window.location.href = r.initPoint; }
+        else setError(r.error ?? "No pudimos iniciar el pago. Probá de nuevo en unos segundos.");
+      } catch {
+        setError("No pudimos iniciar el pago. Revisá tu conexión y probá de nuevo.");
+      }
     });
   };
 
@@ -209,13 +252,23 @@ export function CheckoutForm({ subtotal, discount, couponCode, couponFreeShippin
                 </select>
               </Field>
               <Field id="co-city" label="Localidad">
-                <Input id="co-city" value={city} onChange={(e) => { setCity(e.target.value); resetDestino(); }} autoComplete="address-level2" className={FIELD} />
+                <Input
+                  id="co-city"
+                  value={city}
+                  onChange={(e) => {
+                    // Un espacio de más no cambia el destino: no se borran ni se vuelven a buscar las sucursales.
+                    if (e.target.value.trim() !== city.trim()) resetDestino();
+                    setCity(e.target.value);
+                  }}
+                  autoComplete="address-level2"
+                  className={FIELD}
+                />
               </Field>
               <Field id="co-cp" label="Código postal">
                 <Input
                   id="co-cp"
                   value={cp}
-                  onChange={(e) => { setCp(e.target.value.replace(/\D/g, "").slice(0, 4)); setShipping(null); setQuoteFailed(false); }}
+                  onChange={(e) => setCp(e.target.value.replace(/\D/g, "").slice(0, 4))}
                   inputMode="numeric"
                   autoComplete="postal-code"
                   placeholder="Ej: 6700"
@@ -225,18 +278,21 @@ export function CheckoutForm({ subtotal, discount, couponCode, couponFreeShippin
 
               {/* Resultado de la cotización: aparece solo cuando hay CP y localidad. */}
               <div className="flex items-end" aria-live="polite">
-                <div className="flex min-h-12 w-full items-center gap-3 rounded-2xl bg-secondary px-4 text-[15px]">
+                <div className="flex min-h-12 w-full items-center gap-3 rounded-2xl bg-secondary px-4 py-2 text-[15px]">
                   <Truck className="size-5 shrink-0 text-primary" aria-hidden />
-                  {quoting ? (
+                  {quoting || (canQuote && !quoted && !quoteErrorMessage) ? (
                     <span className="flex items-center gap-2 text-muted-foreground"><Loader2 className="size-4 animate-spin" aria-hidden /> Calculando envío…</span>
-                  ) : shipping ? (
+                  ) : quoted ? (
                     <span>
-                      Envío: <strong className={cn(shipping.free && "text-success")}>{shipping.free ? "¡Gratis!" : formatPrice(shippingCost ?? 0)}</strong>
+                      Envío: <strong className={cn(quoted.free && "text-success")}>{quoted.free ? "¡Gratis!" : formatPrice(shippingCost ?? 0)}</strong>
                     </span>
-                  ) : quoteFailed ? (
-                    <button type="button" onClick={quote} className="min-h-11 text-left font-semibold text-accent underline underline-offset-4">
-                      No pudimos calcularlo. Probá de nuevo
-                    </button>
+                  ) : quoteErrorMessage ? (
+                    <span>
+                      {quoteErrorMessage}{" "}
+                      <button type="button" onClick={quote} className="min-h-11 font-semibold text-accent underline underline-offset-4">
+                        Probá de nuevo
+                      </button>
+                    </span>
                   ) : (
                     <span className="text-muted-foreground">Completá CP y localidad para ver el envío</span>
                   )}
@@ -262,13 +318,24 @@ export function CheckoutForm({ subtotal, discount, couponCode, couponFreeShippin
               <div className="mt-4">
                 {loadingAgencies ? (
                   <p className="flex min-h-12 items-center gap-2 text-[15px] text-muted-foreground"><Loader2 className="size-4 animate-spin" aria-hidden /> Buscando sucursales…</p>
-                ) : agencies.length > 0 ? (
+                ) : agencies && agencies.length > 0 ? (
                   <Field id="co-agency" label="Sucursal de Correo">
                     <select id="co-agency" value={agencyCode} onChange={(e) => setAgencyCode(e.target.value)} className={SELECT}>
                       <option value="">Elegí tu sucursal…</option>
                       {agencies.map((a) => <option key={a.code} value={a.code}>{a.label}</option>)}
                     </select>
                   </Field>
+                ) : agencies ? (
+                  <p role="status" className="rounded-2xl bg-secondary px-4 py-3 text-[15px] text-foreground">
+                    {agenciesError ?? `No encontramos sucursales de Correo en ${city.trim()}.`}{" "}
+                    {agenciesError ? (
+                      <button type="button" onClick={loadAgencies} className="min-h-11 font-semibold text-accent underline underline-offset-4">
+                        Probá de nuevo
+                      </button>
+                    ) : (
+                      "Revisá cómo escribiste la localidad o elegí envío a domicilio."
+                    )}
+                  </p>
                 ) : (
                   <p className="text-[15px] text-muted-foreground">Cuando completes CP y localidad te mostramos las sucursales cercanas.</p>
                 )}
@@ -300,7 +367,7 @@ export function CheckoutForm({ subtotal, discount, couponCode, couponFreeShippin
         </ul>
         <Separator />
         <CouponInput applied={couponCode} />
-        <CartSummary subtotal={subtotal} discount={discount} shippingCost={shippingCost} total={total} freeShipping={couponFreeShipping || shipping?.free} />
+        <CartSummary subtotal={subtotal} discount={discount} shippingCost={shippingCost} total={total} freeShipping={couponFreeShipping || quoted?.free} />
         <label className="flex min-h-11 cursor-pointer items-start gap-3 text-[14px] leading-relaxed text-muted-foreground">
           <input
             type="checkbox"
@@ -318,12 +385,14 @@ export function CheckoutForm({ subtotal, discount, couponCode, couponFreeShippin
         {error && <p className="rounded-2xl bg-destructive/10 px-4 py-3 text-[15px] font-medium text-destructive" role="alert">{error}</p>}
         <button
           type="submit"
-          disabled={submitting || paymentsDisabled}
+          disabled={submitting || redirecting || paymentsDisabled}
           className="inline-flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-foreground px-6 text-[16px] font-semibold text-white transition hover:bg-foreground/85 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
-          {submitting ? <Loader2 className="size-5 animate-spin" aria-hidden /> : <Lock className="size-5" aria-hidden />}
+          {submitting || redirecting ? <Loader2 className="size-5 animate-spin motion-reduce:animate-none" aria-hidden /> : <Lock className="size-5" aria-hidden />}
           {/* El total solo se muestra cuando ya incluye el envío. */}
-          {shippingCost != null ? `Pagar ${formatPrice(total)} con Mercado Pago` : "Pagar con Mercado Pago"}
+          {redirecting
+            ? "Te llevamos a Mercado Pago…"
+            : shippingCost != null ? `Pagar ${formatPrice(total)} con Mercado Pago` : "Pagar con Mercado Pago"}
         </button>
         <p className="text-center text-[14px] text-muted-foreground">
           {paymentsDisabled ? "Vista previa: los pagos están desactivados." : "Te llevamos a Mercado Pago para pagar seguro."}

@@ -1,21 +1,35 @@
 import { describe, it, expect, vi } from "vitest";
 import { retryOrderPayment, type RetryPaymentDeps } from "@/lib/orders/retry-payment";
+import type { VariantStock } from "@/lib/orders/stock-hold";
 
 const order = (over: Record<string, unknown> = {}) => ({
   id: "ord-1", orderNumber: "GLM-000002", status: "pending_payment", contactEmail: "ana@example.com",
   shippingCost: 1500, discountTotal: 0, total: 1700,
-  items: [{ productNameSnapshot: "Eduardo", variantNameSnapshot: null, unitPriceSnapshot: 200, qty: 1 }],
+  items: [{ productNameSnapshot: "Eduardo", variantNameSnapshot: null, unitPriceSnapshot: 200, qty: 1, variantId: "v1", combo: null }],
   ...over,
 });
+const now = new Date("2026-10-16T12:00:00Z");
 
-function makeDeps(row: unknown, over: Partial<RetryPaymentDeps> = {}) {
+function makeDeps(row: unknown, over: Partial<RetryPaymentDeps> = {}, stock: Record<string, VariantStock> = { v1: { stock: 5, held: 0 } }) {
+  const calls: string[] = [];
+  const state = { renewed: false };
   const updateMany = vi.fn(async () => ({}));
+  const tx = { order: { updateMany: vi.fn(async () => { calls.push("renew"); state.renewed = true; return { count: 1 }; }) } };
   const createPreference = vi.fn(async () => ({ id: "pref-2", init_point: "https://mp/ip", sandbox_init_point: "https://mp/sbx" }));
+  const lockStock = vi.fn(async () => { calls.push("lock"); return new Map(Object.entries(stock)); });
   const deps: RetryPaymentDeps = {
-    db: { order: { findUnique: vi.fn(async () => row) }, payment: { updateMany } } as unknown as RetryPaymentDeps["db"],
-    createPreference, appUrl: "https://app.test", isSandboxToken: false, ...over,
+    db: {
+      order: { findUnique: vi.fn(async () => row) },
+      payment: { updateMany },
+      // Como Postgres: si el callback tira, lo escrito en la tx se deshace.
+      $transaction: vi.fn(async (fn: (t: unknown) => unknown) => {
+        const snapshot = { ...state };
+        try { return await fn(tx); } catch (e) { Object.assign(state, snapshot); throw e; }
+      }),
+    } as unknown as RetryPaymentDeps["db"],
+    lockStock, createPreference, appUrl: "https://app.test", isSandboxToken: false, now, ...over,
   };
-  return { deps, updateMany, createPreference };
+  return { deps, updateMany, createPreference, lockStock, tx, calls, state };
 }
 
 describe("retryOrderPayment", () => {
@@ -44,5 +58,45 @@ describe("retryOrderPayment", () => {
   it("rechaza pedidos que ya no están pendientes o que no existen", async () => {
     await expect(retryOrderPayment("ord-1", makeDeps(order({ status: "paid" })).deps)).rejects.toThrow(/ya no está pendiente/);
     await expect(retryOrderPayment("x", makeDeps(null).deps)).rejects.toThrow(/No encontramos/);
+  });
+});
+
+describe("retryOrderPayment — reserva de stock", () => {
+  it("renueva la reserva y re-chequea el stock sin contar la propia; la preference vence a los 30 min", async () => {
+    const { deps, lockStock, tx, createPreference, calls } = makeDeps(order());
+    await retryOrderPayment("ord-1", deps);
+    expect(lockStock).toHaveBeenCalledWith(tx, ["v1"], { now, excludeOrderId: "ord-1" });
+    expect(tx.order.updateMany).toHaveBeenCalledWith({ where: { id: "ord-1", status: "pending_payment" }, data: { reservedUntil: new Date("2026-10-16T12:35:00Z") } });
+    // Fila del pedido antes que las variantes: mismo orden de locks que el webhook.
+    expect(calls).toEqual(["renew", "lock"]);
+    expect(createPreference).toHaveBeenCalledWith(expect.objectContaining({ expiresAt: new Date("2026-10-16T12:30:00Z") }));
+  });
+
+  it("expande los combos del pedido a sus componentes", async () => {
+    const kit = { productNameSnapshot: "Kit", variantNameSnapshot: null, unitPriceSnapshot: 200, qty: 2, variantId: null, combo: { items: [{ variantId: "v9", qty: 1 }] } };
+    const { deps, lockStock, tx } = makeDeps(order({ items: [kit] }), {}, { v9: { stock: 2, held: 0 } });
+    await retryOrderPayment("ord-1", deps);
+    expect(lockStock).toHaveBeenCalledWith(tx, ["v9"], { now, excludeOrderId: "ord-1" });
+  });
+
+  it("si otra persona está pagando la última unidad: 'Justo se agotó' y no crea preference", async () => {
+    const { deps, createPreference, state } = makeDeps(order(), {}, { v1: { stock: 1, held: 1 } });
+    await expect(retryOrderPayment("ord-1", deps)).rejects.toThrow(/^Justo se agotó Eduardo/);
+    expect(state.renewed).toBe(false); // rollback: no queda renovada una reserva sin stock
+    expect(createPreference).not.toHaveBeenCalled();
+  });
+
+  it("sin stock real: avisa que ya no queda y no crea preference", async () => {
+    const { deps, createPreference } = makeDeps(order(), {}, { v1: { stock: 0, held: 0 } });
+    await expect(retryOrderPayment("ord-1", deps)).rejects.toThrow(/Ya no queda stock de Eduardo/);
+    expect(createPreference).not.toHaveBeenCalled();
+  });
+
+  it("si el pedido dejó de estar pendiente en el medio (lo pagó o venció), no crea preference", async () => {
+    const { deps, createPreference, tx, lockStock } = makeDeps(order());
+    tx.order.updateMany.mockResolvedValueOnce({ count: 0 });
+    await expect(retryOrderPayment("ord-1", deps)).rejects.toThrow(/ya no está pendiente/);
+    expect(lockStock).not.toHaveBeenCalled();
+    expect(createPreference).not.toHaveBeenCalled();
   });
 });

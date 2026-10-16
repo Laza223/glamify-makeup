@@ -28,7 +28,8 @@ export interface ShippingQuote {
   cost: number;
   free: boolean;
   zoneId: string | null;
-  source: "free" | "live" | "zone" | "none";
+  /** `fallback`: el CP no matchea ninguna zona → se cobra la más cara. `none`: no hay con qué cotizar. */
+  source: "free" | "live" | "zone" | "fallback" | "none";
   /** Sólo con cotización en vivo: operador y fecha estimada. */
   carrier?: string;
   estimatedDelivery?: string | null;
@@ -52,7 +53,7 @@ export interface QuoteShippingDeps {
 const DEFAULT_LIVE_QUOTE: NonNullable<QuoteShippingDeps["liveQuote"]> = ({ cpDestino, pesoGr, metodo }) =>
   quoteMicorreo({ cpDestino, pesoGr, metodo });
 
-/** Orquesta el costo de envío: gratis por umbral → cotización en vivo (si se inyecta un proveedor) → tabla de zonas. */
+/** Orquesta el costo de envío: gratis por umbral → cotización en vivo → zona del CP → zona más cara. */
 export async function quoteShipping(input: QuoteShippingInput, deps: QuoteShippingDeps = {}): Promise<ShippingQuote> {
   const getZones = deps.getZones ?? (async () => []);
   const getThreshold = deps.getThreshold ?? (async () => 0);
@@ -92,6 +93,12 @@ export async function quoteShipping(input: QuoteShippingInput, deps: QuoteShippi
   const zone = matchZone(zones, { cp: input.cp, province: input.province });
   if (zone) {
     return { cost: round2(Number(zone.price) * methodFactor(input.method)), free: false, zoneId: zone.id, source: "zone" };
+  }
+
+  // CP sin zona (decisión de la dueña, 2026-10-16): se cobra la zona activa más cara, nunca $0.
+  const priciest = zones.filter((z) => z.active).sort((a, b) => Number(b.price) - Number(a.price))[0];
+  if (priciest) {
+    return { cost: round2(Number(priciest.price) * methodFactor(input.method)), free: false, zoneId: null, source: "fallback" };
   }
 
   return { cost: 0, free: false, zoneId: null, source: "none" };

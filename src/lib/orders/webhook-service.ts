@@ -212,7 +212,9 @@ export async function processWebhook(input: ProcessWebhookInput, deps: ProcessWe
       // negativo). count===0 es la señal real de faltante (reemplaza el chequeo contra el snapshot
       // stale de checkAvailability).
       const shortages: Shortage[] = [];
-      for (const [variantId, qty] of decrements) {
+      // En orden de id, igual que el `ORDER BY id FOR UPDATE` del checkout: dos tx que bloquean las mismas
+      // variantes en el mismo orden no se traban entre sí (deadlock).
+      for (const [variantId, qty] of [...decrements].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) {
         const res = await tx.productVariant.updateMany({ where: { id: variantId, stock: { gte: qty } }, data: { stock: { decrement: qty } } });
         if (res.count === 0) shortages.push({ variantId, needed: qty, available: 0 });
       }
