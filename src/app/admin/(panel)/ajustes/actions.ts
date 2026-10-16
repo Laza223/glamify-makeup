@@ -5,6 +5,8 @@ import { requireAdmin } from "@/lib/admin/auth";
 import { prisma } from "@/lib/prisma";
 import type { ActionResult } from "@/lib/forms/action-result";
 
+const MAX_AMOUNT = 10_000_000;
+
 export async function updateSettingsAction(
   formData: FormData,
 ): Promise<ActionResult> {
@@ -14,6 +16,8 @@ export async function updateSettingsAction(
   const freeShippingThresholdRaw = Number(
     formData.get("freeShippingThreshold") ?? 0,
   );
+  const surchargeRaw = String(formData.get("shippingSurcharge") ?? "").trim();
+  const shippingSurcharge = surchargeRaw === "" ? 0 : Number(surchargeRaw);
   const originPostalCode = String(
     formData.get("originPostalCode") ?? "",
   ).trim();
@@ -32,6 +36,16 @@ export async function updateSettingsAction(
       error: "El monto de envío gratis debe ser un número positivo.",
     };
   }
+  if (
+    !Number.isFinite(shippingSurcharge) ||
+    shippingSurcharge < 0 ||
+    shippingSurcharge > MAX_AMOUNT
+  ) {
+    return {
+      ok: false,
+      error: "El recargo de envío debe ser un número entre 0 y 10.000.000.",
+    };
+  }
   if (!originPostalCode || originPostalCode.length < 4) {
     return {
       ok: false,
@@ -47,6 +61,7 @@ export async function updateSettingsAction(
         id: "default",
         storeName,
         freeShippingThreshold: freeShippingThresholdRaw,
+        shippingSurcharge,
         originPostalCode,
         whatsappNumber,
         instagramUrl,
@@ -55,6 +70,7 @@ export async function updateSettingsAction(
       update: {
         storeName,
         freeShippingThreshold: freeShippingThresholdRaw,
+        shippingSurcharge,
         originPostalCode,
         whatsappNumber,
         instagramUrl,

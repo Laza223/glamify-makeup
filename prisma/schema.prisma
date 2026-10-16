@@ -44,6 +44,9 @@ enum ShipmentStatus {
 
 enum ShipmentCarrier {
   correo_argentino
+  andreani
+  oca
+  via_cargo
 }
 
 enum ShippingMethod {
@@ -397,7 +400,7 @@ model Shipment {
   trackingNumber String?
   status         ShipmentStatus  @default(pending)
   labelUrl       String?
-  micorreoImportedAt DateTime?    // set al pre-imponer en MiCorreo (auto o reintento); null = falta cargarlo a mano
+  micorreoImportedAt DateTime?    // sin uso desde que se sacó la precarga en MiCorreo (ADR 0004); se conserva por datos históricos
   trackingLastEvent  String?      // último movimiento de Correo, legible (lo actualiza el cron de seguimiento)
   trackingCheckedAt  DateTime?    // última consulta al seguimiento de MiCorreo
   trackingNotified   String[]     @default([]) // avisos ya mandados (awaiting_pickup, delivered, returned_alert): una sola vez
@@ -453,6 +456,7 @@ model Setting {
   storeName             String   @default("Glamify Makeup")
   freeShippingThreshold Decimal  @default(47500) @db.Decimal(12, 2)
   originPostalCode      String   @default("6700")
+  shippingSurcharge     Decimal  @default(0) @db.Decimal(12, 2) // recargo fijo sobre la cotización en vivo (empaque, etc.)
   whatsappNumber        String?
   instagramUrl          String?
   tiktokUrl             String?

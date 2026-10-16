@@ -50,8 +50,41 @@ describe("quoteShipping", () => {
     );
     expect(seen).toEqual({ localidad: "La Plata", provincia: "Buenos Aires" });
   });
-  it("sin zona ni cotización en vivo → source none, cost 0", async () => {
-    const q = await quoteShipping({ ...base, method: "domicilio" }, { ...deps, getZones: async () => [] });
-    expect(q).toMatchObject({ source: "none", cost: 0 });
+  it("suma el recargo a la cotización en vivo", async () => {
+    const q = await quoteShipping(
+      { ...base, method: "domicilio" },
+      { ...deps, getSurcharge: async () => 2000, liveQuote: async () => ({ cost: 6113.5, carrier: "Correo Argentino", estimatedDelivery: null }) },
+    );
+    expect(q).toMatchObject({ cost: 8113.5, source: "live" });
+  });
+  it("recargo en sucursal: también se suma, sin methodFactor", async () => {
+    const q = await quoteShipping(
+      { ...base, method: "sucursal" },
+      { ...deps, getSurcharge: async () => 500, liveQuote: async () => ({ cost: 5000, carrier: "Correo Argentino", estimatedDelivery: null }) },
+    );
+    expect(q.cost).toBe(5500);
+  });
+  it("sin recargo configurado (default) el costo en vivo queda igual", async () => {
+    const q = await quoteShipping(
+      { ...base, method: "domicilio" },
+      { ...deps, liveQuote: async () => ({ cost: 6113, carrier: "Correo Argentino", estimatedDelivery: null }) },
+    );
+    expect(q.cost).toBe(6113);
+  });
+  it("la zona de respaldo NO lleva recargo", async () => {
+    const q = await quoteShipping({ ...base, method: "domicilio" }, { ...deps, getSurcharge: async () => 2000 });
+    expect(q).toMatchObject({ cost: 9000, source: "zone" });
+  });
+  it("envío gratis: no suma recargo", async () => {
+    const q = await quoteShipping(
+      { ...base, method: "domicilio", lines: [line({ unitPrice: 50000 })], subtotal: 50000 },
+      { ...deps, getSurcharge: async () => 2000 },
+    );
+    expect(q).toMatchObject({ cost: 0, free: true });
+  });
+  it("sin zona ni cotización en vivo → error para la clienta (NO cobra $0)", async () => {
+    await expect(
+      quoteShipping({ ...base, method: "domicilio" }, { ...deps, getZones: async () => [] }),
+    ).rejects.toThrow(/Todavía no podemos calcular el envío/);
   });
 });
