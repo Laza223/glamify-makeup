@@ -31,7 +31,7 @@ const faqs: Array<{ q: string; a: React.ReactNode }> = [
     q: "¿Puedo cambiar o devolver un producto?",
     a: (
       <>
-        Tenés {businessInfo.retractionDays} días corridos desde que recibís el pedido para arrepentirte de la compra (art. 34 Ley
+        Tenés {businessInfo.retractionDays} días corridos desde que recibís el pedido (o desde la compra, lo que ocurra último) para arrepentirte de la compra (art. 34 Ley
         24.240): gestionalo desde el{" "}
         <Link href="/arrepentimiento">Botón de Arrepentimiento</Link>. Si te llegó roto, fallado o equivocado,
         escribinos por <Link href="/contacto">contacto</Link> con una foto y te lo cambiamos o te devolvemos el dinero,

@@ -5,6 +5,7 @@ import { getCartIdFromCookie, setCartIdCookie } from "@/lib/cart/cart-cookie";
 import { createCart } from "@/lib/cart/cart-service";
 import type { ActionResult } from "@/lib/forms/action-result";
 import { isValidEmail } from "@/lib/forms/email";
+import { getWelcomeCoupon } from "@/lib/coupons/welcome";
 
 export interface ExitIntentResult extends ActionResult {
   couponCode?: string | null;
@@ -32,6 +33,5 @@ export async function captureExitIntentAction(input: { email: string }): Promise
     data: { contactEmail: email, recoveryEmailConsent: true },
   });
 
-  const couponCode = process.env.NEXT_PUBLIC_WELCOME_COUPON_CODE?.trim() || null;
-  return { ok: true, couponCode };
+  return { ok: true, couponCode: await getWelcomeCoupon() };
 }

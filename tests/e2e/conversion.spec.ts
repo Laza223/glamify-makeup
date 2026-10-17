@@ -28,7 +28,7 @@ test.describe("Conversión + crecimiento (M4b)", () => {
     await page.getByLabel(/tu nombre/i).fill("Visitante Test");
     await page.getByRole("radio", { name: /5 estrellas/i }).click();
     await page.getByLabel(/tu experiencia/i).fill(unique);
-    await page.getByRole("button", { name: /publicar reseña/i }).click();
+    await page.getByRole("button", { name: /enviar reseña/i }).click();
 
     // Mensaje de moderación + la reseña NO aparece en la lista pública (sigue pending).
     await expect(page.getByText(/se publicará tras la revisión/i)).toBeVisible({ timeout: 15000 });

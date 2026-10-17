@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { signInAction, signUpAction, signInWithGoogleAction } from "./actions";
+import { settleAction } from "@/lib/forms/action-result";
 
 type Mode = "in" | "up";
 
@@ -52,7 +53,7 @@ export function IngresarForm({ initialError = null, googleEnabled = false, next 
 
   async function onGoogle() {
     setError(null);
-    const res = await signInWithGoogleAction();
+    const res = await settleAction(signInWithGoogleAction());
     if (res.ok && res.url) window.location.href = res.url;
     else setError(res.error ?? "Error con Google.");
   }

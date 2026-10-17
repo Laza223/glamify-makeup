@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { track } from "@/lib/analytics/track";
 import { captureExitIntentAction } from "@/app/(storefront)/marketing-actions";
 import { chromeFor } from "@/lib/routes/chrome";
+import { settleAction } from "@/lib/forms/action-result";
 
 const SEEN_KEY = "glamify_exit_seen";
 const CONSENT_KEY = "glamify_analytics";
@@ -102,7 +103,7 @@ function ExitIntentPopup() {
     e.preventDefault();
     setError(null);
     setPending(true);
-    const res = await captureExitIntentAction({ email });
+    const res = await settleAction(captureExitIntentAction({ email }));
     setPending(false);
     if (!res.ok) {
       setError(res.error ?? "No se pudo guardar tu email.");
@@ -139,8 +140,8 @@ function ExitIntentPopup() {
                 Un descuento para tu primer pedido
               </SheetTitle>
               <SheetDescription className="text-xs leading-relaxed text-muted-foreground">
-                Dejanos tu email y te mandamos tu cupón de bienvenida. Si dejás
-                algo en el carrito, también te mandamos un recordatorio.
+                Dejanos tu email y te mostramos tu cupón de bienvenida. Si dejás
+                algo en el carrito, te mandamos un recordatorio.
               </SheetDescription>
             </SheetHeader>
 
@@ -212,7 +213,7 @@ function ExitIntentPopup() {
                   </>
                 ) : (
                   <p className="text-xs font-semibold text-primary">
-                    ¡Listo! Revisá tu email.
+                    ¡Listo! Guardamos tu email.
                   </p>
                 )}
                 <Button

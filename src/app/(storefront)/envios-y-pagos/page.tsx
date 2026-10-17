@@ -29,11 +29,16 @@ export default async function EnviosYPagosPage() {
         <li>Recibís por email la empresa y el código de seguimiento cuando despachamos.</li>
       </ul>
 
-      <h2>Envío gratis</h2>
-      <p>
-        Tenés <strong>envío gratis</strong> en compras desde {formatARS(threshold)}. En el carrito te mostramos
-        cuánto te falta para alcanzarlo.
-      </p>
+      {/* Umbral 0 = sin envío gratis: no decir "gratis desde $0". */}
+      {threshold > 0 && (
+        <>
+          <h2>Envío gratis</h2>
+          <p>
+            Tenés <strong>envío gratis</strong> en compras desde {formatARS(threshold)}. En el carrito te mostramos
+            cuánto te falta para alcanzarlo.
+          </p>
+        </>
+      )}
 
       <h2>Medios de pago</h2>
       <p>
@@ -43,7 +48,7 @@ export default async function EnviosYPagosPage() {
 
       <h2>Cambios y devoluciones</h2>
       <p>
-        Podés ejercer el derecho de arrepentimiento dentro de los {businessInfo.retractionDays} días corridos desde que recibís el pedido. Gestionalo desde el{" "}
+        Podés ejercer el derecho de arrepentimiento dentro de los {businessInfo.retractionDays} días corridos desde que recibís el pedido o desde la compra, lo que ocurra último. Gestionalo desde el{" "}
         <Link href="/arrepentimiento">Botón de Arrepentimiento</Link>.
       </p>
       <p>
