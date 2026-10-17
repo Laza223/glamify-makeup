@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Trash2 } from "lucide-react";
 import { formatPrice } from "@/lib/money";
@@ -25,6 +25,14 @@ export function CartLineItem({ item }: { item: CartLineItemView }) {
   const [error, setError] = useState<string | null>(null);
   // Sube cuando falla un cambio: remonta el stepper con la cantidad que sigue vigente en el server.
   const [stepperKey, setStepperKey] = useState(0);
+  // Tras un fallo, la cantidad real llega con el refresh (puede venir de otra pestaña): remontar de nuevo.
+  // Solo después de un fallo; remontar en cada éxito le saca el foco a los botones +/−.
+  const resync = useRef(false);
+  useEffect(() => {
+    if (!resync.current) return;
+    resync.current = false;
+    setStepperKey((k) => k + 1);
+  }, [item.qty]);
 
   const run = (action: () => Promise<ActionResult>) =>
     startTransition(async () => {
@@ -32,8 +40,12 @@ export function CartLineItem({ item }: { item: CartLineItemView }) {
       const r = await action().catch((): ActionResult => ({ ok: false }));
       // También al fallar: la línea pudo cambiar en otra pestaña y sin refrescar queda una fantasma.
       router.refresh();
-      if (r.ok) return;
+      if (r.ok) {
+        resync.current = false;
+        return;
+      }
       setError(r.error ?? "No pudimos actualizar tu carrito. Probá de nuevo.");
+      resync.current = true;
       setStepperKey((k) => k + 1);
     });
   const setQty = (qty: number) => run(() => updateCartItemAction(item.id, qty));
@@ -42,7 +54,7 @@ export function CartLineItem({ item }: { item: CartLineItemView }) {
   return (
     <div className="flex gap-4 py-4 transition-opacity data-[pending]:opacity-60" data-pending={pending ? "" : undefined}>
       <div className="size-20 shrink-0 overflow-hidden rounded-[14px] bg-muted">
-        <ProductImage src={item.image} alt={item.name} fallbackLabel={item.name} sizes="80px" className="size-full" />
+        <ProductImage src={item.image} alt="" fallbackLabel={item.name} sizes="80px" className="size-full" />
       </div>
       <div className="flex min-w-0 flex-1 flex-col gap-2">
         <div className="flex items-start justify-between gap-2">

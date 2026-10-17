@@ -35,6 +35,13 @@ describe("ExitIntentGate", () => {
     expect(await ExitIntentGate()).toBeNull();
   });
 
+  it("busca el código en mayúsculas, como lo guarda el admin y lo aplica el carrito", async () => {
+    vi.stubEnv("NEXT_PUBLIC_WELCOME_COUPON_CODE", " bienvenida10 ");
+    findUnique.mockResolvedValue(base);
+    expect(await ExitIntentGate()).not.toBeNull();
+    expect(findUnique).toHaveBeenCalledWith(expect.objectContaining({ where: { code: "BIENVENIDA10" } }));
+  });
+
   it("sin cupón configurado no consulta la base", async () => {
     vi.stubEnv("NEXT_PUBLIC_WELCOME_COUPON_CODE", "");
     expect(await ExitIntentGate()).toBeNull();

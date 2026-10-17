@@ -26,6 +26,9 @@ describe("sanitizeNext", () => {
     "/\u0000/evil.com",
     "/\u007f/evil.com",
     "%2F%2Fevil.com",
+    "/ x",
+    "/😀",
+    "/tienda?q=labial mate",
   ])("manda %j a /cuenta", (next) => {
     expect(sanitizeNext(next)).toBe("/cuenta");
   });
