@@ -32,8 +32,14 @@ function consentDecided(): boolean {
   }
 }
 
-/** Popup sutil de salida (una sola vez): captura email + revela cupón de bienvenida (blueprint 06 §8). */
+/** Sin cupón de bienvenida configurado (NEXT_PUBLIC_WELCOME_COUPON_CODE) no hay nada que ofrecer: no se muestra. */
 export function ExitIntent() {
+  if (!process.env.NEXT_PUBLIC_WELCOME_COUPON_CODE?.trim()) return null;
+  return <ExitIntentPopup />;
+}
+
+/** Popup sutil de salida (una sola vez): captura email + revela cupón de bienvenida (blueprint 06 §8). */
+function ExitIntentPopup() {
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [pending, setPending] = useState(false);
@@ -128,8 +134,8 @@ export function ExitIntent() {
                 Un descuento para tu primer pedido
               </SheetTitle>
               <SheetDescription className="text-xs leading-relaxed text-muted-foreground">
-                Dejanos tu email para recibir tu cupón de bienvenida. Tus datos
-                están protegidos, sin spam.
+                Dejanos tu email y te mandamos tu cupón de bienvenida. Si dejás
+                algo en el carrito, también te mandamos un recordatorio.
               </SheetDescription>
             </SheetHeader>
 
@@ -140,7 +146,7 @@ export function ExitIntent() {
                     htmlFor="exit-email"
                     className="text-xs font-semibold text-foreground"
                   >
-                    Tu correo electrónico
+                    Tu email
                   </Label>
                   <Input
                     id="exit-email"
@@ -201,7 +207,7 @@ export function ExitIntent() {
                   </>
                 ) : (
                   <p className="text-xs font-semibold text-primary">
-                    ¡Listo! Te avisaremos de promociones y novedades.
+                    ¡Listo! Revisá tu email.
                   </p>
                 )}
                 <Button

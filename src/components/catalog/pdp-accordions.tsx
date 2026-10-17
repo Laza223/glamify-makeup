@@ -1,4 +1,5 @@
 import { ChevronDown } from "lucide-react";
+import { businessInfo } from "@/lib/legal/business-info";
 
 interface PdpAccordionsProps {
   description?: string | null;
@@ -30,8 +31,7 @@ export function PdpAccordions({ description }: PdpAccordionsProps) {
             Argentino, con número de seguimiento.
           </p>
           <p>
-            <strong className="text-foreground">Medios de pago:</strong> tarjeta de crédito, débito o dinero en cuenta con
-            Mercado Pago.
+            <strong className="text-foreground">Medios de pago:</strong> {businessInfo.paymentMethods}.
           </p>
         </div>
       </details>

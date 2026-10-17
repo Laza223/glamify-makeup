@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { applyCouponAction, removeCouponAction } from "@/app/(storefront)/actions";
+import type { ActionResult } from "@/lib/forms/action-result";
 
 export function CouponInput({ applied }: { applied: string | null }) {
   const router = useRouter();
@@ -11,31 +12,39 @@ export function CouponInput({ applied }: { applied: string | null }) {
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  const apply = () =>
+  // Una action que tira (red, server) no debe caer al error.tsx: se informa acá mismo.
+  const run = (action: () => Promise<ActionResult>, fallback: string, onOk?: () => void) =>
     startTransition(async () => {
       setError(null);
-      const r = await applyCouponAction(code);
-      if (!r.ok) setError(r.error ?? "No se pudo aplicar.");
-      else { setCode(""); router.refresh(); }
-    });
-  const remove = () =>
-    startTransition(async () => {
-      await removeCouponAction();
+      const r = await action().catch((): ActionResult => ({ ok: false }));
+      if (!r.ok) {
+        setError(r.error ?? fallback);
+        return;
+      }
+      onOk?.();
       router.refresh();
     });
+  const apply = () =>
+    run(() => applyCouponAction(code), "No pudimos aplicar el cupón. Probá de nuevo.", () => setCode(""));
+  const remove = () => run(removeCouponAction, "No pudimos quitar el cupón. Probá de nuevo.");
+
+  const errorMessage = error && <p className="mt-1.5 text-[14px] text-destructive" role="alert">{error}</p>;
 
   if (applied) {
     return (
-      <div className="flex min-h-12 items-center justify-between rounded-2xl bg-success/10 pl-4 pr-1 text-[15px]">
-        <span>Cupón <strong>{applied}</strong> aplicado</span>
-        <button
-          type="button"
-          onClick={remove}
-          disabled={pending}
-          className="inline-flex min-h-11 items-center rounded-full px-3 font-semibold text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          Quitar
-        </button>
+      <div>
+        <div className="flex min-h-12 items-center justify-between rounded-2xl bg-success/10 pl-4 pr-1 text-[15px]">
+          <span>Cupón <strong>{applied}</strong> aplicado</span>
+          <button
+            type="button"
+            onClick={remove}
+            disabled={pending}
+            className="inline-flex min-h-11 items-center rounded-full px-3 font-semibold text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            Quitar
+          </button>
+        </div>
+        {errorMessage}
       </div>
     );
   }
@@ -65,7 +74,7 @@ export function CouponInput({ applied }: { applied: string | null }) {
           Aplicar
         </button>
       </div>
-      {error && <p className="mt-1.5 text-[14px] text-destructive" role="alert">{error}</p>}
+      {errorMessage}
     </div>
   );
 }

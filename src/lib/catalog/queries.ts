@@ -5,7 +5,9 @@ import {
   buildPagination,
   buildProductOrderBy,
   buildProductWhere,
+  clampPage,
   PAGE_SIZE,
+  totalPagesFor,
   type ProductListParams,
 } from "@/lib/catalog/filters";
 import { buildCategoryTree, findCategoryByPath, type CategoryNode } from "@/lib/catalog/categories";
@@ -42,11 +44,13 @@ export async function getProductList(
   categoryIds: string[] | null,
 ): Promise<ProductListResult> {
   const where = buildProductWhere(params, categoryIds);
-  const { skip, take } = buildPagination(params);
   const [rows, total] = await Promise.all([
     prisma.product.findMany({ where, include: PRODUCT_INCLUDE, orderBy: buildProductOrderBy(params) }),
     prisma.product.count({ where }),
   ]);
+  // `?page=99` fuera de rango: se recorta a la última página válida (no una grilla vacía con "N productos").
+  const page = clampPage(params.page, total);
+  const { skip, take } = buildPagination({ ...params, page });
 
   // Asegura que los productos con stock disponible aparezcan primero (agotados al final de la tienda)
   const sorted = [...rows].sort((a, b) => {
@@ -61,9 +65,9 @@ export async function getProductList(
   return {
     items: pagedItems.map(toCatalogProduct),
     total,
-    page: params.page,
+    page,
     pageSize: PAGE_SIZE,
-    totalPages: Math.max(1, Math.ceil(total / PAGE_SIZE)),
+    totalPages: totalPagesFor(total),
   };
 }
 

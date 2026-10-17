@@ -17,6 +17,7 @@ const { cartItem, productVariant } = vi.hoisted(() => ({
 vi.mock("@/lib/prisma", () => ({ prisma: { cartItem, productVariant } }));
 
 import { addItem, updateItem, removeItem } from "@/lib/cart/cart-service";
+import { CustomerFacingError } from "@/lib/orders/customer-error";
 
 describe("tope de gift cards por línea", () => {
   const giftVariant = (slug = "gift-cards") => ({
@@ -140,5 +141,33 @@ describe("addItem — productos a pedido (se arman por WhatsApp)", () => {
     cartItem.findFirst.mockResolvedValue(null);
     await addItem({ cartId: "c1", variantId: "v1", qty: 2 });
     expect(cartItem.create).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("errores: solo los escritos para la clienta son CustomerFacingError", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("variante no disponible y tope de gift cards son para la clienta", async () => {
+    productVariant.findUnique.mockResolvedValue(null);
+    await expect(addItem({ cartId: "c1", variantId: "nope", qty: 1 })).rejects.toBeInstanceOf(CustomerFacingError);
+
+    productVariant.findUnique.mockResolvedValue({
+      id: "gv1", active: true, priceOverride: 20000,
+      product: { basePrice: 20000, category: { slug: "gift-cards" }, categories: [] },
+    });
+    cartItem.findFirst.mockResolvedValue(null);
+    await expect(addItem({ cartId: "c1", variantId: "gv1", qty: 11 })).rejects.toBeInstanceOf(CustomerFacingError);
+  });
+
+  it("los errores internos siguen siendo Error común (la UI muestra el genérico)", async () => {
+    const internal = await addItem({ cartId: "c1", qty: 1 }).catch((e: unknown) => e);
+    expect(internal).toBeInstanceOf(Error);
+    expect(internal).not.toBeInstanceOf(CustomerFacingError);
+
+    cartItem.updateMany.mockResolvedValue({ count: 0 });
+    const foreign = await updateItem("cart-a", "item-ajeno", 3).catch((e: unknown) => e);
+    expect(foreign).not.toBeInstanceOf(CustomerFacingError);
   });
 });

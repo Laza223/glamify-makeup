@@ -3,7 +3,7 @@ import { getKitBuilderData } from "@/lib/catalog/kit";
 import { KitBuilder } from "@/components/bundle/kit-builder";
 
 export const metadata: Metadata = {
-  title: "Armá tu Kit",
+  title: "Armá tu kit",
   description: "Elegí tus esenciales de Labios, Ojos y Rostro y armá tu kit de maquillaje.",
 };
 

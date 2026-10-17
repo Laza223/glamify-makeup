@@ -34,7 +34,11 @@ export interface CartUI {
     productId?: string | null,
   ) => Promise<boolean>;
   isUpdating: (variantId: string) => boolean;
+  /** Mensaje para la clienta si el último intento sobre esa variante falló (null si no hay). */
+  getError: (variantId: string) => string | null;
 }
+
+const UPDATE_ERROR = "No pudimos actualizar tu carrito. Probá de nuevo.";
 
 const CartContext = createContext<CartUI | null>(null);
 
@@ -64,6 +68,7 @@ export function CartProvider({
   );
   const [optimisticCount, setOptimisticCount] = useState(initialCount);
   const [pendingIds, setPendingIds] = useState<Set<string>>(() => new Set());
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Sincronizar cuando el servidor revalida los datos (router.refresh o navegación)
   useEffect(() => {
@@ -98,6 +103,17 @@ export function CartProvider({
     [pendingIds],
   );
 
+  const getError = useCallback((variantId: string): string | null => errors[variantId] ?? null, [errors]);
+
+  const setError = useCallback((variantId: string, message: string | null) => {
+    setErrors((prev) => {
+      const next = { ...prev };
+      if (message === null) delete next[variantId];
+      else next[variantId] = message;
+      return next;
+    });
+  }, []);
+
   const setVariantQty = useCallback(
     async (
       variantId: string,
@@ -110,6 +126,27 @@ export function CartProvider({
       if (prevQty === clampedQty) return true;
 
       const diff = clampedQty - prevQty;
+      setError(variantId, null);
+
+      // Vuelve al estado previo si el server no pudo aplicar el cambio.
+      const revert = (message: string) => {
+        setItems((prev) => {
+          const next = { ...prev };
+          if (prevQty <= 0) {
+            delete next[variantId];
+          } else {
+            next[variantId] = {
+              id: prevItem?.id,
+              refId: variantId,
+              productId: productId ?? prevItem?.productId ?? null,
+              qty: prevQty,
+            };
+          }
+          return next;
+        });
+        setOptimisticCount((prev) => Math.max(0, prev - diff));
+        setError(variantId, message);
+      };
 
       // Actualización optimista inmediata (0ms lag visual)
       setItems((prev) => {
@@ -132,22 +169,7 @@ export function CartProvider({
       try {
         const res = await setVariantQtyAction({ variantId, qty: clampedQty });
         if (!res.ok) {
-          // Revertir estado si falló el servidor
-          setItems((prev) => {
-            const next = { ...prev };
-            if (prevQty <= 0) {
-              delete next[variantId];
-            } else {
-              next[variantId] = {
-                id: prevItem?.id,
-                refId: variantId,
-                productId: productId ?? prevItem?.productId ?? null,
-                qty: prevQty,
-              };
-            }
-            return next;
-          });
-          setOptimisticCount((prev) => Math.max(0, prev - diff));
+          revert(res.error ?? UPDATE_ERROR);
           return false;
         }
 
@@ -159,22 +181,7 @@ export function CartProvider({
         });
         return true;
       } catch {
-        // Revertir ante excepción
-        setItems((prev) => {
-          const next = { ...prev };
-          if (prevQty <= 0) {
-            delete next[variantId];
-          } else {
-            next[variantId] = {
-              id: prevItem?.id,
-              refId: variantId,
-              productId: productId ?? prevItem?.productId ?? null,
-              qty: prevQty,
-            };
-          }
-          return next;
-        });
-        setOptimisticCount((prev) => Math.max(0, prev - diff));
+        revert(UPDATE_ERROR);
         return false;
       } finally {
         setPendingIds((prev) => {
@@ -184,7 +191,7 @@ export function CartProvider({
         });
       }
     },
-    [items, router],
+    [items, router, setError],
   );
 
   return (
@@ -199,6 +206,7 @@ export function CartProvider({
         getProductQty,
         setVariantQty,
         isUpdating,
+        getError,
       }}
     >
       {children}

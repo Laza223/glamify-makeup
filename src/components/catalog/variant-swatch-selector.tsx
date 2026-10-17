@@ -76,10 +76,10 @@ export function VariantSwatchSelector({
   return (
     <div>
       <div className="mb-3 flex items-center justify-between gap-3">
-        <span className="text-[16px] font-bold text-foreground">
+        <span className="min-w-0 text-[16px] font-bold text-foreground [overflow-wrap:anywhere]">
           Tono: <span className="font-normal text-muted-foreground">{selected?.name}</span>
         </span>
-        {selected && <StockBadge state={getStockState(selected)} stock={selected.stock} />}
+        {selected && <StockBadge state={getStockState(selected)} stock={selected.stock} className="shrink-0" />}
       </div>
       <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Elegí un tono">
         {variants.map((v, i) => {
@@ -111,7 +111,7 @@ export function VariantSwatchSelector({
                       isSelected ? "ring-2 ring-foreground" : "hover:ring-2 hover:ring-border",
                     )
                   : cn(
-                      "inline-flex min-h-11 items-center rounded-full border px-4 text-[15px] font-semibold",
+                      "inline-flex min-h-11 max-w-full items-center rounded-full border px-4 py-2 text-left text-[15px] font-semibold leading-tight [overflow-wrap:anywhere]",
                       isSelected ? "border-foreground bg-foreground text-white" : "border-border bg-white text-foreground hover:border-foreground",
                     ),
                 out && "cursor-not-allowed opacity-40",

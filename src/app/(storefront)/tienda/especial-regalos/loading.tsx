@@ -3,7 +3,7 @@ import { ProductGridSkeleton } from "@/components/catalog/product-grid-skeleton"
 
 export default function EspecialRegalosLoading() {
   return (
-    <section className="space-y-4 page-enter" aria-busy="true" aria-label="Cargando Especial Regalos...">
+    <section className="space-y-4 page-enter" aria-busy="true" aria-label="Cargando especial regalos...">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Skeleton className="h-8 w-48" />
       </div>

@@ -1,5 +1,6 @@
 import { Heart, CreditCard, PackageCheck, Truck } from "lucide-react";
 import { formatPrice } from "@/lib/money";
+import { businessInfo } from "@/lib/legal/business-info";
 
 /**
  * "Comprar es re fácil": el recorrido real de una compra en 4 pasos, unidos por una línea rosa
@@ -13,7 +14,7 @@ export function HowItWorks({ threshold, brands }: { threshold: number; brands: s
       d: brands.length > 0 ? `Por categoría o por marca: ${brands.join(", ")} y más.` : "Por categoría o por marca.",
     },
     { icon: CreditCard, t: "Pagás en un toque", d: "Con Mercado Pago: tarjeta o dinero en cuenta, en un solo paso." },
-    { icon: PackageCheck, t: "Lo armamos en Luján", d: "Y lo despachamos en hasta 3 días hábiles." },
+    { icon: PackageCheck, t: "Lo armamos en Luján", d: `Y lo despachamos en ${businessInfo.dispatchWindow}.` },
     { icon: Truck, t: "Te llega", d: `A tu casa o a la sucursal de Correo Argentino. Gratis desde ${formatPrice(threshold)}.` },
   ];
 

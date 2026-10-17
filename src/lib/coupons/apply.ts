@@ -1,4 +1,4 @@
-import { round2 } from "@/lib/money";
+import { round2, formatPrice } from "@/lib/money";
 import { lineTotal } from "@/lib/cart/totals";
 import type { CartLine } from "@/lib/cart/types";
 
@@ -24,7 +24,7 @@ export function validateCoupon(coupon: ValidatableCoupon, ctx: CouponContext): C
   if (coupon.validFrom && ctx.now < coupon.validFrom) return { ok: false, reason: "El cupón todavía no es válido." };
   if (coupon.validTo && ctx.now > coupon.validTo) return { ok: false, reason: "El cupón está vencido." };
   if (coupon.minSubtotal != null && ctx.subtotal < Number(coupon.minSubtotal)) {
-    return { ok: false, reason: "No alcanzás el mínimo para este cupón." };
+    return { ok: false, reason: `Este cupón pide una compra mínima de ${formatPrice(coupon.minSubtotal)}.` };
   }
   if (coupon.maxUses != null && coupon.usedCount >= coupon.maxUses) {
     return { ok: false, reason: "El cupón alcanzó su límite de usos." };

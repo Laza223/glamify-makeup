@@ -2,9 +2,11 @@
 
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { X } from "lucide-react";
+import { activeFilterKeys, type FilterKey } from "@/lib/catalog/filters";
 import { formatPrice } from "@/lib/money";
 
-const LABELS: Record<string, (v: string) => string> = {
+// `min`/`max` solo llegan acá si son enteros válidos (`activeFilterKeys`), así que `Number(v)` nunca es NaN.
+const LABELS: Record<FilterKey, (v: string) => string> = {
   min: (v) => `Desde ${formatPrice(Number(v))}`,
   max: (v) => `Hasta ${formatPrice(Number(v))}`,
   oferta: () => "Con descuento",
@@ -15,7 +17,7 @@ export function ActiveFilterChips() {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
-  const active = Object.keys(LABELS).filter((k) => params.get(k));
+  const active = activeFilterKeys((k) => params.get(k));
   if (active.length === 0) return null;
 
   const remove = (key: string) => {

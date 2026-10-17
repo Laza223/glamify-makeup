@@ -74,7 +74,7 @@ export function GiftBand({
                 href={giftCardHref}
                 className="inline-flex h-12 items-center justify-center rounded-2xl border border-white/25 px-6 text-[15px] font-semibold text-white transition hover:border-white/60 hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
               >
-                O regalá una Gift Card
+                O regalá una gift card
               </Link>
             )}
           </div>

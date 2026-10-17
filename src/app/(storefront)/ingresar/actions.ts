@@ -7,6 +7,7 @@ import { mergeGuestCartIntoCustomer, type MergeCartDb } from "@/lib/cart/merge";
 import { getCartIdFromCookie, setCartIdCookie } from "@/lib/cart/cart-cookie";
 import { prisma } from "@/lib/prisma";
 import { getAuthBaseUrl } from "@/lib/http/base-url";
+import { customerErrorMessage } from "@/lib/orders/customer-error";
 import type { ActionResult } from "@/lib/forms/action-result";
 
 /** Tras autenticar, asocia el carrito de la cookie a la clienta. */
@@ -52,7 +53,7 @@ export async function signUpAction(input: {
   // ON) devuelve un user obfuscado con un id NUEVO y sin mandar mail; el upsert
   // por ese id chocaría con el @unique de `email` → error 500 no controlado.
   const existing = await prisma.customer.findUnique({ where: { email }, select: { id: true } });
-  if (existing) return { ok: false, error: "El correo electrónico ya está registrado." };
+  if (existing) return { ok: false, error: "Ese email ya está registrado." };
 
   const baseUrl = await getAuthBaseUrl();
   const { data, error } = await supabase.auth.signUp({
@@ -60,7 +61,13 @@ export async function signUpAction(input: {
     password: input.password,
     options: { data: { name: input.name.trim() }, emailRedirectTo: `${baseUrl}/auth/callback` },
   });
-  if (error) return { ok: false, error: error.message };
+  if (error) {
+    // Supabase rechaza contraseñas débiles o filtradas: decirle por qué, en castellano.
+    if (error.code === "weak_password") {
+      return { ok: false, error: "Esa contraseña es muy fácil de adivinar. Probá con una más larga, con números o símbolos." };
+    }
+    return { ok: false, error: customerErrorMessage(error, "sign-up", "No pudimos crear tu cuenta. Probá de nuevo en unos segundos.") };
+  }
 
   // Email ya registrado Y CONFIRMADO: Supabase (anti-enumeración, "Confirm
   // email" ON) no devuelve error — devuelve un user ofuscado con id NUEVO,
@@ -71,7 +78,7 @@ export async function signUpAction(input: {
   // vacío) y Supabase le reenvía el mail de confirmación — comportamiento
   // deseado, no bloquear.
   if (data.user && (data.user.identities?.length ?? 0) === 0) {
-    return { ok: false, error: "El correo electrónico ya está registrado." };
+    return { ok: false, error: "Ese email ya está registrado." };
   }
   // Persistir consentimiento si la fila ya existe (confirmación ON → puede no haber sesión aún).
   if (data.user) {
@@ -83,7 +90,7 @@ export async function signUpAction(input: {
       });
     } catch (e) {
       // Carrera: otra request creó la fila con este email entre el check y el upsert.
-      if (isUniqueConstraintError(e)) return { ok: false, error: "El correo electrónico ya está registrado." };
+      if (isUniqueConstraintError(e)) return { ok: false, error: "Ese email ya está registrado." };
       throw e;
     }
   }

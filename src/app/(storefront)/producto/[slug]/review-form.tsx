@@ -9,6 +9,13 @@ import { Label } from "@/components/ui/label";
 import { RatingInput } from "@/components/ui/rating-stars";
 import { track } from "@/lib/analytics/track";
 import { createReviewAction } from "./review-actions";
+import {
+  REVIEW_PHOTO_FORMATS_LABEL,
+  REVIEW_PHOTO_MAX_BYTES,
+  REVIEW_PHOTO_MAX_MB,
+  REVIEW_PHOTO_MIME,
+  isReviewPhotoType,
+} from "./review-photo";
 
 export function ReviewForm({
   productId,
@@ -28,8 +35,15 @@ export function ReviewForm({
   function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        setError("La foto supera el límite de 5 MB.");
+      const invalid = !isReviewPhotoType(file.type)
+        ? `Formato de foto no permitido. Subí ${REVIEW_PHOTO_FORMATS_LABEL}.`
+        : file.size > REVIEW_PHOTO_MAX_BYTES
+          ? `La foto supera el límite de ${REVIEW_PHOTO_MAX_MB} MB.`
+          : null;
+      if (invalid) {
+        setError(invalid);
+        e.target.value = "";
+        setPreviewUrl(null);
         return;
       }
       setError(null);
@@ -62,10 +76,10 @@ export function ReviewForm({
 
   if (doneStatus) {
     return (
-      <p className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-medium text-emerald-700">
+      <p role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-medium text-emerald-700">
         {doneStatus === "approved"
           ? "¡Muchas gracias por tu reseña! Ya está publicada en la tienda."
-          : "¡Muchas gracias por tu reseña! Se publicará en breve tras la moderación de la dueña."}
+          : "¡Muchas gracias por tu reseña! La revisamos antes de publicarla."}
       </p>
     );
   }
@@ -76,7 +90,6 @@ export function ReviewForm({
         <Button
           type="button"
           variant="outline"
-          size="sm"
           onClick={() => setIsOpen(true)}
           className="gap-1.5 rounded-full text-xs font-semibold hover:bg-secondary hover:text-primary"
         >
@@ -90,7 +103,7 @@ export function ReviewForm({
   return (
     <form
       onSubmit={onSubmit}
-      className="animate-fade-up space-y-4 rounded-2xl border border-border bg-white p-5 shadow-soft"
+      className="animate-fade-up space-y-4 motion-reduce:animate-none rounded-2xl border border-border bg-white p-5 shadow-soft"
     >
       <input type="hidden" name="productId" value={productId} />
       <input type="hidden" name="slug" value={slug} />
@@ -102,7 +115,7 @@ export function ReviewForm({
         <button
           type="button"
           onClick={() => setIsOpen(false)}
-          className="text-xs text-muted-foreground hover:text-foreground"
+          className="min-h-11 px-2 text-xs text-muted-foreground hover:text-foreground"
         >
           Cancelar
         </button>
@@ -151,7 +164,7 @@ export function ReviewForm({
         <Label className="flex items-center justify-between text-xs font-semibold text-foreground">
           <span>Foto del producto (opcional)</span>
           <span className="text-[11px] font-normal text-muted-foreground">
-            Hasta 5 MB (PNG, JPG)
+            Hasta {REVIEW_PHOTO_MAX_MB} MB ({REVIEW_PHOTO_FORMATS_LABEL})
           </span>
         </Label>
 
@@ -185,7 +198,7 @@ export function ReviewForm({
               id="rphoto"
               name="photo"
               type="file"
-              accept="image/png,image/jpeg,image/webp,image/avif"
+              accept={REVIEW_PHOTO_MIME.join(",")}
               onChange={onFileChange}
               className="hidden"
             />
@@ -205,7 +218,7 @@ export function ReviewForm({
 
       {!isLoggedIn && (
         <p className="text-xs text-muted-foreground">
-          Tu reseña se publicará tras la moderación de la dueña.
+          Revisamos las reseñas antes de publicarlas.
         </p>
       )}
 
@@ -226,7 +239,7 @@ export function ReviewForm({
             <span>Enviando reseña…</span>
           </>
         ) : (
-          "Publicar reseña"
+          "Enviar reseña"
         )}
       </Button>
     </form>

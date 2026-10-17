@@ -11,11 +11,13 @@ type Mode = "in" | "up";
 
 interface IngresarFormProps {
   initialError?: string | null;
+  /** Path interno (ya saneado en el server) al que volver después de ingresar. */
+  next?: string;
   /** Solo mostrar "Continuar con Google" si el provider está habilitado en Supabase. */
   googleEnabled?: boolean;
 }
 
-export function IngresarForm({ initialError = null, googleEnabled = false }: IngresarFormProps) {
+export function IngresarForm({ initialError = null, googleEnabled = false, next = "/cuenta" }: IngresarFormProps) {
   const router = useRouter();
   const [mode, setMode] = useState<Mode>("in");
   const [error, setError] = useState<string | null>(initialError);
@@ -32,7 +34,7 @@ export function IngresarForm({ initialError = null, googleEnabled = false }: Ing
       if (mode === "in") {
         const res = await signInAction({ email, password });
         if (!res.ok) { setError(res.error ?? "Error"); return; }
-        router.push("/cuenta"); router.refresh();
+        router.push(next); router.refresh();
       } else {
         const res = await signUpAction({
           email, password,
@@ -41,8 +43,10 @@ export function IngresarForm({ initialError = null, googleEnabled = false }: Ing
         });
         if (!res.ok) { setError(res.error ?? "Error"); return; }
         if (res.needsConfirmation) setInfo("¡Listo! Revisá tu correo para confirmar tu cuenta. Si no lo ves, fijate en la casilla de spam.");
-        else { router.push("/cuenta"); router.refresh(); }
+        else { router.push(next); router.refresh(); }
       }
+    } catch {
+      setError("No pudimos conectarnos. Probá de nuevo en unos segundos.");
     } finally { setPending(false); }
   }
 

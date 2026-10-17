@@ -45,7 +45,7 @@ export default async function ContactoPage() {
   return (
     <section className="mx-auto max-w-prose space-y-8 py-8 md:py-12">
       <PageTitle lead="Estamos para" accent="ayudarte">
-        ¿Tenés una consulta sobre un producto, tu pedido o un cambio? Escribinos por donde te quede más cómodo.
+        ¿Tenés una consulta sobre un producto o tu pedido? Escribinos por donde te quede más cómodo.
       </PageTitle>
 
       <ul className="space-y-3">

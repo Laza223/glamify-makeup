@@ -38,7 +38,7 @@ const SELECT =
   "h-12 w-full rounded-2xl border border-input bg-white px-3 text-[16px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
 
 /** Etiqueta visible arriba de cada campo (antes eran solo placeholders). */
-function Field({ id, label, optional, className, children }: { id: string; label: string; optional?: boolean; className?: string; children: React.ReactNode }) {
+function Field({ id, label, optional, error, className, children }: { id: string; label: string; optional?: boolean; error?: string; className?: string; children: React.ReactNode }) {
   return (
     <div className={cn("space-y-1.5", className)}>
       <label htmlFor={id} className="block text-[15px] font-semibold text-foreground">
@@ -46,9 +46,17 @@ function Field({ id, label, optional, className, children }: { id: string; label
         {optional && <span className="font-normal text-muted-foreground"> (opcional)</span>}
       </label>
       {children}
+      {error && <p id={`${id}-error`} className="text-[14px] font-medium text-destructive">{error}</p>}
     </div>
   );
 }
+
+type FieldKey = "name" | "email" | "phone" | "city" | "cp" | "street" | "number" | "dni";
+type FieldErrors = Partial<Record<FieldKey, string>>;
+/** Campos de dirección en el orden en que aparecen en pantalla. */
+const ADDRESS_FIELDS = ["city", "cp", "street", "number", "dni"] as const;
+/** Dirección válida de base: validar un campo con el resto OK da el mensaje de ese campo solo (mismas reglas que el server). */
+const VALID_ADDRESS = { cp: "1000", province: "Buenos Aires", city: "x", street: "x", number: "1", dni: "30123456" };
 
 function StepTitle({ n, children }: { n: number; children: React.ReactNode }) {
   return (
@@ -85,7 +93,9 @@ export function CheckoutForm({ subtotal, discount, couponCode, couponFreeShippin
   const [submitting, startSubmit] = useTransition();
   // Entre recibir el link de MP y salir de la página el botón sigue bloqueado: un segundo click crearía otro pedido.
   const [redirecting, setRedirecting] = useState(false);
+  // Errores que no son de un campo (envío sin calcular, términos, server): banner junto al botón.
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
   const quoted = shipping?.key === quoteKey ? shipping : null;
   const quoteErrorMessage = quoteError?.key === quoteKey ? quoteError.message : null;
@@ -127,24 +137,60 @@ export function CheckoutForm({ subtotal, discount, couponCode, couponFreeShippin
     return () => clearTimeout(t);
   }, [quoteKey, canQuote, digitalOnly]);
 
-  const validate = (): string | null => {
-    if (!name.trim()) return "Ingresá tu nombre.";
-    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return "Revisá el email: parece que le falta algo.";
-    if (!phone.trim()) return "Ingresá un teléfono.";
+  /** Errores por campo, en el orden en que aparecen en pantalla. */
+  const validateFields = (): FieldErrors => {
+    const errors: FieldErrors = {};
+    if (!name.trim()) errors.name = "Ingresá tu nombre.";
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) errors.email = "Revisá el email: parece que le falta algo.";
+    if (!phone.trim()) errors.phone = "Ingresá un teléfono.";
     if (!digitalOnly) {
-      const addressError = validateShippingAddress(method, { cp, province, city, street, number, dni });
-      if (addressError) return addressError;
-      if (shippingCost == null) return quoteErrorMessage ?? "Esperá a que calculemos el envío con tu código postal.";
+      const values = { cp, city, street, number, dni };
+      for (const k of ADDRESS_FIELDS) {
+        const message = validateShippingAddress(method, { ...VALID_ADDRESS, [k]: values[k] });
+        if (message) errors[k] = message;
+      }
     }
-    if (!acceptedTerms) return "Tenés que aceptar los Términos y Condiciones.";
+    return errors;
+  };
+
+  /** Errores sin campo propio: solo se muestran cuando los campos están bien. */
+  const validateRest = (): string | null => {
+    if (!digitalOnly && shippingCost == null) return quoteErrorMessage ?? "Esperá a que calculemos el envío con tu código postal.";
+    if (!acceptedTerms) return "Tenés que aceptar los Términos y condiciones.";
     return null;
+  };
+
+  const clearFieldError = (k: FieldKey) => setFieldErrors((prev) => (prev[k] ? { ...prev, [k]: undefined } : prev));
+
+  /** Props de a11y y borde de un input con error posible; `hintId` suma el texto de ayuda al aria-describedby. */
+  const fieldProps = (k: FieldKey, hintId?: string) => {
+    const invalid = Boolean(fieldErrors[k]);
+    return {
+      className: cn(FIELD, invalid && "border-destructive"),
+      "aria-invalid": invalid || undefined,
+      "aria-describedby": [hintId, invalid ? `co-${k}-error` : undefined].filter(Boolean).join(" ") || undefined,
+    };
   };
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (submitting || redirecting) return;
-    const v = validate();
-    if (v) { setError(v); return; }
+    const errors = validateFields();
+    const first = (Object.keys(errors) as FieldKey[])[0];
+    setFieldErrors(errors);
+    if (first) {
+      setError(null);
+      // Después del render, así el input ya tiene aria-invalid y el mensaje enlazado cuando recibe el foco.
+      requestAnimationFrame(() => {
+        const el = document.getElementById(`co-${first}`);
+        el?.focus({ preventScroll: true });
+        const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        el?.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "center" });
+      });
+      return;
+    }
+    const rest = validateRest();
+    if (rest) { setError(rest); return; }
     setError(null);
     startSubmit(async () => {
       try {
@@ -169,14 +215,14 @@ export function CheckoutForm({ subtotal, discount, couponCode, couponFreeShippin
         <fieldset>
           <StepTitle n={1}>Tus datos</StepTitle>
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field id="co-name" label="Nombre y apellido" className="sm:col-span-2">
-              <Input id="co-name" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" className={FIELD} />
+            <Field id="co-name" label="Nombre y apellido" error={fieldErrors.name} className="sm:col-span-2">
+              <Input id="co-name" value={name} onChange={(e) => { setName(e.target.value); clearFieldError("name"); }} autoComplete="name" {...fieldProps("name")} />
             </Field>
-            <Field id="co-email" label="Email">
-              <Input id="co-email" value={email} onChange={(e) => setEmail(e.target.value)} type="email" inputMode="email" autoComplete="email" className={FIELD} />
+            <Field id="co-email" label="Email" error={fieldErrors.email}>
+              <Input id="co-email" value={email} onChange={(e) => { setEmail(e.target.value); clearFieldError("email"); }} type="email" inputMode="email" autoComplete="email" {...fieldProps("email")} />
             </Field>
-            <Field id="co-phone" label="Teléfono">
-              <Input id="co-phone" value={phone} onChange={(e) => setPhone(e.target.value)} type="tel" inputMode="tel" autoComplete="tel" placeholder="11 2345 6789" className={FIELD} />
+            <Field id="co-phone" label="Teléfono" error={fieldErrors.phone}>
+              <Input id="co-phone" value={phone} onChange={(e) => { setPhone(e.target.value); clearFieldError("phone"); }} type="tel" inputMode="tel" autoComplete="tel" placeholder="11 2345 6789" {...fieldProps("phone")} />
             </Field>
           </div>
         </fieldset>
@@ -216,24 +262,24 @@ export function CheckoutForm({ subtotal, discount, couponCode, couponFreeShippin
                   {AR_PROVINCES.map((p) => <option key={p} value={p}>{p}</option>)}
                 </select>
               </Field>
-              <Field id="co-city" label="Localidad">
+              <Field id="co-city" label="Localidad" error={fieldErrors.city}>
                 <Input
                   id="co-city"
                   value={city}
-                  onChange={(e) => setCity(e.target.value)}
+                  onChange={(e) => { setCity(e.target.value); clearFieldError("city"); }}
                   autoComplete="address-level2"
-                  className={FIELD}
+                  {...fieldProps("city")}
                 />
               </Field>
-              <Field id="co-cp" label="Código postal">
+              <Field id="co-cp" label="Código postal" error={fieldErrors.cp}>
                 <Input
                   id="co-cp"
                   value={cp}
-                  onChange={(e) => setCp(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                  onChange={(e) => { setCp(e.target.value.replace(/\D/g, "").slice(0, 4)); clearFieldError("cp"); }}
                   inputMode="numeric"
                   autoComplete="postal-code"
                   placeholder="Ej: 6700"
-                  className={FIELD}
+                  {...fieldProps("cp")}
                 />
               </Field>
 
@@ -242,7 +288,7 @@ export function CheckoutForm({ subtotal, discount, couponCode, couponFreeShippin
                 <div className="flex min-h-12 w-full items-center gap-3 rounded-2xl bg-secondary px-4 py-2 text-[15px]">
                   <Truck className="size-5 shrink-0 text-primary" aria-hidden />
                   {quoting || (canQuote && !quoted && !quoteErrorMessage) ? (
-                    <span className="flex items-center gap-2 text-muted-foreground"><Loader2 className="size-4 animate-spin" aria-hidden /> Calculando envío…</span>
+                    <span className="flex items-center gap-2 text-muted-foreground"><Loader2 className="size-4 animate-spin motion-reduce:animate-none" aria-hidden /> Calculando envío…</span>
                   ) : quoted ? (
                     <span>
                       Envío: <strong className={cn(quoted.free && "text-success")}>{quoted.free ? "¡Gratis!" : formatPrice(shippingCost ?? 0)}</strong>
@@ -263,11 +309,11 @@ export function CheckoutForm({ subtotal, discount, couponCode, couponFreeShippin
 
             {method === "domicilio" && (
               <div className="mt-4 grid gap-4 sm:grid-cols-[1fr_140px]">
-                <Field id="co-street" label="Calle">
-                  <Input id="co-street" value={street} onChange={(e) => setStreet(e.target.value)} autoComplete="address-line1" className={FIELD} />
+                <Field id="co-street" label="Calle" error={fieldErrors.street}>
+                  <Input id="co-street" value={street} onChange={(e) => { setStreet(e.target.value); clearFieldError("street"); }} autoComplete="address-line1" {...fieldProps("street")} />
                 </Field>
-                <Field id="co-number" label="Número">
-                  <Input id="co-number" value={number} onChange={(e) => setNumber(e.target.value)} inputMode="numeric" className={FIELD} />
+                <Field id="co-number" label="Número" error={fieldErrors.number}>
+                  <Input id="co-number" value={number} onChange={(e) => { setNumber(e.target.value); clearFieldError("number"); }} inputMode="numeric" {...fieldProps("number")} />
                 </Field>
                 <Field id="co-floor" label="Piso / depto" optional className="sm:col-span-2">
                   <Input id="co-floor" value={floorApt} onChange={(e) => setFloorApt(e.target.value)} autoComplete="address-line2" className={FIELD} />
@@ -281,17 +327,17 @@ export function CheckoutForm({ subtotal, discount, couponCode, couponFreeShippin
               </p>
             )}
 
-            <Field id="co-dni" label="DNI de quien recibe" className="mt-4">
+            <Field id="co-dni" label="DNI de quien recibe" error={fieldErrors.dni} className="mt-4">
               <Input
                 id="co-dni"
                 value={dni}
-                onChange={(e) => setDni(e.target.value.replace(/[^\d.\s-]/g, "").slice(0, 12))}
+                onChange={(e) => { setDni(e.target.value.replace(/[^\d.\s-]/g, "").slice(0, 12)); clearFieldError("dni"); }}
                 inputMode="numeric"
                 autoComplete="off"
                 placeholder="Ej: 30123456"
-                className={FIELD}
+                {...fieldProps("dni", "co-dni-hint")}
               />
-              <p className="text-[14px] text-muted-foreground">Lo pide la empresa de envío para entregarte el pedido.</p>
+              <p id="co-dni-hint" className="text-[14px] text-muted-foreground">Lo pide la empresa de envío para entregarte el pedido.</p>
             </Field>
 
             <Field id="co-notes" label="Notas para la entrega" optional className="mt-4">
@@ -308,7 +354,7 @@ export function CheckoutForm({ subtotal, discount, couponCode, couponFreeShippin
         <ul className="space-y-2 text-[15px]">
           {items.map((it) => (
             <li key={it.id} className="flex justify-between gap-3">
-              <span className="text-foreground">
+              <span className="min-w-0 break-words text-foreground">
                 {it.name}
                 {it.variantName ? <span className="text-muted-foreground"> · {it.variantName}</span> : null}
                 <span className="text-muted-foreground"> × {it.qty}</span>
@@ -329,9 +375,9 @@ export function CheckoutForm({ subtotal, discount, couponCode, couponFreeShippin
           />
           <span>
             Acepto los{" "}
-            <a href="/terminos" target="_blank" rel="noopener noreferrer" className="font-semibold text-foreground underline underline-offset-2">Términos y Condiciones</a>{" "}
+            <a href="/terminos" target="_blank" rel="noopener noreferrer" className="font-semibold text-foreground underline underline-offset-2">Términos y condiciones</a>{" "}
             y la{" "}
-            <a href="/privacidad" target="_blank" rel="noopener noreferrer" className="font-semibold text-foreground underline underline-offset-2">Política de Privacidad</a>.
+            <a href="/privacidad" target="_blank" rel="noopener noreferrer" className="font-semibold text-foreground underline underline-offset-2">Política de privacidad</a>.
           </span>
         </label>
         {error && <p className="rounded-2xl bg-destructive/10 px-4 py-3 text-[15px] font-medium text-destructive" role="alert">{error}</p>}

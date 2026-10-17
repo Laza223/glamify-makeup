@@ -4,16 +4,16 @@ import { Prose } from "@/components/legal/prose";
 import { businessInfo } from "@/lib/legal/business-info";
 
 export const metadata: Metadata = {
-  title: "Términos y Condiciones",
+  title: "Términos y condiciones",
   description: "Términos y condiciones de uso y compra en Glamify Makeup.",
 };
 
 export default function TerminosPage() {
   return (
     <Prose>
-      <h1>Términos y Condiciones</h1>
+      <h1>Términos y condiciones</h1>
       <p>
-        Estos Términos y Condiciones regulan el uso del sitio y la compra de productos en Glamify Makeup. Al navegar
+        Estos términos y condiciones regulan el uso del sitio y la compra de productos en Glamify Makeup. Al navegar
         o realizar un pedido, aceptás estos términos. Última actualización: junio de 2026.
       </p>
 
@@ -53,15 +53,17 @@ export default function TerminosPage() {
 
       <h2>6. Derecho de arrepentimiento</h2>
       <p>
-        Podés revocar tu compra dentro de los {businessInfo.retractionDays} días corridos conforme al art. 34 de la
-        Ley 24.240. Ejercé este derecho desde el{" "}
+        Podés revocar tu compra dentro de los {businessInfo.retractionDays} días corridos desde que recibís el pedido, conforme al art. 34 de
+        la Ley 24.240. Ejercé este derecho desde el{" "}
         <Link href="/arrepentimiento">Botón de Arrepentimiento</Link>.
       </p>
 
-      <h2>7. Garantía legal</h2>
+      <h2>7. Cambios, devoluciones y garantía legal</h2>
       <p>
-        Los productos cuentan con la garantía legal prevista en la Ley 24.240 de Defensa del Consumidor. Ante un
-        defecto, escribinos a {businessInfo.email} para gestionar el cambio o la devolución.
+        Los productos cuentan con la garantía legal prevista en la Ley 24.240 de Defensa del Consumidor. Si un
+        producto te llegó roto, fallado o equivocado, escribinos por <Link href="/contacto">contacto</Link> con una
+        foto: te lo cambiamos o te devolvemos el dinero, con el envío a nuestro cargo. Por higiene, no hacemos cambios
+        por gusto fuera de esos casos. Esto es aparte del derecho de arrepentimiento de la sección 6.
       </p>
 
       <h2>8. Responsabilidad</h2>
@@ -79,12 +81,12 @@ export default function TerminosPage() {
       <h2>10. Privacidad</h2>
       <p>
         El tratamiento de tus datos personales se rige por nuestra{" "}
-        <Link href="/privacidad">Política de Privacidad</Link>.
+        <Link href="/privacidad">Política de privacidad</Link>.
       </p>
 
-      <h2>11. Gift Cards</h2>
+      <h2>11. Gift cards</h2>
       <p>
-        Las Gift Cards son digitales: se envían por mail con un código al acreditarse el pago. Cada código es de un
+        Las gift cards son digitales: se envían por mail con un código al acreditarse el pago. Cada código es de un
         solo uso, vence a los 6 meses de la compra y descuenta únicamente productos: no cubre el envío ni se acumula
         con otras gift cards. Si la compra es menor al monto, el saldo no se conserva. No se canjean por dinero. El
         reembolso de una gift card solo procede si todavía no se usó; al reembolsarla, el código se anula.

@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { formatPrice } from "@/lib/money";
 import { validateCoupon, applyCoupon, type ValidatableCoupon, type ApplicableCoupon } from "@/lib/coupons/apply";
 import type { CartLine } from "@/lib/cart/types";
 
@@ -25,6 +26,12 @@ describe("validateCoupon", () => {
   it("rechaza si subtotal < minSubtotal", () => {
     expect(validateCoupon(baseCoupon({ minSubtotal: 5000 }), { subtotal: 4999, now: NOW }).ok).toBe(false);
     expect(validateCoupon(baseCoupon({ minSubtotal: 5000 }), { subtotal: 5000, now: NOW }).ok).toBe(true);
+  });
+  it("el rechazo por mínimo le dice cuánto tiene que comprar, con el monto formateado", () => {
+    const r = validateCoupon(baseCoupon({ minSubtotal: 5000 }), { subtotal: 4999, now: NOW });
+    expect(r).toEqual({ ok: false, reason: expect.stringContaining(formatPrice(5000)) });
+    const dec = validateCoupon(baseCoupon({ minSubtotal: "12500.5" }), { subtotal: 100, now: NOW });
+    expect(dec).toEqual({ ok: false, reason: expect.stringContaining(formatPrice(12500.5)) });
   });
   it("rechaza si se agotaron los usos", () => {
     expect(validateCoupon(baseCoupon({ maxUses: 10, usedCount: 10 }), { subtotal: 5000, now: NOW }).ok).toBe(false);

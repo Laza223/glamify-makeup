@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check, Loader2, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { useCartUI } from "@/components/cart/cart-provider";
 import { addKitToCartAction, addToCartAction } from "@/app/(storefront)/actions";
 import { track } from "@/lib/analytics/track";
+import type { ActionResult } from "@/lib/forms/action-result";
 import type { CatalogProduct } from "@/lib/catalog/types";
 
 interface CuratedComboItem {
@@ -49,6 +51,7 @@ export function KitBuilder({ labios, ojos, rostro, curatedCombos }: KitBuilderPr
   const { openCart } = useCartUI();
   const [activeTab, setActiveTab] = useState<Step>("labios");
   const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
   const [slots, setSlots] = useState<Record<Step, SelectedSlot | null>>({ labios: null, ojos: null, rostro: null });
 
   const productsByStep: Record<Step, CatalogProduct[]> = { labios, ojos, rostro };
@@ -65,6 +68,7 @@ export function KitBuilder({ labios, ojos, rostro, curatedCombos }: KitBuilderPr
 
     if (!chosenVariant) return;
 
+    setError(null);
     const slotData: SelectedSlot = {
       product,
       variantId: chosenVariant.id,
@@ -80,42 +84,51 @@ export function KitBuilder({ labios, ojos, rostro, curatedCombos }: KitBuilderPr
     if (next && step !== "rostro") setActiveTab(next.key);
   };
 
-  const handleAddCustomKit = () => {
-    const variantIds = STEPS.map((s) => slots[s.key]?.variantId).filter((v): v is string => Boolean(v));
-    if (variantIds.length === 0) return;
-
+  // Corre la action; si falla (resultado no ok o excepción) lo informa en la barra fija en vez de callar.
+  const submit = (action: () => Promise<ActionResult>, trackProps: Record<string, unknown>) => {
     startTransition(async () => {
-      const res = await addKitToCartAction(variantIds);
-      if (res.ok) {
-        track("add_to_cart", {
-          kind: "custom_kit",
-          variantIds,
-          total: rawSubtotal,
-        });
-        router.refresh();
-        openCart();
+      setError(null);
+      try {
+        const res = await action();
+        if (!res.ok) {
+          setError(res.error ?? "No pudimos sumarlo al carrito. Probá de nuevo.");
+          return;
+        }
+      } catch {
+        setError("No pudimos sumarlo al carrito. Probá de nuevo.");
+        return;
       }
+      track("add_to_cart", trackProps);
+      router.refresh();
+      openCart();
     });
   };
 
+  const handleAddCustomKit = () => {
+    const variantIds = STEPS.map((s) => slots[s.key]?.variantId).filter((v): v is string => Boolean(v));
+    if (variantIds.length === 0) return;
+    submit(() => addKitToCartAction(variantIds), { kind: "custom_kit", variantIds, total: rawSubtotal });
+  };
+
   const handleAddCuratedCombo = (comboId: string, comboName: string, price: number) => {
-    startTransition(async () => {
-      const res = await addToCartAction({ comboId, qty: 1 });
-      if (res.ok) {
-        track("add_to_cart", {
-          kind: "curated_combo",
-          comboId,
-          comboName,
-          price,
-        });
-        router.refresh();
-        openCart();
-      }
-    });
+    submit(() => addToCartAction({ comboId, qty: 1 }), { kind: "curated_combo", comboId, comboName, price });
   };
 
   const renderProductStep = (step: Step) => {
     const currentSlot = slots[step];
+    if (productsByStep[step].length === 0) {
+      const label = STEPS.find((s) => s.key === step)?.label.toLowerCase();
+      return (
+        <div className="mx-auto max-w-md space-y-4 rounded-[24px] bg-secondary p-6 text-center">
+          <p className="text-[16px] text-foreground">
+            Por ahora no tenemos productos de {label} con stock para armar el kit. Seguí con los otros pasos o mirá la tienda.
+          </p>
+          <Button asChild variant="ink">
+            <Link href="/tienda">Ver la tienda</Link>
+          </Button>
+        </div>
+      );
+    }
     return (
       <ul className="grid grid-cols-2 gap-x-3 gap-y-8 sm:grid-cols-3 lg:grid-cols-4 lg:gap-x-4">
         {productsByStep[step].map((p) => {
@@ -274,6 +287,11 @@ export function KitBuilder({ labios, ojos, rostro, curatedCombos }: KitBuilderPr
 
       {/* Barra fija: tu kit + total + CTA. En mobile va arriba del menú inferior. */}
       <div className="fixed inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-20 border-t border-border bg-white/95 px-4 py-3 shadow-[0_-8px_24px_-12px_rgb(0_0_0/0.18)] backdrop-blur-md md:bottom-0 md:py-4">
+        {error && (
+          <p role="alert" className="mx-auto mb-2 max-w-5xl text-[15px] font-medium text-destructive">
+            {error}
+          </p>
+        )}
         <div className="mx-auto flex max-w-5xl items-center gap-3 md:gap-6">
           <ul className="flex shrink-0 items-center gap-1.5" aria-label="Tu kit">
             {STEPS.map((s, i) => {

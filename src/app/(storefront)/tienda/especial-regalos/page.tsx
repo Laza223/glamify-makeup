@@ -9,7 +9,7 @@ import { MADE_TO_ORDER_CATEGORY_SLUGS } from "@/lib/catalog/made-to-order";
 const GIFT_SLUGS: string[] = ["lip-combos", "gift-cards", ...MADE_TO_ORDER_CATEGORY_SLUGS];
 
 export const metadata: Metadata = {
-  title: "Especial Regalos",
+  title: "Especial regalos",
   description: "Todas las opciones para regalar: Lip Combos, Gift Cards, Ramos y Box de Maquillaje.",
 };
 
@@ -28,12 +28,12 @@ export default async function EspecialRegalosPage({
   const result: ProductListResult =
     categoryIds.length > 0
       ? await getProductList(listParams, categoryIds)
-      : { items: [], total: 0, page: listParams.page, pageSize: PAGE_SIZE, totalPages: 1 };
+      : { items: [], total: 0, page: 1, pageSize: PAGE_SIZE, totalPages: 1 };
 
   const crumbs = [
     { label: "Inicio", href: "/", current: false },
     { label: "Tienda", href: "/tienda", current: false },
-    { label: "Especial Regalos", href: "/tienda/especial-regalos", current: true },
+    { label: "Especial regalos", href: "/tienda/especial-regalos", current: true },
   ];
 
   return (

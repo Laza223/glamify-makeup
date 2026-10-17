@@ -3,14 +3,14 @@ import { Prose } from "@/components/legal/prose";
 import { businessInfo } from "@/lib/legal/business-info";
 
 export const metadata: Metadata = {
-  title: "Política de Privacidad",
+  title: "Política de privacidad",
   description: "Cómo Glamify Makeup trata y protege tus datos personales (Ley 25.326).",
 };
 
 export default function PrivacidadPage() {
   return (
     <Prose>
-      <h1>Política de Privacidad</h1>
+      <h1>Política de privacidad</h1>
       <p>
         En Glamify Makeup protegemos tus datos personales conforme a la Ley 25.326 de Protección de los Datos
         Personales. Esta política explica qué datos recolectamos, con qué fin y cuáles son tus derechos.
@@ -50,7 +50,7 @@ export default function PrivacidadPage() {
       <h2>5. Destinatarios</h2>
       <p>
         Compartimos datos solo con proveedores necesarios para operar: Mercado Pago (pagos), Correo Argentino, Andreani, OCA,
-        Vía Cargo u otro operador logístico (envíos), Resend (emails), Supabase y Cloudflare (infraestructura) y PostHog (analítica).
+        Vía Cargo u otro operador logístico (envíos), Resend (emails), Supabase y Vercel (infraestructura) y PostHog (analítica).
         No vendemos tus datos a terceros.
       </p>
 

@@ -2,8 +2,9 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ShoppingBag, Loader2, Check } from "lucide-react";
+import { ShoppingBag, Loader2, Check, MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import { VariantSwatchSelector } from "@/components/catalog/variant-swatch-selector";
 import { QuantityStepper } from "@/components/catalog/quantity-stepper";
 import { useCartUI } from "@/components/cart/cart-provider";
@@ -14,11 +15,13 @@ import type { CatalogVariant } from "@/lib/catalog/types";
 
 interface AddToCartProps {
   variants: CatalogVariant[];
-  /** Barra fija mobile: comparte el tono elegido acá (si no, agregaría el primero con stock). */
+  /** Barra fija mobile: comparte el tono y la cantidad elegidos acá. */
   stickyBar?: { productName: string; image?: string | null; price: number };
+  /** Link wa.me de la tienda: con la variante elegida sin stock, el CTA pasa a consultar por WhatsApp. */
+  whatsappUrl?: string | null;
 }
 
-export function AddToCart({ variants, stickyBar }: AddToCartProps) {
+export function AddToCart({ variants, stickyBar, whatsappUrl }: AddToCartProps) {
   const router = useRouter();
   const { openCart } = useCartUI();
   const firstAvailable = variants.find((v) => v.stock > 0) ?? variants[0];
@@ -35,8 +38,13 @@ export function AddToCart({ variants, stickyBar }: AddToCartProps) {
     startTransition(async () => {
       setError(null);
       if (!variantId) { setError("Elegí un tono."); return; }
-      const r = await addToCartAction({ variantId, qty });
-      if (!r.ok) { setError(r.error ?? "No se pudo agregar."); return; }
+      try {
+        const r = await addToCartAction({ variantId, qty });
+        if (!r.ok) { setError(r.error ?? "No se pudo agregar."); return; }
+      } catch {
+        setError("No se pudo agregar. Probá de nuevo.");
+        return;
+      }
       track("add_to_cart", { variantId, qty, variantName: selected?.name });
       setAdded(true);
       setTimeout(() => setAdded(false), 1600);
@@ -48,29 +56,40 @@ export function AddToCart({ variants, stickyBar }: AddToCartProps) {
     <div className="space-y-5">
       {variants.length > 0 && <VariantSwatchSelector variants={variants} onChange={(v) => setVariantId(v.id)} />}
       <div className="flex flex-wrap items-center gap-3 pt-1">
-        <QuantityStepper max={Math.max(1, selected?.stock ?? 99)} onChange={setQty} />
-        <button
-          type="button"
-          id="main-pdp-cta"
-          onClick={add}
-          disabled={pending || outOfStock}
-          className={cn(
-            "inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-2xl px-6 text-[16px] font-semibold text-white transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-            added ? "bg-success" : "bg-foreground hover:bg-foreground/85",
-          )}
-        >
-          {pending ? (
-            <Loader2 className="size-5 animate-spin" aria-hidden />
-          ) : added ? (
-            <Check className="size-5 animate-in zoom-in-50" aria-hidden />
-          ) : (
-            <ShoppingBag className="size-5" aria-hidden />
-          )}
-          <span aria-live="polite">{outOfStock ? "Sin stock" : added ? "¡Agregado!" : "Agregar al carrito"}</span>
-        </button>
+        {!outOfStock && <QuantityStepper initial={qty} max={Math.max(1, selected.stock)} onChange={setQty} />}
+        {outOfStock && whatsappUrl ? (
+          <Button asChild variant="ink" size="lg" className="w-full">
+            <a href={whatsappUrl} target="_blank" rel="noopener noreferrer">
+              <MessageCircle aria-hidden />
+              Consultanos por WhatsApp
+            </a>
+          </Button>
+        ) : (
+          <button
+            type="button"
+            id="main-pdp-cta"
+            onClick={add}
+            disabled={pending || outOfStock}
+            className={cn(
+              "inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-2xl px-6 text-[16px] font-semibold text-white transition active:scale-[0.98] motion-reduce:transition-none disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+              added ? "bg-success" : "bg-foreground hover:bg-foreground/85",
+            )}
+          >
+            {pending ? (
+              <Loader2 className="size-5 animate-spin" aria-hidden />
+            ) : added ? (
+              <Check className="size-5 animate-in zoom-in-50 motion-reduce:animate-none" aria-hidden />
+            ) : (
+              <ShoppingBag className="size-5" aria-hidden />
+            )}
+            <span aria-live="polite">{outOfStock ? "Sin stock" : added ? "¡Agregado!" : "Agregar al carrito"}</span>
+          </button>
+        )}
       </div>
       {error && <p className="text-[15px] font-medium text-destructive" role="alert">{error}</p>}
-      {stickyBar && <MobileStickyBuyBar {...stickyBar} variants={variants} selectedVariantId={variantId} />}
+      {stickyBar && !outOfStock && (
+        <MobileStickyBuyBar {...stickyBar} variants={variants} selectedVariantId={variantId} qty={qty} />
+      )}
     </div>
   );
 }

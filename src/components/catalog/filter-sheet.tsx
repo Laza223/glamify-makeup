@@ -6,9 +6,8 @@ import { SlidersHorizontal } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { FILTER_KEYS, activeFilterKeys, parsePriceParam, validatePriceRange } from "@/lib/catalog/filters";
 import { cn } from "@/lib/utils";
-
-const FILTER_KEYS = ["min", "max", "oferta", "disponible"] as const;
 
 /** Filtros del listado. Mobile: panel desde abajo; desktop: panel lateral. Se aplican al tocar "Ver productos". */
 export function FilterSheet() {
@@ -17,11 +16,17 @@ export function FilterSheet() {
   const params = useSearchParams();
   const [open, setOpen] = useState(false);
   const [side, setSide] = useState<"bottom" | "right">("bottom");
-  const [min, setMin] = useState(params.get("min") ?? "");
-  const [max, setMax] = useState(params.get("max") ?? "");
-  const [oferta, setOferta] = useState(params.get("oferta") === "1");
-  const [disponible, setDisponible] = useState(params.get("disponible") === "1");
-  const activeCount = FILTER_KEYS.filter((k) => params.get(k)).length;
+  // Estado del form = lo que la URL aplica de verdad (precios inválidos se ignoran). Se re-sincroniza al abrir.
+  const urlMin = String(parsePriceParam(params.get("min")) ?? "");
+  const urlMax = String(parsePriceParam(params.get("max")) ?? "");
+  const urlOferta = params.get("oferta") === "1";
+  const urlDisponible = params.get("disponible") === "1";
+  const [min, setMin] = useState(urlMin);
+  const [max, setMax] = useState(urlMax);
+  const [oferta, setOferta] = useState(urlOferta);
+  const [disponible, setDisponible] = useState(urlDisponible);
+  const [error, setError] = useState<string | null>(null);
+  const activeCount = activeFilterKeys((k) => params.get(k)).length;
 
   const push = (next: URLSearchParams) => {
     next.delete("page");
@@ -30,13 +35,18 @@ export function FilterSheet() {
   };
 
   const apply = () => {
+    const range = validatePriceRange(min, max);
+    if (range.error) {
+      setError(range.error);
+      return;
+    }
     const next = new URLSearchParams(params.toString());
-    const setOrDel = (k: string, v: string | boolean) => {
-      if (v === "" || v === false) next.delete(k);
+    const setOrDel = (k: string, v: string | number | boolean | undefined) => {
+      if (v === undefined || v === "" || v === false) next.delete(k);
       else next.set(k, v === true ? "1" : String(v));
     };
-    setOrDel("min", min);
-    setOrDel("max", max);
+    setOrDel("min", range.min);
+    setOrDel("max", range.max);
     setOrDel("oferta", oferta);
     setOrDel("disponible", disponible);
     push(next);
@@ -47,6 +57,7 @@ export function FilterSheet() {
     setMax("");
     setOferta(false);
     setDisponible(false);
+    setError(null);
     const next = new URLSearchParams(params.toString());
     FILTER_KEYS.forEach((k) => next.delete(k));
     push(next);
@@ -57,7 +68,14 @@ export function FilterSheet() {
       open={open}
       onOpenChange={(o) => {
         // El lado se decide al abrir: panel desde abajo en el celu, lateral en desktop.
-        if (o) setSide(window.matchMedia("(min-width: 768px)").matches ? "right" : "bottom");
+        if (o) {
+          setSide(window.matchMedia("(min-width: 768px)").matches ? "right" : "bottom");
+          setMin(urlMin);
+          setMax(urlMax);
+          setOferta(urlOferta);
+          setDisponible(urlDisponible);
+          setError(null);
+        }
         setOpen(o);
       }}
     >
@@ -100,7 +118,12 @@ export function FilterSheet() {
                   min={0}
                   placeholder="0"
                   value={min}
-                  onChange={(e) => setMin(e.target.value)}
+                  onChange={(e) => {
+                    setMin(e.target.value);
+                    setError(null);
+                  }}
+                  aria-invalid={error ? true : undefined}
+                  aria-describedby={error ? "filtro-precio-error" : undefined}
                   className="h-12 rounded-xl text-[16px]"
                 />
               </label>
@@ -112,11 +135,21 @@ export function FilterSheet() {
                   min={0}
                   placeholder="Sin tope"
                   value={max}
-                  onChange={(e) => setMax(e.target.value)}
+                  onChange={(e) => {
+                    setMax(e.target.value);
+                    setError(null);
+                  }}
+                  aria-invalid={error ? true : undefined}
+                  aria-describedby={error ? "filtro-precio-error" : undefined}
                   className="h-12 rounded-xl text-[16px]"
                 />
               </label>
             </div>
+            {error && (
+              <p id="filtro-precio-error" role="alert" className="text-[14px] font-semibold text-destructive">
+                {error}
+              </p>
+            )}
           </fieldset>
           <label className="flex min-h-11 cursor-pointer items-center justify-between gap-4 rounded-xl">
             <span className="text-[16px] font-semibold">Solo con descuento</span>

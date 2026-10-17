@@ -32,7 +32,7 @@ export function QuickVariantPicker({
   onOpenChange,
   initialVariantId,
 }: QuickVariantPickerProps) {
-  const { setVariantQty, isUpdating } = useCartUI();
+  const { setVariantQty, isUpdating, getError } = useCartUI();
   const firstAvailable =
     product.variants.find((v) => v.stock > 0) ?? product.variants[0];
   const [selectedId, setSelectedId] = useState<string>(
@@ -43,6 +43,7 @@ export function QuickVariantPicker({
     product.variants.find((v) => v.id === selectedId) ?? firstAvailable;
   const outOfStock = !selected || selected.stock <= 0;
   const pending = selected ? isUpdating(selected.id) : false;
+  const error = selected ? getError(selected.id) : null;
   const price = getEffectivePrice(product, selected);
   const onSale = isOnSale(product);
   const imageUrl = productImageUrl(
@@ -182,6 +183,9 @@ export function QuickVariantPicker({
 
         {/* CTA Agregar al Carrito */}
         <div className="pt-2">
+          <div role="status">
+            {error && <p className="pb-2 text-[14px] text-destructive">{error}</p>}
+          </div>
           <Button
             size="lg"
             className="w-full rounded-2xl bg-primary py-6 text-sm font-semibold text-white shadow-soft transition-all hover:bg-[#E01E7D] hover:shadow-soft-lg"

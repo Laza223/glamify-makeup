@@ -1,11 +1,20 @@
 import { CreditCard, PackageCheck, Truck } from "lucide-react";
 import { formatPrice } from "@/lib/money";
+import { businessInfo } from "@/lib/legal/business-info";
 
 /** Datos reales de compra en la ficha (sin promesas de política: esas viven en sus páginas). */
-export function TrustBadges({ freeShippingThreshold }: { freeShippingThreshold: number }) {
+export function TrustBadges({ freeShippingThreshold, soldOut = false }: { freeShippingThreshold: number; soldOut?: boolean }) {
   const items = [
-    { icon: Truck, text: `Envío a todo el país · gratis desde ${formatPrice(freeShippingThreshold)}` },
-    { icon: PackageCheck, text: "Lo despachamos en hasta 3 días hábiles" },
+    {
+      icon: Truck,
+      // Umbral 0 = sin umbral cargado: no se muestra "gratis desde $0".
+      text:
+        freeShippingThreshold > 0
+          ? `Envío a todo el país · gratis desde ${formatPrice(freeShippingThreshold)}`
+          : "Envío a todo el país",
+    },
+    // Sin stock no hay despacho que prometer.
+    ...(soldOut ? [] : [{ icon: PackageCheck, text: `Lo despachamos en ${businessInfo.dispatchWindow}` }]),
     { icon: CreditCard, text: "Pagás con Mercado Pago: tarjeta o dinero en cuenta" },
   ];
   return (

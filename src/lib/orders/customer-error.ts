@@ -4,6 +4,16 @@ export class CustomerFacingError extends Error {
 }
 
 /**
+ * Mensaje para la clienta de una acción cualquiera (carrito, cuenta): solo pasan los `CustomerFacingError`;
+ * lo técnico (Prisma, Supabase, runtime) se loguea y se reemplaza por `fallback`.
+ */
+export function customerErrorMessage(e: unknown, context: string, fallback: string): string {
+  if (e instanceof CustomerFacingError) return e.message;
+  console.error(`[${context}]`, e);
+  return fallback;
+}
+
+/**
  * Mensaje para la clienta cuando falla iniciar un pago. Solo pasan los mensajes escritos para ella;
  * cualquier otro (respuesta cruda de MP, Prisma) se loguea y se reemplaza por uno genérico.
  */

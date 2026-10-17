@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Minus, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -11,11 +11,25 @@ interface QuantityStepperProps {
   className?: string;
 }
 
+/** Recorta la cantidad a [1, max]; un máximo menor a 1 se trata como 1. */
+export function clampQty(qty: number, max: number): number {
+  return Math.min(Math.max(1, qty), Math.max(1, max));
+}
+
 export function QuantityStepper({ max = 99, initial = 1, onChange, className }: QuantityStepperProps) {
-  const [qty, setQty] = useState(Math.min(Math.max(1, initial), max));
+  const [raw, setRaw] = useState(clampQty(initial, max));
+  // Si el máximo baja (otra variante con menos stock), lo que se muestra y se informa es el tope nuevo.
+  const qty = clampQty(raw, max);
+  useEffect(() => {
+    if (qty !== raw) {
+      setRaw(qty);
+      onChange?.(qty);
+    }
+  }, [qty, raw, onChange]);
+
   const set = (next: number) => {
-    const clamped = Math.min(Math.max(1, next), max);
-    setQty(clamped);
+    const clamped = clampQty(next, max);
+    setRaw(clamped);
     onChange?.(clamped);
   };
   return (
