@@ -78,6 +78,15 @@ const config: Config = {
         // glow glam para medallones/CTAs
         glow: "0 12px 30px -10px rgba(201, 138, 118, 0.45)",
       },
+      // Capas fijas del storefront, de abajo hacia arriba. Usar estos nombres, no números sueltos.
+      zIndex: {
+        bar: "20", // barras de compra (ficha, kit)
+        sticky: "30", // header
+        nav: "30", // menú inferior y WhatsApp
+        banner: "40", // cookies
+        overlay: "50", // drawer, sheets, selects
+        toast: "60", // avisos cortos
+      },
       transitionTimingFunction: {
         luxury: "cubic-bezier(0.16, 1, 0.3, 1)",
         spring: "cubic-bezier(0.34, 1.56, 0.64, 1)",
@@ -121,6 +130,12 @@ const config: Config = {
           "70%": { transform: "scale(0.92)" },
           "100%": { transform: "scale(1)" },
         },
+        // Pulso corto de un valor que cambió por una acción (total, kit completo).
+        "soft-pop": {
+          "0%": { transform: "scale(1)" },
+          "40%": { transform: "scale(1.06)" },
+          "100%": { transform: "scale(1)" },
+        },
         "shimmer-luxury": {
           "0%": { transform: "translateX(-100%)" },
           "100%": { transform: "translateX(100%)" },
@@ -134,6 +149,7 @@ const config: Config = {
         "heart-pop": "heart-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both",
         marquee: "marquee 40s linear infinite",
         "count-bump": "count-bump 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both",
+        "soft-pop": "soft-pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) both",
         "shimmer-luxury": "shimmer-luxury 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite",
       },
     },

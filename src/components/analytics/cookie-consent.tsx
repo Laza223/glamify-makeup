@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import posthog from "posthog-js";
+import { chromeFor } from "@/lib/routes/chrome";
 import { Button } from "@/components/ui/button";
 
 const COOKIE = "glamify_analytics";
@@ -28,13 +30,15 @@ function writeChoice(value: "yes" | "no") {
  * "Rechazar" desactiva PostHog. Se muestra una sola vez (hasta que hay elección).
  */
 export function CookieConsent() {
+  const pathname = usePathname();
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
     if (!readCookie(COOKIE)) setVisible(true);
   }, []);
 
-  if (!visible) return null;
+  // En el checkout no tapa el formulario ni el botón de pagar; aparece al volver a la tienda.
+  if (!visible || !chromeFor(pathname).cookieBanner) return null;
 
   const accept = () => {
     writeChoice("yes");
@@ -50,7 +54,7 @@ export function CookieConsent() {
     <div
       role="dialog"
       aria-label="Consentimiento de cookies"
-      className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-card/95 p-4 shadow-soft backdrop-blur md:bottom-4 md:left-auto md:right-4 md:max-w-md md:rounded-2xl md:border"
+      className="fixed inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-banner border-t border-border bg-card/95 p-4 shadow-soft backdrop-blur md:bottom-4 md:left-auto md:right-4 md:max-w-md md:rounded-2xl md:border"
     >
       <p className="text-sm text-foreground">
         Usamos cookies para mejorar tu experiencia y entender qué te gusta. Podés rechazarlas cuando quieras.

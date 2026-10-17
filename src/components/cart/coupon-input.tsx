@@ -3,6 +3,8 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
+import { becameTrue, useChangePulse } from "@/lib/motion/use-change-pulse";
 import { applyCouponAction, removeCouponAction } from "@/app/(storefront)/actions";
 import type { ActionResult } from "@/lib/forms/action-result";
 
@@ -11,6 +13,7 @@ export function CouponInput({ applied }: { applied: string | null }) {
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const appliedPulse = useChangePulse(applied, becameTrue);
 
   // Una action que tira (red, server) no debe caer al error.tsx: se informa acá mismo.
   const run = (action: () => Promise<ActionResult>, fallback: string, onOk?: () => void) =>
@@ -33,7 +36,13 @@ export function CouponInput({ applied }: { applied: string | null }) {
   if (applied) {
     return (
       <div>
-        <div className="flex min-h-12 items-center justify-between rounded-2xl bg-success/10 pl-4 pr-1 text-[15px]">
+        <div
+          key={appliedPulse}
+          className={cn(
+            "flex min-h-12 items-center justify-between rounded-2xl bg-success/10 pl-4 pr-1 text-[15px]",
+            appliedPulse > 0 && "duration-300 animate-in fade-in zoom-in-95",
+          )}
+        >
           <span>Cupón <strong>{applied}</strong> aplicado</span>
           <button
             type="button"

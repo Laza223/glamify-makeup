@@ -59,6 +59,8 @@ export const viewport: Viewport = {
   themeColor: "#E6007A",
   width: "device-width",
   initialScale: 1,
+  // Sin esto iOS devuelve env(safe-area-inset-*) = 0 y las barras fijas quedan bajo la barra de inicio.
+  viewportFit: "cover",
 };
 
 export default function RootLayout({

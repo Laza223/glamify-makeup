@@ -3,7 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { ShoppingBag, Loader2 } from "lucide-react";
+import { ShoppingBag, Loader2, Check } from "lucide-react";
 import { formatPrice } from "@/lib/money";
 import { productImageUrl } from "@/lib/images";
 import { useCartUI } from "@/components/cart/cart-provider";
@@ -34,6 +34,7 @@ export function MobileStickyBuyBar({
   const [visible, setVisible] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const [added, setAdded] = useState(false); // misma confirmación breve que el CTA principal
 
   const activeVariant =
     variants.find((v) => v.id === selectedVariantId) ??
@@ -75,6 +76,8 @@ export function MobileStickyBuyBar({
         return;
       }
       track("add_to_cart", { variantId: activeVariant.id, qty, variantName: activeVariant.name, source: "mobile_sticky" });
+      setAdded(true);
+      setTimeout(() => setAdded(false), 1600);
       router.refresh();
       openCart();
     });
@@ -83,7 +86,9 @@ export function MobileStickyBuyBar({
   return (
     <div
       data-testid="sticky-buy-bar"
-      className={`fixed bottom-14 left-0 right-0 z-20 border-t border-border bg-white/95 px-4 py-3 shadow-[0_-8px_24px_-12px_rgb(0_0_0/0.18)] backdrop-blur-md transition-transform duration-300 motion-reduce:transition-none md:hidden ${
+      // Oculta (CTA principal a la vista): fuera del foco y de los lectores, no solo transparente.
+      inert={!visible}
+      className={`fixed bottom-[calc(3.5rem+env(safe-area-inset-bottom))] left-0 right-0 z-bar border-t border-border bg-white/95 px-4 py-3 shadow-[0_-8px_24px_-12px_rgb(0_0_0/0.18)] backdrop-blur-md transition-transform duration-300 motion-reduce:transition-none md:hidden ${
         visible ? "translate-y-0 opacity-100" : "translate-y-full opacity-0 pointer-events-none"
       }`}
     >
@@ -118,10 +123,18 @@ export function MobileStickyBuyBar({
           type="button"
           onClick={handleQuickAdd}
           disabled={pending || outOfStock}
-          className="inline-flex h-11 shrink-0 items-center gap-2 rounded-2xl bg-foreground px-5 text-[15px] font-semibold text-white transition active:scale-[0.97] motion-reduce:transition-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className={`inline-flex h-11 shrink-0 items-center gap-2 rounded-2xl px-5 text-[15px] font-semibold text-white transition active:scale-[0.97] motion-reduce:transition-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+            added ? "bg-success" : "bg-foreground"
+          }`}
         >
-          {pending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <ShoppingBag className="size-4" aria-hidden />}
-          <span>{outOfStock ? "Sin stock" : qty > 1 ? `Agregar (${qty})` : "Agregar"}</span>
+          {pending ? (
+            <Loader2 className="size-4 animate-spin" aria-hidden />
+          ) : added ? (
+            <Check className="size-4 animate-in zoom-in-50 motion-reduce:animate-none" aria-hidden />
+          ) : (
+            <ShoppingBag className="size-4" aria-hidden />
+          )}
+          <span aria-live="polite">{outOfStock ? "Sin stock" : added ? "¡Agregado!" : qty > 1 ? `Agregar (${qty})` : "Agregar"}</span>
         </button>
       </div>
     </div>

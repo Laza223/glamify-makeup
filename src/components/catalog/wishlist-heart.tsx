@@ -56,7 +56,7 @@ export function WishlistHeart({ productId, initial = false, className }: { produ
         // Aviso fijo (no depende del contenedor: el corazón vive dentro de tarjetas con overflow oculto).
         <div
           role="status"
-          className="fixed inset-x-4 bottom-36 z-50 mx-auto flex max-w-sm items-center gap-1 rounded-2xl bg-foreground py-1 pl-4 pr-1 text-[15px] text-white shadow-lg md:bottom-6"
+          className="fixed inset-x-4 bottom-[calc(9rem+env(safe-area-inset-bottom))] z-toast mx-auto flex max-w-sm items-center gap-1 rounded-2xl bg-foreground py-1 pl-4 pr-1 text-[15px] text-white shadow-lg md:bottom-6"
         >
           <p className="flex-1 py-2">
             {notice === "guest" ? "Ingresá para guardar tus favoritos." : "No pudimos actualizar tus favoritos. Probá de nuevo."}

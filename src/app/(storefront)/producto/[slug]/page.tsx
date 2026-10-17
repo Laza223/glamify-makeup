@@ -128,7 +128,7 @@ export default async function ProductoPage({ params }: { params: Promise<{ slug:
           <ProductGallery images={product.images} name={product.name} />
         </div>
 
-        <div className="lg:col-span-5 lg:sticky lg:top-28 space-y-6">
+        <div className="lg:col-span-5 lg:sticky lg:top-[calc(var(--header-h)+1.5rem)] space-y-6">
           <header className="space-y-3">
             <div className="flex items-start justify-between gap-3">
               <p className="pt-2 text-[13px] font-bold uppercase tracking-[0.1em] text-accent">
@@ -208,7 +208,7 @@ export default async function ProductoPage({ params }: { params: Promise<{ slug:
       </div>
 
       {/* Sección de Reseñas */}
-      <section id="opiniones" className="scroll-mt-32 border-t border-border pt-12">
+      <section id="opiniones" className="scroll-mt-4 border-t border-border pt-12">
         <div className="mb-6 flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
           <div>
             <h2 className="font-display text-[30px] font-normal leading-tight md:text-[38px]">

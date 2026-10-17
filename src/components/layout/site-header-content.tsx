@@ -8,6 +8,7 @@ import { Logo } from "@/components/ui/logo";
 import { CategoryNav } from "@/components/layout/category-nav";
 import { CartButton } from "@/components/cart/cart-button";
 import type { CategoryNode } from "@/lib/catalog/categories";
+import { chromeFor } from "@/lib/routes/chrome";
 
 interface SiteHeaderContentProps {
   tree: CategoryNode[];
@@ -48,20 +49,23 @@ export function SiteHeaderContent({ tree, count }: SiteHeaderContentProps) {
   // Cerrar la búsqueda mobile al navegar.
   useEffect(() => setSearchOpen(false), [pathname]);
 
-  if (pathname.startsWith("/checkout")) {
+  const chrome = chromeFor(pathname);
+  if (chrome.header === "checkout") {
     return (
       <div className="border-b border-border bg-white">
         <div className="container flex h-14 items-center justify-between">
           <Link href="/" aria-label="Glamify Makeup, inicio" className="py-2">
             <Logo size="sm" />
           </Link>
-          <Link
-            href="/carrito"
-            className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-foreground hover:text-primary"
-          >
-            <ArrowLeft className="size-4" aria-hidden />
-            Volver al carrito
-          </Link>
+          {chrome.backToCart && (
+            <Link
+              href="/carrito"
+              className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-foreground hover:text-primary"
+            >
+              <ArrowLeft className="size-4" aria-hidden />
+              Volver al carrito
+            </Link>
+          )}
         </div>
       </div>
     );

@@ -12,6 +12,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCartUI } from "@/components/cart/cart-provider";
+import { useCartBump } from "@/components/cart/use-cart-bump";
+import { chromeFor } from "@/lib/routes/chrome";
 
 interface NavItem {
   href: string;
@@ -30,15 +32,20 @@ const ITEMS: NavItem[] = [
 
 export function BottomNav({ cartCount = 0 }: { cartCount?: number }) {
   const pathname = usePathname();
+  if (!chromeFor(pathname).bottomNav) return null;
+  // Montado solo cuando se ve: el estado del rebote arranca de cero al volver del checkout.
+  return <BottomNavBar pathname={pathname} cartCount={cartCount} />;
+}
+
+function BottomNavBar({ pathname, cartCount }: { pathname: string; cartCount: number }) {
   const { openCart, cartCount: ctxCount } = useCartUI();
   const effectiveCount = typeof ctxCount === "number" ? ctxCount : cartCount;
-
-  if (pathname.startsWith("/checkout")) return null;
+  const bumps = useCartBump(effectiveCount);
 
   return (
     <nav
       aria-label="Navegación principal"
-      className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-white pb-[env(safe-area-inset-bottom)] md:hidden"
+      className="fixed inset-x-0 bottom-0 z-nav border-t border-border bg-white pb-[env(safe-area-inset-bottom)] md:hidden"
     >
       <ul className="grid grid-cols-5">
         {ITEMS.map((item) => {
@@ -60,7 +67,13 @@ export function BottomNav({ cartCount = 0 }: { cartCount?: number }) {
                 <Icon className="size-5" aria-hidden />
               </span>
               {isCart && effectiveCount > 0 && (
-                <span className="absolute right-[22%] top-1 grid min-w-[18px] place-items-center rounded-full bg-primary px-1 text-[11px] font-bold leading-[18px] tabular-nums text-primary-foreground">
+                <span
+                  key={bumps}
+                  className={cn(
+                    "absolute right-[22%] top-1 grid min-w-[18px] place-items-center rounded-full bg-primary px-1 text-[11px] font-bold leading-[18px] tabular-nums text-primary-foreground",
+                    bumps > 0 && "animate-count-bump",
+                  )}
+                >
                   {effectiveCount}
                 </span>
               )}
