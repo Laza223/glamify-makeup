@@ -25,7 +25,7 @@ export default async function EnviosYPagosPage() {
       </p>
       <ul>
         <li>El costo final se muestra en el carrito y el checkout antes de pagar.</li>
-        <li>Despacho dentro de las 24 a 72 horas hábiles de acreditado el pago.</li>
+        <li>Despachamos en {businessInfo.dispatchWindow} de acreditado el pago.</li>
         <li>Recibís por email la empresa y el código de seguimiento cuando despachamos.</li>
       </ul>
 
@@ -37,13 +37,13 @@ export default async function EnviosYPagosPage() {
 
       <h2>Medios de pago</h2>
       <p>
-        Aceptamos {businessInfo.paymentMethods}. El pago se procesa de forma segura con Mercado Pago (Checkout Pro);
+        Aceptamos {businessInfo.paymentMethods}. El pago se procesa de forma segura con Mercado Pago;
         Glamify Makeup no almacena los datos de tu tarjeta.
       </p>
 
       <h2>Cambios y devoluciones</h2>
       <p>
-        Podés ejercer el derecho de arrepentimiento dentro de los {businessInfo.retractionDays} días corridos desde el{" "}
+        Podés ejercer el derecho de arrepentimiento dentro de los {businessInfo.retractionDays} días corridos desde que recibís el pedido. Gestionalo desde el{" "}
         <Link href="/arrepentimiento">Botón de Arrepentimiento</Link>.
       </p>
       <p>

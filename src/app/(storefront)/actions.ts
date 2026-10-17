@@ -31,7 +31,7 @@ import {
   defaultCheckoutDeps,
 } from "@/lib/orders/checkout-service";
 import { retryOrderPayment, defaultRetryPaymentDeps } from "@/lib/orders/retry-payment";
-import { paymentErrorMessage } from "@/lib/orders/customer-error";
+import { customerErrorMessage, paymentErrorMessage } from "@/lib/orders/customer-error";
 import { getCustomer } from "@/lib/customer/auth";
 import type { ActionResult } from "@/lib/forms/action-result";
 import { isPreviewDeploy, PREVIEW_PAYMENTS_OFF_MESSAGE } from "@/lib/http/deploy-env";
@@ -73,10 +73,7 @@ export async function addToCartAction(input: {
     revalidatePath("/carrito");
     return { ok: true };
   } catch (e) {
-    return {
-      ok: false,
-      error: e instanceof Error ? e.message : "No se pudo agregar al carrito.",
-    };
+    return { ok: false, error: customerErrorMessage(e, "add-to-cart", "No pudimos sumarlo al carrito. Probá de nuevo.") };
   }
 }
 
@@ -98,13 +95,7 @@ export async function addKitToCartAction(
     revalidatePath("/carrito");
     return { ok: true };
   } catch (e) {
-    return {
-      ok: false,
-      error:
-        e instanceof Error
-          ? e.message
-          : "No se pudo agregar el kit al carrito.",
-    };
+    return { ok: false, error: customerErrorMessage(e, "add-kit", "No pudimos sumar el kit al carrito. Probá de nuevo.") };
   }
 }
 
@@ -120,11 +111,7 @@ export async function updateCartItemAction(
     revalidatePath("/carrito");
     return { ok: true };
   } catch (e) {
-    return {
-      ok: false,
-      error:
-        e instanceof Error ? e.message : "No se pudo actualizar el carrito.",
-    };
+    return { ok: false, error: customerErrorMessage(e, "update-cart-item", "No pudimos actualizar tu carrito. Probá de nuevo.") };
   }
 }
 
@@ -139,10 +126,7 @@ export async function removeCartItemAction(
     revalidatePath("/carrito");
     return { ok: true };
   } catch (e) {
-    return {
-      ok: false,
-      error: e instanceof Error ? e.message : "No se pudo quitar del carrito.",
-    };
+    return { ok: false, error: customerErrorMessage(e, "remove-cart-item", "No pudimos sacarlo del carrito. Probá de nuevo.") };
   }
 }
 
@@ -173,11 +157,7 @@ export async function setVariantQtyAction(input: {
     revalidatePath("/carrito");
     return { ok: true };
   } catch (e) {
-    return {
-      ok: false,
-      error:
-        e instanceof Error ? e.message : "No se pudo actualizar la cantidad.",
-    };
+    return { ok: false, error: customerErrorMessage(e, "set-variant-qty", "No pudimos actualizar la cantidad. Probá de nuevo.") };
   }
 }
 

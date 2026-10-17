@@ -21,7 +21,7 @@ export function CardQuickStepper({
   onOpenPicker,
   className,
 }: CardQuickStepperProps) {
-  const { getVariantQty, getProductQty, setVariantQty, isUpdating } =
+  const { getVariantQty, getProductQty, setVariantQty, isUpdating, getError } =
     useCartUI();
 
   // Encontrar la variante activa para operar:
@@ -48,6 +48,7 @@ export function CardQuickStepper({
     : getProductQty(productId);
 
   const pending = activeVariant ? isUpdating(activeVariant.id) : false;
+  const error = activeVariant ? getError(activeVariant.id) : null;
   const maxStock = activeVariant?.stock ?? 99;
   const canIncrement = currentQty < maxStock;
 
@@ -94,6 +95,15 @@ export function CardQuickStepper({
       role="group"
       aria-label="Agregar al carrito"
     >
+      {/* Aviso si el cambio falló (el estado optimista ya se revirtió); la región vive siempre para que se anuncie */}
+      <div role="status" className="absolute bottom-full right-0 z-10 mb-1.5">
+        {error && (
+          <p className="w-max max-w-[148px] rounded-xl border border-border bg-white px-2.5 py-1.5 text-[14px] leading-snug text-destructive shadow-soft">
+            {error}
+          </p>
+        )}
+      </div>
+
       {/* Contenedor animado: botón + que se abre en stepper, targets de 44 px */}
       <div
         className={cn(

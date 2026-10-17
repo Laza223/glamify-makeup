@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { mergeCartForCurrentCustomer } from "@/app/(storefront)/ingresar/actions";
+import { sanitizeNext } from "@/lib/auth/safe-next";
 
 /**
  * Confirmación de email vía OTP (`token_hash`) — INDEPENDIENTE DEL DISPOSITIVO.
@@ -29,16 +30,6 @@ type EmailOtpType = (typeof EMAIL_OTP_TYPES)[number];
 
 function parseOtpType(value: string | null): EmailOtpType | null {
   return EMAIL_OTP_TYPES.includes(value as EmailOtpType) ? (value as EmailOtpType) : null;
-}
-
-/**
- * Solo paths internos relativos (anti open-redirect). Default: `/cuenta`.
- * Rechaza `//` y `\` (los navegadores normalizan backslash a slash, así que
- * `/\evil.com` se comportaría como `//evil.com` si el origin no antecediera).
- */
-function sanitizeNext(next: string | null): string {
-  if (next && next.startsWith("/") && !next.startsWith("//") && !next.includes("\\")) return next;
-  return "/cuenta";
 }
 
 export async function GET(request: NextRequest) {

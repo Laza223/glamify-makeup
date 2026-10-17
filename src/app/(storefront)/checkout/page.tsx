@@ -8,7 +8,7 @@ import { getOrderBumpOffers } from "@/lib/catalog/recommendations";
 import { selectOrderBump } from "@/lib/catalog/recommend";
 import { isPreviewDeploy } from "@/lib/http/deploy-env";
 
-export const metadata: Metadata = { title: "Checkout" };
+export const metadata: Metadata = { title: "Finalizar compra" };
 
 export default async function CheckoutPage() {
   const { cart, count, subtotal, coupon, digitalOnly } = await getCartView();

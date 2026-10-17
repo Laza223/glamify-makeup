@@ -56,7 +56,13 @@ export default async function ProductoPage({ params }: { params: Promise<{ slug:
 
   const madeToOrder = isProductMadeToOrder(product);
   const giftCard = isProductGiftCard(product);
-  const whatsappUrl = madeToOrder ? await storeWhatsappUrl(`¡Hola! Quiero armar un ${product.name}`) : null;
+  const inStock = product.variants.some((v) => v.active && v.stock > 0);
+  const soldOut = !madeToOrder && !inStock;
+  // wa.me: "armalo" si es a pedido; "consultá" si hay algún tono sin stock (el CTA principal pasa a WhatsApp).
+  const needsWhatsapp = madeToOrder || product.variants.length === 0 || product.variants.some((v) => v.stock <= 0);
+  const whatsappUrl = needsWhatsapp
+    ? await storeWhatsappUrl(madeToOrder ? `¡Hola! Quiero armar un ${product.name}` : `¡Hola! Quiero consultar por ${product.name}`)
+    : null;
   const price = getEffectivePrice(product);
   const onSale = isOnSale(product);
   const [wishlisted, threshold] = await Promise.all([isWishlisted(product.id), getFreeShippingThreshold()]);
@@ -95,7 +101,6 @@ export default async function ProductoPage({ params }: { params: Promise<{ slug:
     alreadyReviewed = Boolean(existing);
   }
 
-  const inStock = product.variants.some((v) => v.active && v.stock > 0);
   const jsonLd = buildProductJsonLd(
     {
       name: product.name,
@@ -132,7 +137,7 @@ export default async function ProductoPage({ params }: { params: Promise<{ slug:
               <WishlistHeart productId={product.id} initial={wishlisted} className="shrink-0 border border-border" />
             </div>
 
-            <h1 className="font-display text-[32px] font-normal leading-tight text-foreground md:text-[40px]">
+            <h1 className="font-display text-[32px] font-normal leading-tight text-foreground [overflow-wrap:anywhere] md:text-[40px]">
               {product.name}
             </h1>
 
@@ -191,11 +196,12 @@ export default async function ProductoPage({ params }: { params: Promise<{ slug:
               <AddToCart
                 variants={product.variants}
                 stickyBar={{ productName: product.name, image: product.images[0], price }}
+                whatsappUrl={whatsappUrl}
               />
             </>
           )}
 
-          <TrustBadges freeShippingThreshold={threshold} />
+          <TrustBadges freeShippingThreshold={threshold} soldOut={soldOut} />
 
           <PdpAccordions description={product.description} />
         </div>

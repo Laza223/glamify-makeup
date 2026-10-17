@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getEffectivePrice, toNumber } from "@/lib/catalog/pricing";
 import { isProductMadeToOrder } from "@/lib/catalog/made-to-order";
 import { isProductGiftCard } from "@/lib/catalog/gift-card";
+import { CustomerFacingError } from "@/lib/orders/customer-error";
 import type { CartLine } from "@/lib/cart/types";
 
 /** Tope de unidades por línea gift card (cada unidad emite un cupón/código). */
@@ -81,12 +82,12 @@ export async function addItem(input: AddItemInput): Promise<void> {
       where: { id: input.variantId },
       include: { product: { include: { category: true, categories: { select: { category: { select: { slug: true } } } } } } },
     });
-    if (!variant || !variant.active) throw new Error("Variante no disponible.");
-    if (isProductMadeToOrder(variant.product)) throw new Error("Este producto se arma por WhatsApp.");
+    if (!variant || !variant.active) throw new CustomerFacingError("Variante no disponible.");
+    if (isProductMadeToOrder(variant.product)) throw new CustomerFacingError("Este producto se arma por WhatsApp.");
     const unit = getEffectivePrice(variant.product, variant);
     const existing = await prisma.cartItem.findFirst({ where: { cartId: input.cartId, variantId: input.variantId } });
     if (isProductGiftCard(variant.product) && (existing?.qty ?? 0) + qty > MAX_GIFT_CARDS_PER_LINE) {
-      throw new Error(MAX_GIFT_CARDS_ERROR);
+      throw new CustomerFacingError(MAX_GIFT_CARDS_ERROR);
     }
     if (existing) await prisma.cartItem.update({ where: { id: existing.id }, data: { qty: existing.qty + qty } });
     else await prisma.cartItem.create({ data: { cartId: input.cartId, variantId: input.variantId, qty, unitPriceSnapshot: unit } });
@@ -94,7 +95,7 @@ export async function addItem(input: AddItemInput): Promise<void> {
   }
   if (input.comboId) {
     const combo = await prisma.combo.findUnique({ where: { id: input.comboId } });
-    if (!combo || !combo.active) throw new Error("Combo no disponible.");
+    if (!combo || !combo.active) throw new CustomerFacingError("Combo no disponible.");
     const existing = await prisma.cartItem.findFirst({ where: { cartId: input.cartId, comboId: input.comboId } });
     if (existing) await prisma.cartItem.update({ where: { id: existing.id }, data: { qty: existing.qty + qty } });
     else await prisma.cartItem.create({ data: { cartId: input.cartId, comboId: input.comboId, qty, unitPriceSnapshot: combo.comboPrice } });
@@ -113,7 +114,7 @@ export async function updateItem(cartId: string, itemId: string, qty: number): P
       where: { id: itemId, cartId },
       include: { variant: { include: { product: { include: { category: true, categories: { select: { category: { select: { slug: true } } } } } } } } },
     });
-    if (item?.variant && isProductGiftCard(item.variant.product)) throw new Error(MAX_GIFT_CARDS_ERROR);
+    if (item?.variant && isProductGiftCard(item.variant.product)) throw new CustomerFacingError(MAX_GIFT_CARDS_ERROR);
   }
   const res = await prisma.cartItem.updateMany({ where: { id: itemId, cartId }, data: { qty: Math.floor(qty) } });
   if (res.count === 0) throw new Error("Esa línea no pertenece a este carrito.");

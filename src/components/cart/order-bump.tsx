@@ -7,26 +7,34 @@ import { formatPrice } from "@/lib/money";
 import { addToCartAction } from "@/app/(storefront)/actions";
 import { track } from "@/lib/analytics/track";
 import type { BumpOffer } from "@/lib/catalog/recommend";
+import type { ActionResult } from "@/lib/forms/action-result";
 
 /** Order-bump: oferta de un complemento barato para subir el ticket (blueprint 06 §2). */
 export function OrderBump({ offer }: { offer: BumpOffer | null }) {
   const router = useRouter();
   const [added, setAdded] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
   // Si tras agregar el refresh trae otra oferta a este slot, reseteamos el estado "Agregado".
-  useEffect(() => setAdded(false), [offer?.variantId]);
+  useEffect(() => {
+    setAdded(false);
+    setError(null);
+  }, [offer?.variantId]);
 
   if (!offer) return null;
 
   const add = () =>
     startTransition(async () => {
-      const r = await addToCartAction({ variantId: offer.variantId });
-      if (r.ok) {
-        track("order_bump_added", { productId: offer.productId });
-        setAdded(true);
-        router.refresh();
+      setError(null);
+      const r = await addToCartAction({ variantId: offer.variantId }).catch((): ActionResult => ({ ok: false }));
+      if (!r.ok) {
+        setError(r.error ?? "No pudimos sumarlo. Probá de nuevo.");
+        return;
       }
+      track("order_bump_added", { productId: offer.productId });
+      setAdded(true);
+      router.refresh();
     });
 
   return (
@@ -38,9 +46,10 @@ export function OrderBump({ offer }: { offer: BumpOffer | null }) {
         <p className="font-display text-[17px] text-foreground">
           Completá tu <em className="font-medium text-primary">look</em>
         </p>
-        <p className="truncate text-[14px] text-muted-foreground">
-          {offer.name} · <span className="font-bold tabular-nums text-foreground">{formatPrice(offer.price)}</span>
-        </p>
+        {/* Nombre hasta 2 líneas y precio aparte: en mobile el botón "Sumar" deja poco ancho. */}
+        <p className="line-clamp-2 break-words text-[14px] leading-snug text-muted-foreground">{offer.name}</p>
+        <p className="text-[14px] font-bold tabular-nums text-foreground">{formatPrice(offer.price)}</p>
+        {error && <p role="alert" className="text-[14px] text-destructive">{error}</p>}
       </div>
       <button
         type="button"

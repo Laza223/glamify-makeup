@@ -19,6 +19,7 @@ const IMAGE_SIZES = "(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw";
 export function ProductCard({ product }: { product: CatalogListItem }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [broken, setBroken] = useState(false); // foto que no carga → inicial en vez del ícono roto
+  const [secondaryBroken, setSecondaryBroken] = useState(false); // 2ª foto (hover) rota → queda la principal
 
   const price = getEffectivePrice(product);
   const compareAt = isOnSale(product) ? toNumber(product.compareAtPrice) : null;
@@ -28,7 +29,7 @@ export function ProductCard({ product }: { product: CatalogListItem }) {
   const swatches = product.variants.filter((v) => v.swatchHex).slice(0, 5);
 
   const primaryUrl = productImageUrl(product.images[0]);
-  const secondaryUrl = product.images[1] ? productImageUrl(product.images[1]) : null;
+  const secondaryUrl = product.images[1] && !secondaryBroken ? productImageUrl(product.images[1]) : null;
   const href = `/producto/${product.slug}`;
 
   return (
@@ -52,6 +53,7 @@ export function ProductCard({ product }: { product: CatalogListItem }) {
                 alt=""
                 fill
                 sizes={IMAGE_SIZES}
+                onError={() => setSecondaryBroken(true)}
                 className="object-cover opacity-0 transition duration-700 ease-out group-hover:scale-[1.04] group-hover:opacity-100"
               />
             )}

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ChevronDown, MessageCircle } from "lucide-react";
 import { PageTitle } from "@/components/ui/page-title";
+import { businessInfo } from "@/lib/legal/business-info";
 
 export const metadata: Metadata = {
   title: "Preguntas frecuentes",
@@ -20,7 +21,7 @@ const faqs: Array<{ q: string; a: React.ReactNode }> = [
   },
   {
     q: "¿Cuánto tarda en llegar mi pedido?",
-    a: "Despachamos dentro de las 24 a 72 horas hábiles de acreditado el pago. El tiempo de tránsito depende de tu zona; el seguimiento te llega por email.",
+    a: `Despachamos en ${businessInfo.dispatchWindow} de acreditado el pago. El tiempo de tránsito depende de tu zona; el seguimiento te llega por email.`,
   },
   {
     q: "¿Qué medios de pago aceptan?",
@@ -30,7 +31,8 @@ const faqs: Array<{ q: string; a: React.ReactNode }> = [
     q: "¿Puedo cambiar o devolver un producto?",
     a: (
       <>
-        Tenés 10 días corridos para arrepentirte de la compra (art. 34 Ley 24.240): gestionalo desde el{" "}
+        Tenés {businessInfo.retractionDays} días corridos desde que recibís el pedido para arrepentirte de la compra (art. 34 Ley
+        24.240): gestionalo desde el{" "}
         <Link href="/arrepentimiento">Botón de Arrepentimiento</Link>. Si te llegó roto, fallado o equivocado,
         escribinos por <Link href="/contacto">contacto</Link> con una foto y te lo cambiamos o te devolvemos el dinero,
         con el envío a nuestro cargo. Por higiene, no hacemos cambios por gusto fuera de esos casos.

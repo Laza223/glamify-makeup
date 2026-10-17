@@ -29,7 +29,7 @@ export function stockLabel(state: StockState, stock?: number): string {
     case "in_stock":
       return "Disponible";
     case "low_stock":
-      return stock !== undefined ? `Quedan ${stock}` : "Bajo stock";
+      return stock === undefined ? "Bajo stock" : stock === 1 ? "Queda 1" : `Quedan ${stock}`;
     case "out_of_stock":
       return "Sin stock";
   }

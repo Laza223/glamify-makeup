@@ -1,11 +1,13 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Trash2 } from "lucide-react";
 import { formatPrice } from "@/lib/money";
 import { QuantityStepper } from "@/components/catalog/quantity-stepper";
+import { ProductImage } from "@/components/catalog/product-image";
 import { updateCartItemAction, removeCartItemAction } from "@/app/(storefront)/actions";
+import type { ActionResult } from "@/lib/forms/action-result";
 
 export interface CartLineItemView {
   id: string;
@@ -20,27 +22,34 @@ export function CartLineItem({ item }: { item: CartLineItemView }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
-  const setQty = (qty: number) =>
+  const [error, setError] = useState<string | null>(null);
+  // Sube cuando falla un cambio: remonta el stepper con la cantidad que sigue vigente en el server.
+  const [stepperKey, setStepperKey] = useState(0);
+
+  const run = (action: () => Promise<ActionResult>) =>
     startTransition(async () => {
-      await updateCartItemAction(item.id, qty);
-      router.refresh();
+      setError(null);
+      const r = await action().catch((): ActionResult => ({ ok: false }));
+      if (r.ok) {
+        router.refresh();
+        return;
+      }
+      setError(r.error ?? "No pudimos actualizar tu carrito. Probá de nuevo.");
+      setStepperKey((k) => k + 1);
     });
-  const remove = () =>
-    startTransition(async () => {
-      await removeCartItemAction(item.id);
-      router.refresh();
-    });
+  const setQty = (qty: number) => run(() => updateCartItemAction(item.id, qty));
+  const remove = () => run(() => removeCartItemAction(item.id));
 
   return (
     <div className="flex gap-4 py-4 transition-opacity data-[pending]:opacity-60" data-pending={pending ? "" : undefined}>
       <div className="size-20 shrink-0 overflow-hidden rounded-[14px] bg-muted">
-        {item.image ? <img src={item.image} alt="" className="size-full object-cover" /> : null}
+        <ProductImage src={item.image} alt={item.name} fallbackLabel={item.name} sizes="80px" className="size-full" />
       </div>
       <div className="flex min-w-0 flex-1 flex-col gap-2">
         <div className="flex items-start justify-between gap-2">
-          <div>
-            <p className="text-[15px] font-semibold leading-snug text-foreground">{item.name}</p>
-            {item.variantName && <p className="text-[14px] text-muted-foreground">{item.variantName}</p>}
+          <div className="min-w-0">
+            <p className="line-clamp-2 break-words text-[15px] font-semibold leading-snug text-foreground">{item.name}</p>
+            {item.variantName && <p className="break-words text-[14px] text-muted-foreground">{item.variantName}</p>}
           </div>
           <button
             type="button"
@@ -53,9 +62,10 @@ export function CartLineItem({ item }: { item: CartLineItemView }) {
           </button>
         </div>
         <div className="flex items-center justify-between">
-          <QuantityStepper initial={item.qty} max={99} onChange={setQty} />
+          <QuantityStepper key={stepperKey} initial={item.qty} max={99} onChange={setQty} />
           <span className="text-[16px] font-bold tabular-nums">{formatPrice(item.unitPrice * item.qty)}</span>
         </div>
+        {error && <p role="alert" className="text-[14px] text-destructive">{error}</p>}
       </div>
     </div>
   );

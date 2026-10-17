@@ -39,7 +39,14 @@ describe("stockLabel", () => {
   it("etiquetas legibles", () => {
     expect(stockLabel("in_stock")).toBe("Disponible");
     expect(stockLabel("low_stock", 2)).toBe("Quedan 2");
+    expect(stockLabel("low_stock")).toBe("Bajo stock");
     expect(stockLabel("out_of_stock")).toBe("Sin stock");
+  });
+});
+
+describe("stockLabel con una sola unidad", () => {
+  it("usa el singular", () => {
+    expect(stockLabel("low_stock", 1)).toBe("Queda 1");
   });
 });
 

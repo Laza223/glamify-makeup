@@ -6,7 +6,7 @@ import { RetractionForm } from "./retraction-form";
 export const metadata: Metadata = {
   title: "Botón de Arrepentimiento",
   description:
-    "Ejercé tu derecho de arrepentimiento (art. 34 Ley 24.240). Tenés 10 días corridos para revocar tu compra sin costo.",
+    `Ejercé tu derecho de arrepentimiento (art. 34 Ley 24.240). Tenés ${businessInfo.retractionDays} días corridos para revocar tu compra sin costo.`,
 };
 
 export default function ArrepentimientoPage() {

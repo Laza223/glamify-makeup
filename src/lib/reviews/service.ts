@@ -2,6 +2,7 @@ import "server-only";
 import { hasPurchased } from "@/lib/reviews/purchase";
 import { validateReview } from "@/lib/reviews/validation";
 import { classifyReview } from "@/lib/reviews/moderation";
+import { CustomerFacingError } from "@/lib/orders/customer-error";
 
 const PURCHASED_STATUSES = [
   "paid",
@@ -61,7 +62,7 @@ export async function createReview(
     body: input.body,
     authorName: input.customerId == null ? input.authorName : undefined,
   });
-  if (!valid.ok) throw new Error(valid.reason);
+  if (!valid.ok) throw new CustomerFacingError(valid.reason);
 
   let purchased = false;
   if (input.customerId != null) {
@@ -73,7 +74,7 @@ export async function createReview(
         },
       },
     });
-    if (existing) throw new Error("Ya dejaste tu reseña para este producto.");
+    if (existing) throw new CustomerFacingError("Ya dejaste tu reseña para este producto.");
 
     const rows = await deps.db.orderItem.findMany({
       where: {

@@ -3,17 +3,22 @@
 import { revalidatePath } from "next/cache";
 import { getCustomer } from "@/lib/customer/auth";
 import { createReview } from "@/lib/reviews/service";
+import { validateReview } from "@/lib/reviews/validation";
 import { prisma } from "@/lib/prisma";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { PRODUCT_IMAGES_BUCKET } from "@/lib/admin/products/images";
 import type { ActionResult } from "@/lib/forms/action-result";
+import { customerErrorMessage } from "@/lib/orders/customer-error";
+import {
+  REVIEW_PHOTO_FORMATS_LABEL,
+  REVIEW_PHOTO_MAX_BYTES,
+  REVIEW_PHOTO_MAX_MB,
+  isReviewPhotoType,
+} from "./review-photo";
 
 export interface ReviewActionResult extends ActionResult {
   status?: string;
 }
-
-const ALLOWED_MIME = ["image/png", "image/jpeg", "image/webp", "image/avif"];
-const MAX_BYTES = 5 * 1024 * 1024;
 
 export async function createReviewAction(
   inputOrFormData:
@@ -50,14 +55,14 @@ export async function createReviewAction(
 
     const photoFile = inputOrFormData.get("photo") as File | null;
     if (photoFile && photoFile.size > 0 && photoFile.name) {
-      if (!ALLOWED_MIME.includes(photoFile.type)) {
+      if (!isReviewPhotoType(photoFile.type)) {
         return {
           ok: false,
-          error: "Formato de foto no permitido. Subí PNG, JPG o WEBP.",
+          error: `Formato de foto no permitido. Subí ${REVIEW_PHOTO_FORMATS_LABEL}.`,
         };
       }
-      if (photoFile.size > MAX_BYTES) {
-        return { ok: false, error: "La foto no puede superar los 5 MB." };
+      if (photoFile.size > REVIEW_PHOTO_MAX_BYTES) {
+        return { ok: false, error: `La foto no puede superar los ${REVIEW_PHOTO_MAX_MB} MB.` };
       }
 
       const ext =
@@ -75,7 +80,8 @@ export async function createReviewAction(
         });
 
       if (error) {
-        return { ok: false, error: `Error al subir la foto: ${error.message}` };
+        console.error("[createReviewAction] subida de foto", error);
+        return { ok: false, error: "No pudimos subir la foto. Probá con otra o enviá la reseña sin foto." };
       }
       photoUrl = path;
     }
@@ -94,6 +100,11 @@ export async function createReviewAction(
   if (website && website.trim() !== "") return { ok: true, status: "pending" };
 
   const customer = await getCustomer();
+  // Los mensajes de validación están escritos para la clienta; lo que tire createReview (DB) no.
+  const authorForValidation = customer ? undefined : (authorName ?? "").trim();
+  const valid = validateReview({ rating, title, body, authorName: authorForValidation });
+  if (!valid.ok) return { ok: false, error: valid.reason };
+
   try {
     const res = await createReview(
       {
@@ -112,9 +123,6 @@ export async function createReviewAction(
     revalidatePath(`/producto/${slug}`);
     return { ok: true, status: res.status };
   } catch (e) {
-    return {
-      ok: false,
-      error: e instanceof Error ? e.message : "No se pudo enviar la reseña.",
-    };
+    return { ok: false, error: customerErrorMessage(e, "createReviewAction", "No pudimos enviar tu reseña. Probá de nuevo en un rato.") };
   }
 }
