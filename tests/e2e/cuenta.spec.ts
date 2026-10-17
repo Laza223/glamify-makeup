@@ -38,7 +38,7 @@ test.describe("Cuenta de clienta (DoD M4)", () => {
     await page.goto(`/producto/${PRODUCT_SLUG}`);
     await page.getByRole("radio", { name: /5 estrellas/i }).click();
     await page.getByLabel(/tu experiencia/i).fill("Excelente labial, dura todo el día.");
-    await page.getByRole("button", { name: /publicar reseña/i }).click();
+    await page.getByRole("button", { name: /enviar reseña/i }).click();
     await expect(page.getByText(/excelente labial/i)).toBeVisible({ timeout: 15000 });
   });
 });

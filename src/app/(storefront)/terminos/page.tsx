@@ -14,7 +14,7 @@ export default function TerminosPage() {
       <h1>Términos y condiciones</h1>
       <p>
         Estos términos y condiciones regulan el uso del sitio y la compra de productos en Glamify Makeup. Al navegar
-        o realizar un pedido, aceptás estos términos. Última actualización: junio de 2026.
+        o realizar un pedido, aceptás estos términos. Última actualización: octubre de 2026.
       </p>
 
       <h2>1. Identificación del proveedor</h2>
@@ -53,7 +53,7 @@ export default function TerminosPage() {
 
       <h2>6. Derecho de arrepentimiento</h2>
       <p>
-        Podés revocar tu compra dentro de los {businessInfo.retractionDays} días corridos desde que recibís el pedido, conforme al art. 34 de
+        Podés revocar tu compra dentro de los {businessInfo.retractionDays} días corridos desde que recibís el pedido o desde la compra, lo que ocurra último, conforme al art. 34 de
         la Ley 24.240. Ejercé este derecho desde el{" "}
         <Link href="/arrepentimiento">Botón de Arrepentimiento</Link>.
       </p>

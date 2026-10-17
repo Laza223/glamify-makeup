@@ -15,7 +15,11 @@ export function HowItWorks({ threshold, brands }: { threshold: number; brands: s
     },
     { icon: CreditCard, t: "Pagás en un toque", d: "Con Mercado Pago: tarjeta o dinero en cuenta, en un solo paso." },
     { icon: PackageCheck, t: "Lo armamos en Luján", d: `Y lo despachamos en ${businessInfo.dispatchWindow}.` },
-    { icon: Truck, t: "Te llega", d: `A tu casa o a la sucursal de Correo Argentino. Gratis desde ${formatPrice(threshold)}.` },
+    {
+      icon: Truck,
+      t: "Te llega",
+      d: `A tu casa o a la sucursal de Correo Argentino.${threshold > 0 ? ` Gratis desde ${formatPrice(threshold)}.` : ""}`,
+    },
   ];
 
   return (

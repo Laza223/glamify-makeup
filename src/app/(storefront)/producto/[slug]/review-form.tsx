@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { RatingInput } from "@/components/ui/rating-stars";
 import { track } from "@/lib/analytics/track";
 import { createReviewAction } from "./review-actions";
+import { settleAction } from "@/lib/forms/action-result";
 import {
   REVIEW_PHOTO_FORMATS_LABEL,
   REVIEW_PHOTO_MAX_BYTES,
@@ -64,7 +65,7 @@ export function ReviewForm({
     setError(null);
     setPending(true);
     const fd = new FormData(e.currentTarget);
-    const res = await createReviewAction(fd);
+    const res = await settleAction(createReviewAction(fd));
     setPending(false);
     if (res.ok) {
       setDoneStatus(res.status ?? "pending");

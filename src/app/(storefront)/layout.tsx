@@ -7,7 +7,7 @@ import { CartDrawer } from "@/components/cart/cart-drawer";
 import { CartContents } from "@/components/cart/cart-contents";
 import { PostHogProvider } from "@/components/analytics/posthog-provider";
 import { CookieConsent } from "@/components/analytics/cookie-consent";
-import { ExitIntent } from "@/components/marketing/exit-intent";
+import { ExitIntentGate } from "@/components/marketing/exit-intent-gate";
 import { WhatsAppFab } from "@/components/layout/whatsapp-fab";
 import { PreviewBanner } from "@/components/layout/preview-banner";
 import { getCartView } from "@/lib/cart/cart-view";
@@ -49,7 +49,7 @@ export default async function StorefrontLayout({
         </CartDrawer>
         <WhatsAppFab />
         <CookieConsent />
-        <ExitIntent />
+        <ExitIntentGate />
       </CartProvider>
     </PostHogProvider>
   );
