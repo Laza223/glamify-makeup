@@ -30,10 +30,9 @@ export function CartLineItem({ item }: { item: CartLineItemView }) {
     startTransition(async () => {
       setError(null);
       const r = await action().catch((): ActionResult => ({ ok: false }));
-      if (r.ok) {
-        router.refresh();
-        return;
-      }
+      // También al fallar: la línea pudo cambiar en otra pestaña y sin refrescar queda una fantasma.
+      router.refresh();
+      if (r.ok) return;
       setError(r.error ?? "No pudimos actualizar tu carrito. Probá de nuevo.");
       setStepperKey((k) => k + 1);
     });

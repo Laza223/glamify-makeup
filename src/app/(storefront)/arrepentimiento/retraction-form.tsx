@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { requestRetractionAction } from "./actions";
+import { settleAction } from "@/lib/forms/action-result";
 
 export function RetractionForm() {
   const [error, setError] = useState<string | null>(null);
@@ -18,14 +19,14 @@ export function RetractionForm() {
     setError(null);
     setPending(true);
     const fd = new FormData(e.currentTarget);
-    const res = await requestRetractionAction({
+    const res = await settleAction(requestRetractionAction({
       contactName: String(fd.get("contactName") ?? ""),
       contactEmail: String(fd.get("contactEmail") ?? ""),
       contactPhone: String(fd.get("contactPhone") ?? ""),
       orderNumber: String(fd.get("orderNumber") ?? ""),
       reason: String(fd.get("reason") ?? ""),
       website: String(fd.get("website") ?? ""),
-    });
+    }));
     setPending(false);
     if (res.ok) {
       setTicket(res.ticket ?? "—");

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { updateProfileAction } from "./actions";
+import { settleAction } from "@/lib/forms/action-result";
 
 export function DatosForm({ initial }: { initial: { name: string; phone: string; email: string } }) {
   const [saved, setSaved] = useState(false);
@@ -16,9 +17,9 @@ export function DatosForm({ initial }: { initial: { name: string; phone: string;
     e.preventDefault();
     setSaved(false); setError(null); setPending(true);
     const fd = new FormData(e.currentTarget);
-    const res = await updateProfileAction({ name: String(fd.get("name") ?? ""), phone: String(fd.get("phone") ?? "") });
+    const res = await settleAction(updateProfileAction({ name: String(fd.get("name") ?? ""), phone: String(fd.get("phone") ?? "") }));
     setPending(false);
-    if (res.ok) setSaved(true); else setError(res.error ?? "Error");
+    if (res.ok) setSaved(true); else setError(res.error ?? "No pudimos guardar tus datos. Probá de nuevo.");
   }
 
   return (
