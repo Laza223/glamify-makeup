@@ -54,6 +54,7 @@ export function SiteFooter() {
         <p>
           © {new Date().getFullYear()} Glamify Makeup ·{" "}
           <Link href="/terminos" className="underline-offset-4 hover:underline">Términos</Link> ·{" "}
+          <Link href="/privacidad" className="underline-offset-4 hover:underline">Privacidad</Link> ·{" "}
           <Link href="/arrepentimiento" className="underline-offset-4 hover:underline">Botón de arrepentimiento</Link>
         </p>
       </footer>

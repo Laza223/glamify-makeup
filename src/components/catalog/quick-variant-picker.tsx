@@ -62,7 +62,7 @@ export function QuickVariantPicker({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
-        className="max-h-[85vh] rounded-t-3xl border-t border-border/80 bg-white p-6 shadow-soft-lg sm:bottom-auto sm:top-1/2 sm:mx-auto sm:max-w-md sm:-translate-y-1/2 sm:rounded-2xl sm:border"
+        className="max-h-[85vh] rounded-t-3xl border-t border-border/80 bg-white shadow-soft-lg sm:bottom-auto sm:top-1/2 sm:mx-auto sm:max-w-md sm:-translate-y-1/2 sm:rounded-2xl sm:border"
       >
         <SheetHeader className="pb-3 text-left">
           <SheetTitle className="text-base font-bold text-foreground">

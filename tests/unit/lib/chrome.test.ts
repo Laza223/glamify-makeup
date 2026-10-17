@@ -21,8 +21,17 @@ describe("chromeFor", () => {
     expect(c.whatsappFab || c.exitIntent || c.cookieBanner).toBe(false);
   });
 
-  it("confirmación de compra: header mínimo sin 'Volver al carrito'", () => {
-    expect(chromeFor("/checkout/gracias")).toMatchObject({ header: "checkout", backToCart: false, exitIntent: false });
+  it("confirmación de compra: como el checkout pero sin 'Volver al carrito'", () => {
+    expect(chromeFor("/checkout/gracias")).toEqual({
+      header: "checkout",
+      backToCart: false,
+      bottomNav: false,
+      footer: "minimal",
+      whatsappFab: false,
+      exitIntent: false,
+      cookieBanner: false,
+      buyBar: "none",
+    });
   });
 
   it("una ruta que solo empieza con 'checkout' no es el checkout", () => {

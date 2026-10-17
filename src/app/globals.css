@@ -57,7 +57,7 @@
     scroll-padding-top: calc(var(--header-h) + 1rem);
   }
 
-  /* Admin: conserva el sistema anterior (ADR 0003). El storefront nunca depende de :has(). */
+  /* Admin: conserva el sistema anterior (ADR 0003). El storefront no depende de :has() para nada esencial (solo scroll-padding). */
   :root:has([data-surface="admin"]) {
     /* === Glamify Makeup — Warm Editorial Luxury Tokens === */
     --background: 35 40% 98%; /* #FBF9F6 Warm Alabaster */
@@ -108,6 +108,9 @@
   body {
     @apply bg-background font-sans text-foreground antialiased selection:bg-primary/20 selection:text-foreground;
     font-size: 16px;
+    /* Con viewport-fit=cover, en horizontal el contenido no se mete bajo el notch. */
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
   }
 
   h1,
@@ -217,7 +220,6 @@
     /* Sin esto las infinitas (spinners) giran a 0.01ms por vuelta: tiemblan en vez de quedarse quietas. */
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
   }
   .admin-card:hover {
     transform: none;

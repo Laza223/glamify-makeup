@@ -32,11 +32,15 @@ const ITEMS: NavItem[] = [
 
 export function BottomNav({ cartCount = 0 }: { cartCount?: number }) {
   const pathname = usePathname();
+  if (!chromeFor(pathname).bottomNav) return null;
+  // Montado solo cuando se ve: el estado del rebote arranca de cero al volver del checkout.
+  return <BottomNavBar pathname={pathname} cartCount={cartCount} />;
+}
+
+function BottomNavBar({ pathname, cartCount }: { pathname: string; cartCount: number }) {
   const { openCart, cartCount: ctxCount } = useCartUI();
   const effectiveCount = typeof ctxCount === "number" ? ctxCount : cartCount;
   const bumps = useCartBump(effectiveCount);
-
-  if (!chromeFor(pathname).bottomNav) return null;
 
   return (
     <nav

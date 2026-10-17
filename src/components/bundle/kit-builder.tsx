@@ -320,12 +320,16 @@ export function KitBuilder({ labios, ojos, rostro, curatedCombos }: KitBuilderPr
             })}
           </ul>
 
-          <div key={completePulse} className={cn("min-w-0 flex-1 origin-left", completePulse > 0 && "animate-soft-pop")}>
+          <div className="min-w-0 flex-1">
             <p className="flex items-center gap-1 text-[13px] text-muted-foreground">
               {isComplete && <Check className="size-3.5 text-success" aria-hidden />}
               {isComplete ? "Tu kit" : `${selectedCount} de 3 elegidos`}
             </p>
-            <p className="text-[18px] font-bold tabular-nums leading-tight" aria-live="polite">{formatPrice(rawSubtotal)}</p>
+            <p className="text-[18px] font-bold tabular-nums leading-tight" aria-live="polite">
+              <span key={completePulse} className={cn("inline-block origin-left", completePulse > 0 && "animate-soft-pop")}>
+                {formatPrice(rawSubtotal)}
+              </span>
+            </p>
           </div>
 
           <Button
