@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Logo } from "@/components/ui/logo";
 import { businessInfo } from "@/lib/legal/business-info";
+import { chromeFor } from "@/lib/routes/chrome";
 
 const linkClass =
   "inline-flex min-h-11 items-center text-[15px] text-foreground underline-offset-4 transition-colors hover:text-accent hover:underline focus-visible:rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
@@ -36,11 +37,18 @@ const columns: Array<{ title: string; links: Array<{ label: string; href: string
   },
 ];
 
+// Lugar para lo fijo de abajo: menú inferior (mobile) y, si hay, la barra de compra.
+const bottomInset = {
+  none: "pb-[calc(6rem+env(safe-area-inset-bottom))] md:pb-5",
+  mobile: "pb-[calc(11rem+env(safe-area-inset-bottom))] md:pb-5",
+  always: "pb-[calc(11rem+env(safe-area-inset-bottom))] md:pb-28",
+} as const;
+
 export function SiteFooter() {
   const pathname = usePathname();
-  const isCheckout = pathname.startsWith("/checkout");
+  const chrome = chromeFor(pathname);
 
-  if (isCheckout) {
+  if (chrome.footer === "minimal") {
     return (
       <footer className="mt-8 border-t border-border py-6 text-center text-sm text-muted-foreground">
         <p>
@@ -85,7 +93,7 @@ export function SiteFooter() {
           </nav>
         ))}
       </div>
-      <div className="container flex flex-col items-center justify-between gap-3 border-t border-foreground/10 py-5 pb-24 text-sm text-foreground/80 md:flex-row md:pb-5">
+      <div className={`container flex flex-col items-center justify-between gap-3 border-t border-foreground/10 pt-5 text-sm text-foreground/80 md:flex-row ${bottomInset[chrome.buyBar]}`}>
         <div className="space-y-0.5 text-center md:text-left">
           <p>© {new Date().getFullYear()} Glamify Makeup</p>
           <p>Medios de pago: {businessInfo.paymentMethods}</p>

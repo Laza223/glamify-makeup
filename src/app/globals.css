@@ -43,6 +43,18 @@
     --radius: 0.875rem;
     --ff-sans: var(--font-nunito);
     --ff-display: var(--font-playfair);
+
+    /* Alto del header fijo: lo mide sticky-header.tsx; esto vale hasta que hidrata. */
+    --header-h: 89px;
+  }
+  @media (min-width: 768px) {
+    :root {
+      --header-h: 142px;
+    }
+  }
+  /* Saltos a anclas y foco por teclado: que no queden debajo del header. */
+  :root:has([data-site-header]) {
+    scroll-padding-top: calc(var(--header-h) + 1rem);
   }
 
   /* Admin: conserva el sistema anterior (ADR 0003). El storefront nunca depende de :has(). */
@@ -202,7 +214,10 @@
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+    /* Sin esto las infinitas (spinners) giran a 0.01ms por vuelta: tiemblan en vez de quedarse quietas. */
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
   .admin-card:hover {
     transform: none;

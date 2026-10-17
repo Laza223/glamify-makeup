@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
 import { ShoppingBag } from "lucide-react";
 import { useCartUI } from "@/components/cart/cart-provider";
+import { useCartBump } from "@/components/cart/use-cart-bump";
 import { cn } from "@/lib/utils";
 
 export function CartButton({
@@ -14,13 +14,7 @@ export function CartButton({
 }) {
   const { openCart, cartCount } = useCartUI();
   const displayCount = typeof cartCount === "number" ? cartCount : count;
-  // Rebote con masa cada vez que suma (no al restar ni al cargar).
-  const prev = useRef(displayCount);
-  const [bumps, setBumps] = useState(0);
-  useEffect(() => {
-    if (displayCount > prev.current) setBumps((n) => n + 1);
-    prev.current = displayCount;
-  }, [displayCount]);
+  const bumps = useCartBump(displayCount);
 
   return (
     <button

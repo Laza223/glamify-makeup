@@ -347,7 +347,7 @@ export function CheckoutForm({ subtotal, discount, couponCode, couponFreeShippin
         )}
       </div>
 
-      <aside className="space-y-4 rounded-[24px] bg-secondary p-5 md:p-6 lg:sticky lg:top-28 lg:self-start">
+      <aside className="space-y-4 rounded-[24px] bg-secondary p-5 md:p-6 lg:sticky lg:top-[calc(var(--header-h)+1.5rem)] lg:self-start">
         <h2 className="font-display text-[24px] text-foreground">
           Tu <em className="font-medium text-primary">pedido</em>
         </h2>

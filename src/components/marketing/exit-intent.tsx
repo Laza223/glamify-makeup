@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 import { Gift, Copy, Check } from "lucide-react";
 import {
   Sheet,
@@ -14,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { track } from "@/lib/analytics/track";
 import { captureExitIntentAction } from "@/app/(storefront)/marketing-actions";
+import { chromeFor } from "@/lib/routes/chrome";
 
 const SEEN_KEY = "glamify_exit_seen";
 const CONSENT_KEY = "glamify_analytics";
@@ -32,9 +34,12 @@ function consentDecided(): boolean {
   }
 }
 
-/** Sin cupón de bienvenida configurado (NEXT_PUBLIC_WELCOME_COUPON_CODE) no hay nada que ofrecer: no se muestra. */
+/** Sin cupón de bienvenida configurado (NEXT_PUBLIC_WELCOME_COUPON_CODE) no hay nada que ofrecer: no se muestra. Tampoco en el checkout. */
 export function ExitIntent() {
+  const pathname = usePathname();
   if (!process.env.NEXT_PUBLIC_WELCOME_COUPON_CODE?.trim()) return null;
+  // Nunca en medio de la compra.
+  if (!chromeFor(pathname).exitIntent) return null;
   return <ExitIntentPopup />;
 }
 

@@ -10,6 +10,7 @@ import { ProductImage } from "@/components/catalog/product-image";
 import { getEffectivePrice } from "@/lib/catalog/pricing";
 import { formatPrice } from "@/lib/money";
 import { cn } from "@/lib/utils";
+import { becameTrue, useChangePulse } from "@/lib/motion/use-change-pulse";
 import { useCartUI } from "@/components/cart/cart-provider";
 import { addKitToCartAction, addToCartAction } from "@/app/(storefront)/actions";
 import { track } from "@/lib/analytics/track";
@@ -57,6 +58,7 @@ export function KitBuilder({ labios, ojos, rostro, curatedCombos }: KitBuilderPr
   const productsByStep: Record<Step, CatalogProduct[]> = { labios, ojos, rostro };
   const selectedCount = STEPS.filter((s) => slots[s.key]).length;
   const isComplete = selectedCount === 3;
+  const completePulse = useChangePulse(isComplete, becameTrue);
   const rawSubtotal = STEPS.reduce((sum, s) => sum + (slots[s.key]?.price ?? 0), 0);
 
   const handleSelectProduct = (step: Step, product: CatalogProduct, variantId?: string, advance = true) => {
@@ -286,7 +288,7 @@ export function KitBuilder({ labios, ojos, rostro, curatedCombos }: KitBuilderPr
       </div>
 
       {/* Barra fija: tu kit + total + CTA. En mobile va arriba del menú inferior. */}
-      <div className="fixed inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-20 border-t border-border bg-white/95 px-4 py-3 shadow-[0_-8px_24px_-12px_rgb(0_0_0/0.18)] backdrop-blur-md md:bottom-0 md:py-4">
+      <div className="fixed inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-bar border-t border-border bg-white/95 px-4 py-3 shadow-[0_-8px_24px_-12px_rgb(0_0_0/0.18)] backdrop-blur-md md:bottom-0 md:py-4">
         {error && (
           <p role="alert" className="mx-auto mb-2 max-w-5xl text-[15px] font-medium text-destructive">
             {error}
@@ -318,8 +320,11 @@ export function KitBuilder({ labios, ojos, rostro, curatedCombos }: KitBuilderPr
             })}
           </ul>
 
-          <div className="min-w-0 flex-1">
-            <p className="text-[13px] text-muted-foreground">{isComplete ? "Tu kit" : `${selectedCount} de 3 elegidos`}</p>
+          <div key={completePulse} className={cn("min-w-0 flex-1 origin-left", completePulse > 0 && "animate-soft-pop")}>
+            <p className="flex items-center gap-1 text-[13px] text-muted-foreground">
+              {isComplete && <Check className="size-3.5 text-success" aria-hidden />}
+              {isComplete ? "Tu kit" : `${selectedCount} de 3 elegidos`}
+            </p>
             <p className="text-[18px] font-bold tabular-nums leading-tight" aria-live="polite">{formatPrice(rawSubtotal)}</p>
           </div>
 

@@ -69,7 +69,7 @@ export default async function CarritoPage() {
           </div>
           {bump && <OrderBump offer={bump} />}
         </div>
-        <aside className="space-y-4 rounded-[20px] bg-secondary p-5 lg:sticky lg:top-32 lg:self-start md:p-6">
+        <aside className="space-y-4 rounded-[20px] bg-secondary p-5 lg:sticky lg:top-[calc(var(--header-h)+1.5rem)] lg:self-start md:p-6">
           <CouponInput applied={coupon?.code ?? null} />
           <Separator />
           <CartSummary subtotal={subtotal} discount={discount} shippingCost={digitalOnly ? 0 : null} total={total} freeShipping={coupon?.freeShipping} />

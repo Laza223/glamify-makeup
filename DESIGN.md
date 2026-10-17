@@ -198,6 +198,9 @@ Las secciones de estantería aparecen con `.reveal` al scrollear; si el navegado
 
 Plano por defecto: la jerarquía sale del color (negro, blanco, porcelana) y de los hilos finos (#ECE6E9), no de sombras. Las sombras son raras y funcionales: el botón + y el corazón flotan sobre la foto con una sombra corta para separarse de ella, y las cartas del abanico de regalos proyectan una sombra profunda sobre negro.
 
+### Capas fijas
+Escala en tokens de Tailwind (`z-bar` 20 · `z-sticky`/`z-nav` 30 · `z-banner` 40 · `z-overlay` 50 · `z-toast` 60), nunca números sueltos. Qué capa va en cada ruta lo decide `chromeFor(pathname)` (`src/lib/routes/chrome.ts`): el checkout no lleva menú inferior, WhatsApp, popup de salida ni banner de cookies. Todo lo fijo abajo suma `env(safe-area-inset-bottom)`, y los paneles sticky de desktop se ubican con `--header-h`, el alto real del header.
+
 ### Shadow Vocabulary
 - **Sobre foto** (`box-shadow: 0 2px 6px -2px rgb(0 0 0 / 0.18)`): corazón de favoritos; el badge "Sin stock" o "A pedido" usa `shadow-sm`.
 - **Botón +** (`box-shadow: 0 3px 8px -3px rgb(224 23 122 / 0.6)`): sombra rosa corta bajo el + cerrado.
@@ -257,12 +260,20 @@ Lista de 4 pasos con círculos rosa numerados unidos por una línea que se dibuj
 Conjunto cerrado, todo anulado con `prefers-reduced-motion`:
 - Corazón: late solo cuando ella lo marca (`heart-pop`, 0.4s, resorte).
 - Botón +: se abre en stepper (300ms).
-- Contador del carrito: rebota (`count-bump`, 0.45s).
+- Contador del carrito (header y menú inferior): rebota (`count-bump`, 0.45s) cada vez que suma; si sumó con el drawer abierto, rebota al cerrarlo.
 - Tarjeta: la segunda foto reemplaza a la primera al hover.
 - Tira de marcas: loop de 40s, pausa con hover o foco.
 - Abanico de regalos: se abre al hover (500ms).
 - Línea de pasos: se dibuja con el scroll.
 - Aparición: `.reveal` en las secciones de estantería y `.reveal-scale` en el bloque de regalos; nada más aparece animado.
+- Respuesta a una acción (nunca al montar ni al abrir el carrito):
+  - Agregar desde la barra fija de la ficha: el botón pasa a "¡Agregado!" en verde, igual que el principal.
+  - Total del resumen: late corto (`soft-pop`, 0.3s, resorte) cuando cambia.
+  - Cupón aplicado: el aviso entra con fade + zoom de 300ms.
+  - Envío gratis: al cruzar el umbral el ícono rebota (`count-bump`) y el fondo pasa a verde.
+  - Kit: al completar los 3 pasos, el total late (`soft-pop`) y aparece un tilde.
+
+Con reduced-motion, cualquier animación (incluidos los spinners) queda en su estado final: una sola iteración de 0.01ms.
 
 Easing: salida suave `cubic-bezier(0.16, 1, 0.3, 1)` para entradas; resorte `cubic-bezier(0.34, 1.56, 0.64, 1)` para latidos y rebotes.
 

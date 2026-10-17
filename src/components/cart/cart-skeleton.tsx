@@ -31,7 +31,7 @@ export function CartSkeleton() {
         </div>
 
         {/* Columna Derecha: Resumen lateral */}
-        <aside className="space-y-4 rounded-2xl border border-border bg-white p-5 lg:sticky lg:top-20 lg:self-start">
+        <aside className="space-y-4 rounded-2xl border border-border bg-white p-5 lg:sticky lg:top-[calc(var(--header-h)+1.5rem)] lg:self-start">
           <Skeleton className="h-10 w-full rounded-xl" />
           <div className="space-y-2 pt-2">
             <div className="flex justify-between">
