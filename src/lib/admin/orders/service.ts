@@ -1,8 +1,8 @@
 import { prisma, type PrismaTransactionClient } from "@/lib/prisma";
 import { canTransition } from "@/lib/orders/state-machine";
-import { computeStockDecrements } from "@/lib/orders/stock";
+import { applyPaidEffects, restockItems } from "@/lib/orders/stock-effects";
 import { voidUnusedGiftCards, releaseGiftCardReservation } from "@/lib/coupons/gift-card-service";
-import type { CartLine } from "@/lib/cart/types";
+import type { Money } from "@/lib/catalog/types";
 import type { OrderStatus } from "@prisma/client";
 
 const STATUS_LABELS: Record<OrderStatus, string> = {
@@ -31,6 +31,9 @@ export interface AdminOrder {
   id: string;
   status: OrderStatus;
   couponId: string | null;
+  customerId?: string | null;
+  shippingMethod?: string;
+  shippingCost?: Money;
   items: AdminOrderItem[];
 }
 
@@ -52,31 +55,6 @@ export function defaultOrdersDeps(): OrdersDeps {
 /** include para cargar el pedido con lo necesario para restock. */
 const orderInclude = { items: { include: { combo: { include: { items: true } } } } } as const;
 
-/** Convierte un OrderItem a CartLine para computar decrementos/incrementos de stock. */
-function orderItemToLine(it: AdminOrderItem): CartLine {
-  if (it.comboId && it.combo) {
-    return {
-      id: it.id,
-      kind: "combo",
-      refId: it.comboId,
-      unitPrice: 0,
-      qty: it.qty,
-      weightGr: 0,
-      isGiftCard: false,
-      components: it.combo.items.map((ci) => ({ variantId: ci.variantId, qty: ci.qty })),
-    };
-  }
-  return {
-    id: it.id,
-    kind: "variant",
-    refId: it.variantId ?? "",
-    unitPrice: 0,
-    qty: it.qty,
-    weightGr: 0,
-    isGiftCard: false,
-  };
-}
-
 /**
  * Efectos sobre gift cards cuando el pedido pasa a refunded/cancelled: se anulan las emitidas sin
  * usar (devuelve cuántas ya estaban usadas) y, si nunca se pagó, se libera la gift card que reservó.
@@ -87,6 +65,8 @@ async function applyGiftCardEffects(tx: PrismaTransactionClient, orderId: string
   if (to === "cancelled" && from === "pending_payment") await releaseGiftCardReservation(tx, orderId);
   return used;
 }
+
+const ORDER_CHANGED_ERROR = "El pedido cambió de estado mientras lo editabas. Recargá la página.";
 
 export const GIFT_CARD_MANUAL_PAID_ERROR =
   "Los pedidos con gift card se confirman solo con el pago de Mercado Pago (así se emiten los códigos).";
@@ -110,8 +90,23 @@ export async function changeOrderStatus(
   if (order.status === "pending_payment" && to === "paid" && order.items.some((it) => it.isGiftCard)) {
     throw new Error(GIFT_CARD_MANUAL_PAID_ERROR);
   }
+  // Reembolso/cancelación de un pedido que ya descontó stock y todavía no salió (paid/preparing) lo repone;
+  // en shipped/delivered no (la dueña lo suma a mano cuando el producto vuelve; ver state-machine.ts).
+  const shouldRestock = (to === "refunded" || to === "cancelled") && (order.status === "paid" || order.status === "preparing");
   const giftCardsUsed = await deps.db.$transaction(async (tx) => {
-    await tx.order.update({ where: { id: order.id }, data: { status: to } });
+    // Guarda atómica sobre el estado leído: el webhook de MP puede haber movido el pedido antes, y ni los
+    // efectos de una sola vez (stock, cupón) ni un estado viejo pueden pisar lo que ya pasó.
+    const res = await tx.order.updateMany({ where: { id: order.id, status: order.status }, data: { status: to } });
+    if (res.count !== 1) throw new Error(ORDER_CHANGED_ERROR);
+    if (shouldRestock) await restockItems(tx, order.items);
+    // Marcar pagado a mano aplica los mismos efectos que el webhook: stock, envío y uso del cupón.
+    if (to === "paid") {
+      await applyPaidEffects(
+        tx,
+        { id: order.id, couponId: order.couponId, customerId: order.customerId ?? null, shippingMethod: order.shippingMethod ?? "", shippingCost: order.shippingCost ?? 0, items: order.items },
+        deps.now ?? new Date(),
+      );
+    }
     return applyGiftCardEffects(tx, order.id, order.status, to);
   });
   return { id: order.id, giftCardsUsed };
@@ -133,18 +128,10 @@ export async function cancelOrder(orderId: string, deps: OrdersDeps): Promise<{ 
   const shouldRestock =
     order.status === "paid" || order.status === "preparing" || order.status === "shipped";
   const giftCardsUsed = await deps.db.$transaction(async (tx) => {
-    await tx.order.update({ where: { id: order.id }, data: { status: "cancelled" } });
-    if (shouldRestock) {
-      const decrements = computeStockDecrements(order.items.map(orderItemToLine));
-      for (const [variantId, qty] of decrements) {
-        if (variantId && qty > 0) {
-          await tx.productVariant.update({
-            where: { id: variantId },
-            data: { stock: { increment: qty } },
-          });
-        }
-      }
-    }
+    // Misma guarda que changeOrderStatus: si el webhook ya reembolsó y repuso, cancelar de nuevo repondría dos veces.
+    const res = await tx.order.updateMany({ where: { id: order.id, status: order.status }, data: { status: "cancelled" } });
+    if (res.count !== 1) throw new Error(ORDER_CHANGED_ERROR);
+    if (shouldRestock) await restockItems(tx, order.items);
     return applyGiftCardEffects(tx, order.id, order.status, "cancelled");
   });
   return { id: order.id, giftCardsUsed };

@@ -3,6 +3,11 @@ export class CustomerFacingError extends Error {
   override name = "CustomerFacingError";
 }
 
+/** El cupón del carrito dejó de valer al pagar: la acción lo saca del carrito para que la clienta pueda reintentar. */
+export class CouponRejectedError extends CustomerFacingError {
+  override name = "CouponRejectedError";
+}
+
 /**
  * Mensaje para la clienta de una acción cualquiera (carrito, cuenta): solo pasan los `CustomerFacingError`;
  * lo técnico (Prisma, Supabase, runtime) se loguea y se reemplaza por `fallback`.

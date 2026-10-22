@@ -3,13 +3,12 @@ import { prisma, type PrismaTransactionClient } from "@/lib/prisma";
 import { verifyMpSignature } from "@/lib/payments/signature";
 import { getPayment as realGetPayment, mpStatusToPaymentStatus } from "@/lib/payments/mercadopago";
 import { decideWebhookEffects, paymentStatusAdvances } from "@/lib/payments/webhook-effects";
-import { computeStockDecrements, type Shortage } from "@/lib/orders/stock";
+import { applyPaidEffects, restockItems } from "@/lib/orders/stock-effects";
 import { sendEmail as realSendEmail } from "@/lib/email/resend";
 import { orderConfirmationEmail, newOrderAlertEmail, giftCardEmail, giftCardRefundedUsedEmail, approvedOnClosedOrderEmail, type OrderEmailData } from "@/lib/email/templates";
 import { issueGiftCards, voidUnusedGiftCards, releaseGiftCardReservation, type IssuedGiftCard } from "@/lib/coupons/gift-card-service";
 import { storeWhatsappUrl } from "@/lib/email/whatsapp-url";
 import { toNumber } from "@/lib/catalog/pricing";
-import type { CartLine } from "@/lib/cart/types";
 import type { OrderStatus } from "@prisma/client";
 import type { Money } from "@/lib/catalog/types";
 
@@ -21,6 +20,7 @@ export interface ProcessWebhookInput {
 /** Interfaz mínima de la DB necesaria para el webhook (para inyectar fakes en tests). */
 export interface WebhookDb {
   order: { findFirst: (args: Record<string, unknown>) => Promise<WebhookOrder | null> };
+  payment: { findFirst: (args: Record<string, unknown>) => Promise<{ id: string } | null> };
   $transaction: <T>(fn: (tx: PrismaTransactionClient) => Promise<T>) => Promise<T>;
 }
 
@@ -87,14 +87,6 @@ export function defaultWebhookDeps(): ProcessWebhookDeps {
   };
 }
 
-/** Convierte un OrderItem (con snapshots) a CartLine para computar decrementos de stock. */
-function orderItemToLine(it: WebhookOrderItem): CartLine {
-  if (it.comboId && it.combo) {
-    return { id: it.id ?? it.comboId, kind: "combo", refId: it.comboId, unitPrice: toNumber(it.unitPriceSnapshot), qty: it.qty, weightGr: 0, isGiftCard: false, components: it.combo.items.map((ci) => ({ variantId: ci.variantId, qty: ci.qty })) };
-  }
-  return { id: it.id ?? it.variantId ?? "", kind: "variant", refId: it.variantId ?? "", unitPrice: toNumber(it.unitPriceSnapshot), qty: it.qty, weightGr: 0, isGiftCard: it.isGiftCard };
-}
-
 /** Mail a la dueña, best-effort: un fallo de Resend no voltea el webhook (el estado ya está guardado). */
 async function notifyOwner(deps: ProcessWebhookDeps, mail: { subject: string; html: string; text: string }): Promise<void> {
   if (!deps.ownerEmail) return;
@@ -123,8 +115,12 @@ export async function processWebhook(input: ProcessWebhookInput, deps: ProcessWe
   });
   if (!order) return { status: 200, detail: "Pedido inexistente (ack)." };
 
-  // 4. Decidir efectos (idempotente por Order.status).
-  const effects = decideWebhookEffects({ currentOrderStatus: order.status, mpStatus: paymentStatus, hasCoupon: Boolean(order.couponId) });
+  // 4. Decidir efectos (idempotente por Order.status). Si otro intento de pago del pedido ya está
+  // aprobado (el retry crea otra preferencia), un cancelled/refunded de ESTE pago no revierte el pedido.
+  const otherApproved = paymentStatus === "cancelled" || paymentStatus === "refunded"
+    ? await deps.db.payment.findFirst({ where: { orderId: order.id, status: "approved", mpPaymentId: { not: String(mpPayment.id) } }, select: { id: true } })
+    : null;
+  const effects = decideWebhookEffects({ currentOrderStatus: order.status, mpStatus: paymentStatus, hasCoupon: Boolean(order.couponId), otherApprovedPaymentExists: otherApproved != null });
 
   let oversoldLines: Array<{ name: string }> = [];
   // Solo UN webhook gana la transición pending_payment → paid (guarda atómica dentro de la tx).
@@ -182,7 +178,16 @@ export async function processWebhook(input: ProcessWebhookInput, deps: ProcessWe
       // en vez de pisar ciegamente — evita que un webhook "cancelled"/"refunded" desactualizado
       // sobrescriba un pedido que ya está "paid".
       const res = await tx.order.updateMany({ where: { id: order.id, status: order.status }, data: { status: effects.setOrderStatusTo } });
-      if (res.count === 1) {
+      if (res.count !== 1) {
+        // MP no reintenta ante un 200: si el admin movió el pedido justo antes, este cambio (y su reposición) se pierde.
+        console.warn(`[webhook] pedido ${order.id}: no se pudo pasar a ${effects.setOrderStatusTo}, el estado cambió mientras tanto (${order.status}); revisalo a mano`);
+      } else {
+        // Reembolso/contracargo sobre un pedido que ya descontó stock: se repone en la misma tx (el estado
+        // es terminal, nadie más lo repondría). En shipped/delivered no: la mercadería ya salió y la dueña
+        // la suma a mano cuando vuelve (state-machine.ts).
+        if ((effects.setOrderStatusTo === "refunded" || effects.setOrderStatusTo === "cancelled") && (order.status === "paid" || order.status === "preparing")) {
+          await restockItems(tx, order.items);
+        }
         // Las gift cards emitidas por un pedido reembolsado/cancelado se anulan (las ya usadas quedan).
         if (effects.setOrderStatusTo === "refunded" || effects.setOrderStatusTo === "cancelled") {
           giftCardsUsedOnClose = (await voidUnusedGiftCards(tx, order.id)).used;
@@ -200,80 +205,20 @@ export async function processWebhook(input: ProcessWebhookInput, deps: ProcessWe
       // El carrito recién se cierra con el pago aprobado (hasta acá la clienta podía reintentar).
       // Guarda status active: un carrito ya fusionado/abandonado no se toca.
       if (order.cartId) await tx.cart.updateMany({ where: { id: order.cartId, status: "active" }, data: { status: "ordered" } });
-      const lines = order.items.map(orderItemToLine);
-      const decrements = computeStockDecrements(lines);
-      // Update atómico CON precondición de stock real (stock >= qty) por variante — a diferencia
-      // de leer un snapshot con findMany y decrementar después, esto evita que dos pedidos que
-      // compiten por la misma variante lean el mismo stock y ambos decrementen (oversell, stock
-      // negativo). count===0 es la señal real de faltante (reemplaza el chequeo contra el snapshot
-      // stale de checkAvailability).
-      const shortages: Shortage[] = [];
-      // En orden de id, igual que el `ORDER BY id FOR UPDATE` del checkout: dos tx que bloquean las mismas
-      // variantes en el mismo orden no se traban entre sí (deadlock).
-      for (const [variantId, qty] of [...decrements].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) {
-        const res = await tx.productVariant.updateMany({ where: { id: variantId, stock: { gte: qty } }, data: { stock: { decrement: qty } } });
-        if (res.count === 0) shortages.push({ variantId, needed: qty, available: 0 });
-      }
-      if (shortages.length > 0) {
+      const { oversoldVariantIds, couponOverLimit: overLimit } = await applyPaidEffects(tx, order, deps.now ?? new Date());
+      couponOverLimit = overLimit;
+      if (overLimit) console.warn(`[webhook] pedido ${order.orderNumber}: el cupón ${overLimit} superó su límite de usos (el pago se mantiene)`);
+      if (oversoldVariantIds.length > 0) {
         oversoldLines = order.items
           .filter((it) =>
             it.variantId
-              ? shortages.some((s) => s.variantId === it.variantId)
+              ? oversoldVariantIds.includes(it.variantId)
               : // línea de combo: matchea si algún componente está en falta
-                (it.combo?.items.some((ci) => shortages.some((s) => s.variantId === ci.variantId)) ?? false),
+                (it.combo?.items.some((ci) => oversoldVariantIds.includes(ci.variantId)) ?? false),
           )
           .map((it) => ({ name: it.variantNameSnapshot ? `${it.productNameSnapshot} (${it.variantNameSnapshot})` : it.productNameSnapshot }));
       }
-      if (!isDigital) await tx.shipment.create({ data: { orderId: order.id, status: "pending", cost: toNumber(order.shippingCost) } });
       issuedGiftCards = await issueGiftCards(tx, order, deps.now ?? new Date());
-
-      const coupon = order.couponId
-        ? await tx.coupon.findUnique({ where: { id: order.couponId }, select: { code: true, maxUses: true, perCustomerLimit: true, sourceOrderId: true } })
-        : null;
-      // Una gift card usada como cupón ya se reservó (usedCount+1) al crear el pedido: acá no se vuelve a incrementar.
-      if (order.couponId && coupon?.sourceOrderId == null) {
-        // TOCTOU: perCustomerLimit/maxUses se validan en el checkout (lectura, antes de pagar), pero
-        // el incremento real pasa acá. Reafirmar de forma atómica (mismo patrón que el stock: update
-        // condicionado al valor leído en este momento) evita que dos pedidos que ganaron la carrera
-        // del checkout con el mismo cupón terminen superando el límite al pagar ambos.
-        if (coupon?.maxUses != null) {
-          const res = await tx.coupon.updateMany({ where: { id: order.couponId, usedCount: { lt: coupon.maxUses } }, data: { usedCount: { increment: 1 } } });
-          if (res.count === 0) {
-            couponOverLimit = coupon.code;
-            console.warn(`[webhook] pedido ${order.orderNumber}: el cupón ${coupon.code} superó su límite de usos (el pago se mantiene)`);
-          }
-        } else {
-          await tx.coupon.update({ where: { id: order.couponId }, data: { usedCount: { increment: 1 } } });
-        }
-
-        if (order.customerId && coupon) {
-          if (coupon.perCustomerLimit != null) {
-            const res = await tx.couponRedemption.updateMany({
-              where: { customerId: order.customerId, couponId: order.couponId, redeemedCount: { lt: coupon.perCustomerLimit } },
-              data: { redeemedCount: { increment: 1 }, lastRedeemedAt: deps.now ?? new Date() },
-            });
-            if (res.count === 0) {
-              // No había fila todavía (primer uso de esta clienta) → crearla si el límite lo permite.
-              // Si ya existía, es que esta clienta ya está en el límite: no incrementar más (igual que
-              // el stock, "no pasarse" en vez de sobrescribir un límite ya alcanzado).
-              const exists = await tx.couponRedemption.findUnique({
-                where: { customerId_couponId: { customerId: order.customerId, couponId: order.couponId } },
-              });
-              if (!exists && coupon.perCustomerLimit > 0) {
-                await tx.couponRedemption.create({
-                  data: { customerId: order.customerId, couponId: order.couponId, redeemedCount: 1, lastRedeemedAt: deps.now ?? new Date() },
-                });
-              }
-            }
-          } else {
-            await tx.couponRedemption.upsert({
-              where: { customerId_couponId: { customerId: order.customerId, couponId: order.couponId } },
-              create: { customerId: order.customerId, couponId: order.couponId, redeemedCount: 1, lastRedeemedAt: deps.now ?? new Date() },
-              update: { redeemedCount: { increment: 1 }, lastRedeemedAt: deps.now ?? new Date() },
-            });
-          }
-        }
-      }
 
       // Pedido digital: no hay nada que despachar → queda entregado en la misma tx que lo pagó.
       if (isDigital) await tx.order.updateMany({ where: { id: order.id, status: "paid" }, data: { status: "delivered" } });
@@ -305,8 +250,13 @@ export async function processWebhook(input: ProcessWebhookInput, deps: ProcessWe
       }
     }
 
+    // Cada mail va en su propio try: si falla el de la clienta, el de la dueña (única señal de
+    // oversell / monto distinto / cupón sobre el límite) tiene que salir igual.
+    const logEmailFailure = (which: string, e: unknown) =>
+      console.error(`[webhook] mail ${which} falló (pedido ${order.orderNumber}):`, e instanceof Error ? e.message : String(e));
+    let emailData: OrderEmailData | null = null;
     try {
-      const emailData: OrderEmailData = {
+      emailData = {
         orderNumber: order.orderNumber, contactName: order.contactName, contactEmail: order.contactEmail,
         items: order.items.map((it) => ({ name: it.productNameSnapshot, variantName: it.variantNameSnapshot, qty: it.qty, lineTotal: toNumber(it.lineTotal) })),
         subtotal: toNumber(order.subtotal), shippingCost: toNumber(order.shippingCost), discountTotal: toNumber(order.discountTotal), total: toNumber(order.total),
@@ -315,15 +265,26 @@ export async function processWebhook(input: ProcessWebhookInput, deps: ProcessWe
         amountPaid: mpPayment.transaction_amount ?? undefined,
         couponOverLimit: couponOverLimit ?? undefined,
       };
-      const customer = orderConfirmationEmail({ ...emailData, whatsappUrl });
-      await deps.sendEmail({ to: order.contactEmail, subject: customer.subject, html: customer.html, text: customer.text });
-      if (deps.ownerEmail) {
-        const owner = newOrderAlertEmail({ ...emailData, oversoldLines: oversoldLines.length ? oversoldLines : undefined });
-        await deps.sendEmail({ to: deps.ownerEmail, subject: owner.subject, html: owner.html, text: owner.text });
-      }
     } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      console.error(`[webhook] envío de emails falló (pedido ${order.orderNumber}):`, msg);
+      logEmailFailure("(datos)", e);
+    }
+    if (emailData) {
+      try {
+        const customer = orderConfirmationEmail({ ...emailData, whatsappUrl });
+        await deps.sendEmail({ to: order.contactEmail, subject: customer.subject, html: customer.html, text: customer.text });
+      } catch (e) {
+        logEmailFailure("a la clienta", e);
+      }
+      if (deps.ownerEmail) {
+        try {
+          const owner = newOrderAlertEmail({ ...emailData, oversoldLines: oversoldLines.length ? oversoldLines : undefined });
+          await deps.sendEmail({ to: deps.ownerEmail, subject: owner.subject, html: owner.html, text: owner.text });
+        } catch (e) {
+          logEmailFailure("a la dueña", e);
+        }
+      } else {
+        console.error(`[webhook] RESEND_OWNER_EMAIL no configurada: la dueña no recibió el aviso del pedido ${order.orderNumber}`);
+      }
     }
   }
 

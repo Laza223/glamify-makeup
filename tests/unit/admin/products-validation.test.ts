@@ -56,6 +56,14 @@ describe("validateVariant", () => {
     expect(r.ok).toBe(false);
   });
 
+  it("una variante existente acepta stock negativo (oversell registrado) y conserva baseStock; una nueva no", () => {
+    const existing = validateVariant(baseVariant({ id: "v1", stock: -2, baseStock: -3 }));
+    expect(existing.ok && existing.value.stock).toBe(-2);
+    expect(existing.ok && existing.value.baseStock).toBe(-3);
+    expect(validateVariant(baseVariant({ stock: -2 })).ok).toBe(false);
+    expect(validateVariant(baseVariant({ id: "v1", stock: -2, baseStock: 1.5 })).ok).toBe(false);
+  });
+
   it("rechaza stock negativo o no entero", () => {
     expect(validateVariant(baseVariant({ stock: -1 })).ok).toBe(false);
     expect(validateVariant(baseVariant({ stock: 1.5 })).ok).toBe(false);

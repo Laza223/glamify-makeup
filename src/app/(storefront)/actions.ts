@@ -18,6 +18,7 @@ import {
 } from "@/lib/cart/cart-cookie";
 import { isDigitalOnly, physicalSubtotal } from "@/lib/cart/totals";
 import { validateCoupon, applyCoupon } from "@/lib/coupons/apply";
+import { loadCustomerRedemptions } from "@/lib/coupons/redemptions";
 import { toNumber } from "@/lib/catalog/pricing";
 import { prisma } from "@/lib/prisma";
 import { quoteShipping } from "@/lib/shipping/index";
@@ -31,7 +32,7 @@ import {
   defaultCheckoutDeps,
 } from "@/lib/orders/checkout-service";
 import { retryOrderPayment, defaultRetryPaymentDeps } from "@/lib/orders/retry-payment";
-import { customerErrorMessage, paymentErrorMessage } from "@/lib/orders/customer-error";
+import { CouponRejectedError, customerErrorMessage, paymentErrorMessage } from "@/lib/orders/customer-error";
 import { getCustomer } from "@/lib/customer/auth";
 import type { ActionResult } from "@/lib/forms/action-result";
 import { isPreviewDeploy, PREVIEW_PAYMENTS_OFF_MESSAGE } from "@/lib/http/deploy-env";
@@ -172,15 +173,7 @@ export async function applyCouponAction(code: string): Promise<ActionResult> {
   const { lines } = await loadCart(cartId);
   const subtotal = physicalSubtotal(lines); // las gift cards no cuentan para el mínimo de un cupón
   const customer = await getCustomer();
-  let customerRedemptions = 0;
-  if (customer && coupon.perCustomerLimit != null) {
-    const r = await prisma.couponRedemption.findUnique({
-      where: {
-        customerId_couponId: { customerId: customer.id, couponId: coupon.id },
-      },
-    });
-    customerRedemptions = r?.redeemedCount ?? 0;
-  }
+  const customerRedemptions = await loadCustomerRedemptions(prisma, customer?.id, coupon);
   const validatable = {
     ...coupon,
     minSubtotal:
@@ -302,6 +295,12 @@ export async function createCheckoutAction(input: {
       orderNumber: result.orderNumber,
     };
   } catch (e) {
+    // El carrito no muestra un cupón inválido: si la cookie sigue viva la clienta no puede quitarlo ni reintentar.
+    if (e instanceof CouponRejectedError) {
+      await setCouponCodeCookie(null);
+      revalidatePath("/carrito");
+      revalidatePath("/checkout");
+    }
     return { ok: false, error: paymentErrorMessage(e, "checkout") };
   }
 }

@@ -2,6 +2,7 @@ import { formatARS } from "@/lib/money";
 import { appBaseUrl } from "@/lib/seo/url";
 import { CORREO_TRACKING_URL } from "@/lib/shipping/tracking";
 import { formatGiftCardDate } from "@/lib/coupons/gift-card";
+import { businessInfo } from "@/lib/legal/business-info";
 
 /** Escapa HTML para interpolar texto del usuario en cuerpos de email (anti-inyección). */
 function escapeHtml(s: string): string {
@@ -368,6 +369,7 @@ export interface AbandonedCartEmailData {
   name?: string | null;
   items: OrderEmailItem[];
   recoverUrl: string;
+  whatsappUrl?: string | null;
 }
 
 /** Email de recupero de carrito abandonado (un único recordatorio a 24h). */
@@ -377,7 +379,7 @@ export function abandonedCartEmail(d: AbandonedCartEmailData): EmailContent {
   const html = layout({
     preheader: "Guardamos tu carrito para que lo termines cuando quieras.",
     title: "Te quedó algo en el carrito",
-    footer: "Si ya compraste o no te interesa, ignorá este mensaje.",
+    footer: `Si ya compraste o no te interesa, ignorá este mensaje. Para no recibir más recordatorios como este, escribinos a ${escapeHtml(businessInfo.email)} o ${d.whatsappUrl ? `<a href="${escapeHtml(d.whatsappUrl)}" style="color:${COLOR.link};">por WhatsApp</a>` : "por WhatsApp"} y te damos de baja.`,
     body: [
       title(`${escapeHtml(hi)}¿lo dejamos para después?`),
       paragraph("Guardamos tu carrito. Estos productos te están esperando:"),
@@ -385,7 +387,9 @@ export function abandonedCartEmail(d: AbandonedCartEmailData): EmailContent {
       button(d.recoverUrl, "Volver a mi carrito"),
     ].join("\n"),
   });
-  const text = `${hi}te quedó algo en el carrito:\n\n${itemsText(d.items)}\n\nVolvé a tu carrito: ${d.recoverUrl}`;
+  const text = `${hi}te quedó algo en el carrito:\n\n${itemsText(d.items)}\n\nVolvé a tu carrito: ${d.recoverUrl}
+
+Para no recibir más recordatorios como este, escribinos a ${businessInfo.email} o por WhatsApp${d.whatsappUrl ? ` (${d.whatsappUrl})` : ""} y te damos de baja.`;
   return { subject, html, text };
 }
 

@@ -45,6 +45,8 @@ function makeFakeDb(opts: FakeDbOpts = {}) {
         state.payments.find(
           (p) =>
             p.orderId === where.orderId &&
+            (where.status ? p.status === where.status : true) &&
+            (where.mpPaymentId?.not !== undefined ? p.mpPaymentId !== null && p.mpPaymentId !== where.mpPaymentId.not : true) &&
             (where.OR ? where.OR.some((c: any) => "mpPaymentId" in c && p.mpPaymentId === c.mpPaymentId) : true),
         ) ?? null,
       ),
@@ -69,12 +71,20 @@ function makeFakeDb(opts: FakeDbOpts = {}) {
         state.variants.set(where.id, current - data.stock.decrement);
         return { count: 1 };
       }),
+      // Descuento/reposición sin precondición (puede quedar negativo, como Postgres sin CHECK).
+      update: vi.fn(async ({ where, data }: any) => {
+        const next = (state.variants.get(where.id) ?? 0) - (data.stock.decrement ?? 0) + (data.stock.increment ?? 0);
+        state.variants.set(where.id, next);
+        return { stock: next };
+      }),
     },
     coupon: {
       findUnique: vi.fn(async () => ({ maxUses: state.couponMaxUses, perCustomerLimit: state.couponPerCustomerLimit })),
       update: vi.fn(async () => { state.couponUsed++; state.couponUsedCount++; return {}; }),
       // Guarda atómica (mismo patrón que stock/order): solo incrementa si usedCount < maxUses leído.
+      count: vi.fn(async () => 0),
       updateMany: vi.fn(async ({ where }: any) => {
+        if (where.sourceOrderId) return { count: 0 }; // anular/liberar gift cards: este fake no tiene
         if (state.couponUsedCount < where.usedCount.lt) { state.couponUsed++; state.couponUsedCount++; return { count: 1 }; }
         return { count: 0 };
       }),
@@ -205,6 +215,30 @@ describe("processWebhook", () => {
     expect(state.order.status).toBe("paid");
   });
 
+  it("si falla el mail a la clienta, el de la dueña sale igual y se loguea con orderNumber", async () => {
+    const { db } = makeFakeDb();
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    const sendEmail = vi.fn(async (m: { to: string }) => {
+      if (m.to === "ana@example.com") throw new Error("Resend caído");
+      return { id: "e1", logged: false };
+    });
+    const r = await processWebhook({ dataId: "mp-pay-1", xSignature: "ok", xRequestId: "r" }, makeDeps({ db, sendEmail: sendEmail as any }));
+    expect(r.status).toBe(200);
+    expect(sendEmail.mock.calls.map((c) => c[0].to)).toContain("owner@test.com");
+    expect(err.mock.calls.flat().join(" ")).toContain("GLM-000009");
+    err.mockRestore();
+  });
+
+  it("sin RESEND_OWNER_EMAIL → console.error claro (no se saltea en silencio) y el webhook sigue en 200", async () => {
+    const { db, state } = makeFakeDb();
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    const r = await processWebhook({ dataId: "mp-pay-1", xSignature: "ok", xRequestId: "r" }, makeDeps({ db, ownerEmail: "" }));
+    expect(r.status).toBe(200);
+    expect(state.order.status).toBe("paid");
+    expect(err.mock.calls.flat().join(" ")).toContain("RESEND_OWNER_EMAIL");
+    err.mockRestore();
+  });
+
   it("el mail a la dueña ya no habla de MiCorreo ni dice REVISAR si todo está bien", async () => {
     const { db } = makeFakeDb();
     const deps = makeDeps({ db });
@@ -222,7 +256,7 @@ describe("processWebhook", () => {
     ];
     state.variants.set("v9", 5);
     await processWebhook({ dataId: "mp-pay-1", xSignature: "ok", xRequestId: "r" }, makeDeps({ db }));
-    expect(db.productVariant.updateMany.mock.calls.map((c: any) => c[0].where.id)).toEqual(["v1", "v9"]);
+    expect(db.productVariant.update.mock.calls.map((c: any) => c[0].where.id)).toEqual(["v1", "v9"]);
   });
   it("idempotente: el mismo webhook 2× descuenta stock una sola vez", async () => {
     const { db, state } = makeFakeDb();
@@ -244,6 +278,56 @@ describe("processWebhook", () => {
     expect(state.variants.get("v1")).toBe(5); // no descontó (la otra invocación lo hizo)
     expect(state.couponUsed).toBe(0);
     expect((deps.sendEmail as any).mock.calls.length).toBe(0);
+  });
+
+  it("reembolso que pierde la carrera contra un cambio de estado del admin → se avisa en el log (MP no reintenta)", async () => {
+    const { db, state } = makeFakeDb();
+    state.order.status = "paid";
+    db.order.updateMany = vi.fn(async () => ({ count: 0 }));
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const deps = makeDeps({ db, getPayment: vi.fn(async () => ({ id: "mp-pay-1", status: "refunded", external_reference: "ord-1" })) });
+    const r = await processWebhook({ dataId: "mp-pay-1", xSignature: "ok", xRequestId: "r" }, deps);
+    expect(r.status).toBe(200);
+    expect(state.variants.get("v1")).toBe(5); // sin reposición: el pedido no se movió
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("ord-1"));
+    warn.mockRestore();
+  });
+
+  describe("intento de pago viejo vs pedido ya pagado", () => {
+    const paidWithApprovedA = (state: any) => {
+      state.order.status = "paid";
+      state.payments = [
+        { id: "pay-a", orderId: "ord-1", mpPaymentId: "mp-A", status: "approved", amount: 8260 },
+        { id: "pay-b", orderId: "ord-1", mpPaymentId: null, status: "pending", amount: 8260 },
+      ];
+    };
+    const hook = (db: any, id: string, status: string) =>
+      processWebhook({ dataId: id, xSignature: "ok", xRequestId: "r" }, makeDeps({ db, getPayment: vi.fn(async () => ({ id, status, external_reference: "ord-1" })) }));
+
+    it("paid con A approved + webhook de B cancelled → pedido sigue paid, Payment B cancelled", async () => {
+      const { db, state } = makeFakeDb();
+      paidWithApprovedA(state);
+      const r = await hook(db, "mp-B", "cancelled");
+      expect(r.status).toBe(200);
+      expect(state.order.status).toBe("paid");
+      expect(state.payments[0].status).toBe("approved");
+      expect(state.payments[1].mpPaymentId).toBe("mp-B");
+      expect(state.payments[1].status).toBe("cancelled");
+    });
+
+    it("paid con A approved + webhook de A refunded (reembolso real) → pedido refunded", async () => {
+      const { db, state } = makeFakeDb();
+      paidWithApprovedA(state);
+      await hook(db, "mp-A", "refunded");
+      expect(state.order.status).toBe("refunded");
+      expect(state.payments[0].status).toBe("refunded");
+    });
+
+    it("pending_payment sin otro approved + webhook cancelled → cancelled", async () => {
+      const { db, state } = makeFakeDb();
+      await hook(db, "mp-B", "cancelled");
+      expect(state.order.status).toBe("cancelled");
+    });
   });
 
   it("rejected → no cambia el pedido (reintento), sin descuento", async () => {
@@ -272,10 +356,80 @@ describe("processWebhook", () => {
     const deps = makeDeps({ db }); // este pedido pide qty:2 (ver items del fake db)
     const r = await processWebhook({ dataId: "mp-pay-1", xSignature: "ok", xRequestId: "r" }, deps);
     expect(r.status).toBe(200);
-    expect(state.variants.get("v1")).toBe(1); // NO decrementó (no hay negativo, no hay parcial)
+    // Se descuenta completo aunque quede negativo: el negativo registra lo adeudado y la reposición es simétrica.
+    expect(state.variants.get("v1")).toBe(-1);
     expect(state.order.status).toBe("paid"); // el pago se acepta igual, se avisa por email
     const ownerEmail = (deps.sendEmail as any).mock.calls.find((c: any) => c[0].to === "owner@test.com");
     expect(ownerEmail[0].html).toContain("Labial");
+  });
+
+  describe("reposición de stock por reembolso/cancelación de MP", () => {
+    const hook = (status: string) => makeDeps({ getPayment: vi.fn(async () => ({ id: "mp-pay-1", status, external_reference: "ord-1" })) });
+    const run = async (db: any, status: string) => {
+      const deps = hook(status);
+      deps.db = db;
+      return processWebhook({ dataId: "mp-pay-1", xSignature: "ok", xRequestId: "r" }, deps);
+    };
+
+    it("pedido paid → refunded por MP repone lo descontado", async () => {
+      const { db, state } = makeFakeDb();
+      state.order.status = "paid";
+      state.variants.set("v1", 3); // ya descontó 2 de 5
+      await run(db, "refunded");
+      expect(state.order.status).toBe("refunded");
+      expect(state.variants.get("v1")).toBe(5);
+    });
+
+    it("pedido preparing → cancelled (contracargo) repone el stock", async () => {
+      const { db, state } = makeFakeDb();
+      state.order.status = "preparing";
+      state.variants.set("v1", 3);
+      await run(db, "cancelled");
+      expect(state.order.status).toBe("cancelled");
+      expect(state.variants.get("v1")).toBe(5);
+    });
+
+    it("pedido shipped → refunded NO repone (decisión del dueño: lo suma ella al volver el producto)", async () => {
+      const { db, state } = makeFakeDb();
+      state.order.status = "shipped";
+      state.variants.set("v1", 3);
+      await run(db, "refunded");
+      expect(state.order.status).toBe("refunded");
+      expect(state.variants.get("v1")).toBe(3);
+    });
+
+    it("pedido pending_payment → cancelled no repone (nunca descontó)", async () => {
+      const { db, state } = makeFakeDb();
+      await run(db, "cancelled");
+      expect(state.order.status).toBe("cancelled");
+      expect(state.variants.get("v1")).toBe(5);
+    });
+
+    it("simetría: oversell (stock 1, pide 2) y luego reembolso deja el stock como estaba antes", async () => {
+      const { db, state } = makeFakeDb();
+      state.variants.set("v1", 1);
+      await run(db, "approved");
+      expect(state.variants.get("v1")).toBe(-1);
+      await run(db, "refunded");
+      expect(state.order.status).toBe("refunded");
+      expect(state.variants.get("v1")).toBe(1); // no repone de más
+    });
+
+    it("combo: descuenta y repone cada componente; una línea sin variante ni combo no toca stock", async () => {
+      const { db, state } = makeFakeDb();
+      state.variants.set("v2", 10);
+      state.order.items = [
+        { id: "oi-c", variantId: null, comboId: "cmb-1", productNameSnapshot: "Combo", variantNameSnapshot: null, qty: 2, lineTotal: 100, isGiftCard: false, combo: { items: [{ variantId: "v1", qty: 1 }, { variantId: "v2", qty: 3 }] } },
+        { id: "oi-x", variantId: null, comboId: null, productNameSnapshot: "Variante borrada", variantNameSnapshot: null, qty: 1, lineTotal: 0, isGiftCard: false, combo: null },
+      ];
+      await run(db, "approved");
+      expect(state.variants.get("v1")).toBe(3);
+      expect(state.variants.get("v2")).toBe(4);
+      expect([...state.variants.keys()]).not.toContain("");
+      await run(db, "refunded");
+      expect(state.variants.get("v1")).toBe(5);
+      expect(state.variants.get("v2")).toBe(10);
+    });
   });
 
   it("cupón con maxUses global ya alcanzado (perdió la carrera) → no incrementa más allá del límite", async () => {

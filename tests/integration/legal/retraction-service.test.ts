@@ -56,3 +56,24 @@ describe("createRetractionRequest", () => {
     expect(r.ok).toBe(true);
   });
 });
+
+describe("createRetractionRequest — receiptEmailSent", () => {
+  it("true si el mail de la constancia salió", async () => {
+    const d = makeDeps(1);
+    d.sendEmail.mockResolvedValue({ id: "abc", logged: false });
+    const r = await createRetractionRequest({ contactName: "Ana Pérez", contactEmail: "ana@mail.com" }, d);
+    expect(r.ok && r.receiptEmailSent).toBe(true);
+  });
+
+  it("false (y la constancia igual se devuelve) si el mail tira o solo se logueó", async () => {
+    const d = makeDeps(2);
+    d.sendEmail.mockRejectedValue(new Error("resend down"));
+    const r = await createRetractionRequest({ contactName: "Ana Pérez", contactEmail: "ana@mail.com" }, d);
+    expect(r.ok && r.ticket).toBe("ARR-000002");
+    expect(r.ok && r.receiptEmailSent).toBe(false);
+
+    const d2 = makeDeps(3);
+    const r2 = await createRetractionRequest({ contactName: "Ana Pérez", contactEmail: "ana@mail.com" }, d2);
+    expect(r2.ok && r2.receiptEmailSent).toBe(false);
+  });
+});

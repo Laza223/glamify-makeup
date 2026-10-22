@@ -183,10 +183,10 @@ describe("createCheckout — gift cards", () => {
       expect((deps.createPreference as any)).not.toHaveBeenCalled();
     });
 
-    it("ya consumida (usedCount = maxUses) se ignora como cualquier cupón inválido: sin descuento ni reserva", async () => {
+    it("ya consumida (usedCount = maxUses) corta el checkout con el motivo, sin pedido ni reserva", async () => {
       const { deps, tx } = makeDeps({ coupon: giftCardCoupon({ usedCount: 1 }) });
-      await createCheckout({ ...base, lines: [physical], couponCode: "GIFT-AAAA-BBBB" }, deps);
-      expect(tx.order.create.mock.calls[0][0].data.couponId).toBeNull();
+      await expect(createCheckout({ ...base, lines: [physical], couponCode: "GIFT-AAAA-BBBB" }, deps)).rejects.toThrow(/cupón ya no está disponible.*límite de usos/);
+      expect(tx.order.create).not.toHaveBeenCalled();
       expect(tx.coupon.updateMany).not.toHaveBeenCalled();
     });
 

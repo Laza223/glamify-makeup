@@ -76,6 +76,11 @@ function makeFake(opts: {
         state.stock.set(where.id, cur - data.stock.decrement);
         return { count: 1 };
       }),
+      update: vi.fn(async ({ where, data }: any) => {
+        const next = (state.stock.get(where.id) ?? 0) - (data.stock.decrement ?? 0) + (data.stock.increment ?? 0);
+        state.stock.set(where.id, next);
+        return { stock: next };
+      }),
     },
     shipment: { create: vi.fn(async () => ({})) },
     coupon: {
@@ -110,6 +115,7 @@ function makeFake(opts: {
   const deps: ProcessWebhookDeps = {
     db: {
       order: { findFirst: vi.fn(async () => structuredClone(state.order)) },
+      payment: { findFirst: vi.fn(async () => null) },
       shipment: { update: vi.fn(async () => ({})) },
       $transaction: vi.fn(async (fn: (t: unknown) => Promise<unknown>) => fn(tx)),
     } as never,

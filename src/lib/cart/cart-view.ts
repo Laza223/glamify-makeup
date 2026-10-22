@@ -6,6 +6,8 @@ import { getCouponCodeFromCookie } from "@/lib/cart/cart-cookie";
 import { getFreeShippingThreshold } from "@/lib/orders/checkout-data";
 import { prisma } from "@/lib/prisma";
 import { validateCoupon, applyCoupon } from "@/lib/coupons/apply";
+import { loadCustomerRedemptions } from "@/lib/coupons/redemptions";
+import { getCustomer } from "@/lib/customer/auth";
 import type { CartLine } from "@/lib/cart/types";
 
 export interface CartCouponPreview {
@@ -44,7 +46,10 @@ export const getCartView = cache(async (): Promise<CartView> => {
         value: Number(row.value),
         minSubtotal: row.minSubtotal != null ? Number(row.minSubtotal) : null,
       };
-      if (validateCoupon(plain, { subtotal: physicalSubtotal(lines), now: new Date() }).ok) {
+      // Mismo contexto que el checkout (incluye los canjes de la clienta): lo que se ve es lo que se cobra.
+      const customer = await getCustomer();
+      const customerRedemptions = await loadCustomerRedemptions(prisma, customer?.id, row);
+      if (validateCoupon(plain, { subtotal: physicalSubtotal(lines), now: new Date(), customerRedemptions }).ok) {
         const res = applyCoupon(plain, lines);
         coupon = { code, discount: res.discount, freeShipping: res.freeShipping };
       }

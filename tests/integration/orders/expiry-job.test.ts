@@ -34,6 +34,30 @@ describe("runOrderExpiryJob", () => {
     });
   });
 
+  it("NO cancela un pedido con un pago in_process o approved; SÍ cancela uno sin pagos ni con pagos rechazados", async () => {
+    const orders = [
+      { id: "inproc", status: "pending_payment", createdAt: old, payments: [{ status: "in_process" }] },
+      { id: "approved", status: "pending_payment", createdAt: old, payments: [{ status: "approved" }] },
+      { id: "sinpagos", status: "pending_payment", createdAt: old, payments: [] },
+      { id: "rechazado", status: "pending_payment", createdAt: old, payments: [{ status: "rejected" }] },
+    ];
+    // Fake de findMany que respeta el filtro `payments: { none: { status: { in } } }`.
+    const findMany = vi.fn(async ({ where }: { where: { payments?: { none: { status: { in: string[] } } } } }) =>
+      orders.filter((o) => !where.payments || !o.payments.some((p) => where.payments!.none.status.in.includes(p.status))),
+    );
+    const updateMany = vi.fn(async () => ({ count: 1 }));
+    const couponUpdateMany = vi.fn(async () => ({ count: 0 }));
+    const db = {
+      order: { findMany },
+      $transaction: vi.fn(async (fn: (tx: unknown) => Promise<unknown>) => fn({ order: { updateMany }, coupon: { updateMany: couponUpdateMany } })),
+    } as unknown as ExpiryJobDb;
+
+    const res = await runOrderExpiryJob({ db, now: new Date("2026-06-06T12:00:00Z") });
+    const cancelledIds = (updateMany.mock.calls as unknown as Array<[{ where: { id: string } }]>).map((c) => c[0].where.id);
+    expect(cancelledIds.sort()).toEqual(["rechazado", "sinpagos"]);
+    expect(res.cancelled).toBe(2);
+  });
+
   it("perdió la carrera contra el webhook (el pedido ya no está pending_payment) → no lo cuenta como cancelado", async () => {
     // El findMany trajo o1 como pending_payment, pero entre esa lectura y el update de esta misma
     // iteración, el webhook de MP lo aprobó (paid) — la guarda atómica debe rechazar el update.

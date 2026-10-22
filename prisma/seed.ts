@@ -334,14 +334,8 @@ async function upsertCategories(): Promise<Map<string, string>> {
   for (const parent of CATEGORIES) {
     const p = await prisma.category.upsert({
       where: { slug: parent.slug },
-      update: {
-        name: parent.name,
-        skuPrefix: parent.skuPrefix,
-        order: parent.order,
-        image: parent.image ?? null,
-        parentId: null,
-        active: true,
-      },
+      // Solo crea lo que falta: el seed nunca pisa datos reales (dev y prod comparten base).
+      update: {},
       create: {
         slug: parent.slug,
         name: parent.name,
@@ -370,21 +364,7 @@ async function upsertProducts(idBySlug: Map<string, string>): Promise<void> {
       throw new Error(`Categoría inexistente: ${p.categorySlug}`);
     const product = await prisma.product.upsert({
       where: { slug: p.slug },
-      update: {
-        name: p.name,
-        description: p.description,
-        categoryId,
-        basePrice: p.basePrice,
-        compareAtPrice: p.compareAtPrice ?? null,
-        cost: p.cost,
-        weightGr: p.weightGr,
-        isFeatured: p.isFeatured ?? false,
-        heroRank: p.heroRank ?? null,
-        tags: p.tags ?? [],
-        active: true,
-        deletedAt: null,
-        images: p.images ?? [],
-      },
+      update: {},
       create: {
         slug: p.slug,
         name: p.name,
@@ -419,7 +399,7 @@ async function upsertProducts(idBySlug: Map<string, string>): Promise<void> {
       };
       await prisma.productVariant.upsert({
         where: { sku },
-        update: { ...data },
+        update: {},
         create: { ...data },
       });
     }
@@ -488,8 +468,8 @@ const ZONES: SeedZone[] = [
 ];
 
 async function upsertZones(): Promise<void> {
-  // ShippingZone no tiene unique natural; limpiamos y recreamos (idempotente para dev).
-  await prisma.shippingZone.deleteMany({});
+  // ShippingZone no tiene unique natural: si ya hay zonas (las reales, respaldo de MiCorreo) no se toca nada.
+  if ((await prisma.shippingZone.count()) > 0) return;
   for (const z of ZONES) {
     await prisma.shippingZone.create({
       data: {
@@ -539,15 +519,7 @@ async function upsertCoupons(): Promise<void> {
   for (const c of COUPONS) {
     await prisma.coupon.upsert({
       where: { code: c.code },
-      update: {
-        type: c.type,
-        value: c.value,
-        scope: c.scope ?? "all",
-        minSubtotal: c.minSubtotal ?? null,
-        maxUses: c.maxUses ?? null,
-        perCustomerLimit: c.perCustomerLimit ?? null,
-        active: true,
-      },
+      update: {},
       create: {
         code: c.code,
         type: c.type,
@@ -693,14 +665,11 @@ async function upsertCombo(): Promise<void> {
     console.warn("⚠️  Combo no creado: faltan variantes con stock.");
     return;
   }
+  // Si el combo ya existe no se pisa ni se le recrean los componentes.
+  if (await prisma.combo.findUnique({ where: { slug: "duo-labios-glam" } })) return;
   const combo = await prisma.combo.upsert({
     where: { slug: "duo-labios-glam" },
-    update: {
-      name: "Dúo Labios Glam",
-      description: "Labial mate + gloss a precio especial.",
-      comboPrice: 4990,
-      active: true,
-    },
+    update: {},
     create: {
       slug: "duo-labios-glam",
       name: "Dúo Labios Glam",
@@ -720,7 +689,7 @@ async function upsertCombo(): Promise<void> {
 
 async function main(): Promise<void> {
   await confirmProdWrite(
-    "sembrar el catálogo de prueba (borra y recrea zonas de envío, crea el pedido GLM-E2E001)",
+    "sembrar el catálogo de prueba (solo crea lo que falta, crea/actualiza el pedido GLM-E2E001)",
   );
   console.log("🌱 Seeding catálogo Glamify Makeup…");
   const idBySlug = await upsertCategories();

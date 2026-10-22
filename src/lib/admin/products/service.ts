@@ -207,7 +207,11 @@ export async function updateProduct(id: string, input: ProductClean, deps: Creat
         const v = variants[i];
         const row = variantRows[i];
         if (v.id != null && existingIds.has(v.id)) {
-          await tx.productVariant.update({ where: { id: v.id }, data: { ...row } });
+          // Con `baseStock` (stock al abrir el form) se aplica solo la diferencia: las ventas ocurridas
+          // mientras se editaba no se pierden. Sin `baseStock` se mantiene el set absoluto.
+          const { stock, ...rest } = row;
+          const stockData = v.baseStock == null ? { stock } : stock === v.baseStock ? {} : { stock: { increment: stock - v.baseStock } };
+          await tx.productVariant.update({ where: { id: v.id }, data: { ...rest, ...stockData } });
         } else {
           await tx.productVariant.create({ data: { ...row, productId: id } });
         }

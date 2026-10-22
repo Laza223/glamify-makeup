@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { RatingStars } from "@/components/ui/rating-stars";
 import { productImageUrl } from "@/lib/images";
+import { publicAuthorName } from "@/lib/reviews/author";
 
 export interface ReviewView {
   id: string;
@@ -46,7 +47,7 @@ export function ReviewCard({ review }: { review: ReviewView }) {
           >
             <Image
               src={photo}
-              alt={`Foto de ${review.authorName}`}
+              alt={`Foto de ${publicAuthorName(review.authorName)}`}
               fill
               sizes="80px"
               className="object-cover transition-transform duration-300 group-hover:scale-110"
@@ -56,7 +57,7 @@ export function ReviewCard({ review }: { review: ReviewView }) {
       )}
 
       <p className="pt-0.5 text-xs text-muted-foreground">
-        {review.authorName} · {review.createdAt.toLocaleDateString("es-AR")}
+        {publicAuthorName(review.authorName)} · {review.createdAt.toLocaleDateString("es-AR")}
       </p>
     </article>
   );

@@ -28,6 +28,17 @@ describe("runAbandonedCartJob", () => {
     expect(args.where).toMatchObject({ status: "active", orders: { none: { status: "pending_payment" } } });
   });
 
+  it("pide a la base solo carritos con productos y con consentimiento (si no, los que nunca se mandan tapan el lote)", async () => {
+    const { db } = makeDb();
+    await runAbandonedCartJob({ db, sendEmail: vi.fn(async () => ({ id: "e1", logged: false })), now: new Date("2026-06-06T12:00:00Z"), appUrl: "http://localhost:3000" });
+    const args = (db.cart.findMany as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(args.where.items).toEqual({ some: {} });
+    expect(args.where.OR).toEqual([
+      { customer: { is: { marketingConsent: true } } },
+      { customer: { is: null }, recoveryEmailConsent: true, contactEmail: { not: null } },
+    ]);
+  });
+
   it("envía el email y estampa abandonedEmailSentAt", async () => {
     const { db, update } = makeDb();
     const sendEmail = vi.fn(async () => ({ id: "e1", logged: false }));
@@ -46,5 +57,30 @@ describe("runAbandonedCartJob", () => {
     const res = await runAbandonedCartJob({ db, sendEmail, now: new Date("2026-06-06T12:00:00Z"), appUrl: "http://localhost:3000" });
     expect(res.sent).toBe(0);
     expect(sendEmail).not.toHaveBeenCalled();
+  });
+  it("ordena por updatedAt asc (las más viejas primero)", async () => {
+    const { db } = makeDb();
+    await runAbandonedCartJob({ db, sendEmail: vi.fn(async () => ({ id: "e1", logged: false })), now: new Date("2026-06-06T12:00:00Z"), appUrl: "http://localhost:3000" });
+    const args = (db.cart.findMany as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(args.orderBy).toEqual({ updatedAt: "asc" });
+  });
+
+  it("un mail que falla no corta el lote: sigue con el resto y no estampa el fallido", async () => {
+    const { db, update } = makeDb();
+    const item = { qty: 1, unitPriceSnapshot: 1000, variant: { product: { name: "X" }, name: "U" }, combo: null };
+    (db.cart.findMany as ReturnType<typeof vi.fn>).mockResolvedValueOnce([
+      { id: "c1", updatedAt: old, abandonedEmailSentAt: null, contactEmail: "a@x.com", recoveryEmailConsent: true, customer: null, items: [item] },
+      { id: "c2", updatedAt: old, abandonedEmailSentAt: null, contactEmail: "b@x.com", recoveryEmailConsent: true, customer: null, items: [item] },
+    ]);
+    const sendEmail = vi.fn()
+      .mockRejectedValueOnce(new Error("resend down"))
+      .mockResolvedValueOnce({ id: "e2", logged: false });
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const res = await runAbandonedCartJob({ db, sendEmail, now: new Date("2026-06-06T12:00:00Z"), appUrl: "http://localhost:3000" });
+    spy.mockRestore();
+    expect(res.sent).toBe(1);
+    expect(sendEmail).toHaveBeenCalledTimes(2);
+    expect(update).toHaveBeenCalledTimes(1);
+    expect(update).toHaveBeenCalledWith(expect.objectContaining({ where: { id: "c2" } }));
   });
 });
