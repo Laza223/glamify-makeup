@@ -52,6 +52,7 @@ export default async function EditarProductoPage({ params }: { params: Promise<{
       swatchHex: v.swatchHex,
       sku: v.sku,
       stock: v.stock,
+      baseStock: v.stock,
       lowStockThreshold: v.lowStockThreshold,
       priceOverride: v.priceOverride != null ? toNumber(v.priceOverride) : null,
       weightGrOverride: v.weightGrOverride,

@@ -30,6 +30,8 @@ export interface AbandonedJobDeps {
   sendEmail: (input: SendEmailInput) => Promise<SendEmailResult>;
   now: Date;
   appUrl: string;
+  /** Link de WhatsApp de la tienda para el footer del mail (best-effort). */
+  getWhatsappUrl?: () => Promise<string | null>;
   idleHours?: number;
   batch?: number;
 }
@@ -50,14 +52,28 @@ export async function runAbandonedCartJob(deps: AbandonedJobDeps): Promise<{ sen
   const cutoff = new Date(deps.now.getTime() - idleHours * 3600_000);
   const carts = await deps.db.cart.findMany({
     // Un carrito con pedido pendiente no está abandonado: la clienta está pagando (sigue activo hasta el pago).
-    where: { status: "active", abandonedEmailSentAt: null, updatedAt: { lte: cutoff }, orders: { none: { status: "pending_payment" } } },
+    where: {
+      status: "active",
+      abandonedEmailSentAt: null,
+      updatedAt: { lte: cutoff },
+      orders: { none: { status: "pending_payment" } },
+      // Lo que nunca se va a mandar (vacíos, sin consentimiento, sin email) se filtra acá: con el lote acotado y
+      // ordenado por antigüedad, esos carritos tapaban a los que sí corresponde avisar.
+      items: { some: {} },
+      OR: [
+        { customer: { is: { marketingConsent: true } } },
+        { customer: { is: null }, recoveryEmailConsent: true, contactEmail: { not: null } },
+      ],
+    },
     include: { customer: true, items: { include: { variant: { include: { product: true } }, combo: true } } },
+    orderBy: { updatedAt: "asc" },
     take: deps.batch ?? 50,
   });
 
   const normalized = carts.map(normalize);
   const eligibleIds = new Set(findAbandonedCarts(normalized.map((n) => n.row), deps.now, idleHours));
 
+  const whatsappUrl = deps.getWhatsappUrl ? await deps.getWhatsappUrl() : null;
   let sent = 0;
   for (const n of normalized) {
     if (!eligibleIds.has(n.row.cartId) || !n.email) continue;
@@ -68,10 +84,15 @@ export async function runAbandonedCartJob(deps: AbandonedJobDeps): Promise<{ sen
       qty: it.qty,
       lineTotal: Number(it.unitPriceSnapshot) * it.qty,
     }));
-    const email = abandonedCartEmail({ name: n.name, items, recoverUrl: `${deps.appUrl}/carrito` });
-    await deps.sendEmail({ to: n.email, subject: email.subject, html: email.html, text: email.text });
-    await deps.db.cart.update({ where: { id: n.row.cartId }, data: { abandonedEmailSentAt: deps.now } });
-    sent += 1;
+    const email = abandonedCartEmail({ name: n.name, items, recoverUrl: `${deps.appUrl}/carrito`, whatsappUrl });
+    try {
+      await deps.sendEmail({ to: n.email, subject: email.subject, html: email.html, text: email.text });
+      await deps.db.cart.update({ where: { id: n.row.cartId }, data: { abandonedEmailSentAt: deps.now } });
+      sent += 1;
+    } catch (err) {
+      // Un envío fallido no corta el lote: queda sin estampar y se reintenta en la próxima corrida.
+      console.error(`abandoned cart email falló (carrito ${n.row.cartId})`, err);
+    }
   }
   return { sent };
 }

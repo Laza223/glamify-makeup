@@ -24,7 +24,9 @@ export interface RetractionDeps {
   /** Link de WhatsApp de la tienda para la constancia (inyectable para tests). Best-effort. */
   getWhatsappUrl?: (message?: string) => Promise<string | null>;
 }
-export type RetractionResult = { ok: true; ticket: string; date: string } | { ok: false; error: string };
+export type RetractionResult =
+  | { ok: true; ticket: string; date: string; receiptEmailSent: boolean }
+  | { ok: false; error: string };
 
 export async function createRetractionRequest(
   input: RetractionInput,
@@ -50,10 +52,13 @@ export async function createRetractionRequest(
   const send = deps.sendEmail ?? defaultSendEmail;
 
   // Constancia al consumidor (comprobante propio del ejercicio del derecho).
+  let receiptEmailSent = false;
   try {
     const whatsappUrl = deps.getWhatsappUrl ? await deps.getWhatsappUrl(`¡Hola! Tengo una consulta sobre mi solicitud ${ticket}`) : null;
     const receipt = retractionReceiptEmail({ ticket, date, contactName: v.contactName, whatsappUrl });
-    await send({ to: v.contactEmail, subject: receipt.subject, html: receipt.html, text: receipt.text });
+    const sent = await send({ to: v.contactEmail, subject: receipt.subject, html: receipt.html, text: receipt.text });
+    // `logged` = sin API key: el mail se escribió en el log, no salió.
+    receiptEmailSent = sent?.logged !== true;
   } catch (err) {
     console.error("retraction receipt email failed", err);
   }
@@ -76,5 +81,5 @@ export async function createRetractionRequest(
     }
   }
 
-  return { ok: true, ticket, date };
+  return { ok: true, ticket, date, receiptEmailSent };
 }

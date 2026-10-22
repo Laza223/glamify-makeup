@@ -101,7 +101,7 @@ export function VariantFields({ variants, onChange }: Props) {
               </div>
               <div className="space-y-1">
                 <Label htmlFor={`v-stock-${i}`}>Stock</Label>
-                <Input id={`v-stock-${i}`} type="number" inputMode="numeric" min={0} value={v.stock} onChange={(e) => update(i, { stock: e.target.value === "" ? "" : Number(e.target.value) })} placeholder="Ej: 10" />
+                <Input id={`v-stock-${i}`} type="number" inputMode="numeric" min={v.id != null ? undefined : 0} value={v.stock} onChange={(e) => update(i, { stock: e.target.value === "" ? "" : Number(e.target.value) })} placeholder="Ej: 10" />
               </div>
               <div className="space-y-1">
                 <Label htmlFor={`v-low-${i}`}>Aviso de bajo stock</Label>

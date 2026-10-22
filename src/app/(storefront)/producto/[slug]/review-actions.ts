@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getCustomer } from "@/lib/customer/auth";
 import { createReview } from "@/lib/reviews/service";
+import { publicAuthorName } from "@/lib/reviews/author";
 import { validateReview } from "@/lib/reviews/validation";
 import { prisma } from "@/lib/prisma";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -110,7 +111,7 @@ export async function createReviewAction(
       {
         customerId: customer?.id ?? null,
         authorName: customer
-          ? (customer.name ?? customer.email)
+          ? publicAuthorName(customer.name)
           : (authorName ?? "").trim(),
         productId,
         rating,

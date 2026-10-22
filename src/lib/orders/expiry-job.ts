@@ -19,7 +19,8 @@ export interface ExpiryJobDeps {
  */
 export async function runOrderExpiryJob(deps: ExpiryJobDeps): Promise<{ cancelled: number }> {
   const orders = await deps.db.order.findMany({
-    where: { status: "pending_payment" },
+    // Un pago en curso/aprobado (el link de MP puede quedar abierto) no se cancela: lo resuelve el webhook.
+    where: { status: "pending_payment", payments: { none: { status: { in: ["in_process", "approved"] } } } },
     select: { id: true, status: true, createdAt: true },
   });
   const expired = findExpiredOrderIds(orders, deps.now, deps.hours ?? 24);

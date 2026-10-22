@@ -181,6 +181,29 @@ describe("updateProduct", () => {
     expect(tx.productVariant.deleteMany).not.toHaveBeenCalled();
   });
 
+  it("con baseStock aplica solo la diferencia (increment): no pisa ventas hechas mientras se editaba", async () => {
+    const { deps, tx } = makeDeps({ prefix: "LAB", existingSkus: ["LAB-0001"], existingVariantIds: ["v1"] });
+    // La dueña abrió el form con stock 10 y lo dejó en 15 (+5); mientras tanto se vendieron unidades en la DB.
+    await updateProduct("prod-1", clean({ variants: [variant({ id: "v1", stock: 15, baseStock: 10 })] }), deps);
+    const call = tx.productVariant.update.mock.calls[0][0];
+    expect(call.data.stock).toEqual({ increment: 5 });
+    expect(call.data).not.toHaveProperty("baseStock");
+  });
+
+  it("con baseStock y stock sin cambios no toca el stock", async () => {
+    const { deps, tx } = makeDeps({ prefix: "LAB", existingSkus: ["LAB-0001"], existingVariantIds: ["v1"] });
+    await updateProduct("prod-1", clean({ variants: [variant({ id: "v1", stock: 10, baseStock: 10 })] }), deps);
+    const call = tx.productVariant.update.mock.calls[0][0];
+    expect(call.data).not.toHaveProperty("stock");
+    expect(call.data).not.toHaveProperty("baseStock");
+  });
+
+  it("sin baseStock mantiene el set absoluto", async () => {
+    const { deps, tx } = makeDeps({ prefix: "LAB", existingSkus: ["LAB-0001"], existingVariantIds: ["v1"] });
+    await updateProduct("prod-1", clean({ variants: [variant({ id: "v1", stock: 7 })] }), deps);
+    expect(tx.productVariant.update.mock.calls[0][0].data.stock).toBe(7);
+  });
+
   it("crea una variante nueva (sin id) sin tocar las existentes", async () => {
     const { deps, tx } = makeDeps({ prefix: "LAB", existingSkus: ["LAB-0001"], existingVariantIds: ["v1"] });
     await updateProduct(

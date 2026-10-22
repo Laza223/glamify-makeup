@@ -27,7 +27,7 @@ export async function GET(request: Request): Promise<NextResponse> {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://glamifymakeup.site";
 
   const results = await Promise.allSettled([
-    runAbandonedCartJob({ db: prisma as never, sendEmail, now, appUrl }),
+    runAbandonedCartJob({ db: prisma as never, sendEmail, now, appUrl, getWhatsappUrl: storeWhatsappUrl }),
     runOrderExpiryJob({ db: prisma as never, now }),
     runShipmentTrackingJob({
       db: prisma as never,
@@ -39,13 +39,21 @@ export async function GET(request: Request): Promise<NextResponse> {
     }),
   ]);
 
-  for (const r of results) if (r.status === "rejected") console.error("[cron]", r.reason);
+  const jobNames = ["abandoned", "expiry", "tracking"];
+  results.forEach((r, i) => {
+    if (r.status === "rejected") console.error(`[cron] falló el job ${jobNames[i]}`, r.reason);
+  });
 
   const [abandoned, expiry, tracking] = results;
-  return NextResponse.json({
-    ok: results.every((r) => r.status === "fulfilled"),
-    abandoned: abandoned.status === "fulfilled" ? abandoned.value : { error: String(abandoned.reason) },
-    expiry: expiry.status === "fulfilled" ? expiry.value : { error: String(expiry.reason) },
-    tracking: tracking.status === "fulfilled" ? tracking.value : { error: String(tracking.reason) },
-  });
+  const ok = results.every((r) => r.status === "fulfilled");
+  // 500 si algún job rechazó: Vercel lo marca como corrida fallida (los demás jobs ya corrieron).
+  return NextResponse.json(
+    {
+      ok,
+      abandoned: abandoned.status === "fulfilled" ? abandoned.value : { error: String(abandoned.reason) },
+      expiry: expiry.status === "fulfilled" ? expiry.value : { error: String(expiry.reason) },
+      tracking: tracking.status === "fulfilled" ? tracking.value : { error: String(tracking.reason) },
+    },
+    { status: ok ? 200 : 500 },
+  );
 }

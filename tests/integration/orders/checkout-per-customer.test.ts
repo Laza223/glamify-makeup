@@ -33,16 +33,14 @@ function makeDeps(redemptions: number): { deps: CreateCheckoutDeps; createOrder:
 }
 
 describe("createCheckout — perCustomerLimit", () => {
-  it("NO aplica el cupón si la clienta superó su límite (descuento 0)", async () => {
+  it("si la clienta superó su límite corta el checkout con el motivo (no cobra sin el descuento que vio)", async () => {
     const { deps, createOrder } = makeDeps(1);
-    await createCheckout({
+    await expect(createCheckout({
       contactName: "Ana", contactEmail: "ana@x.com", contactPhone: "11", shippingMethod: "domicilio",
       address: { cp: "1414", city: "CABA", street: "Calle", number: "1", dni: "30123456" }, lines: [{ line, productNameSnapshot: "P", variantNameSnapshot: "V", skuSnapshot: "S", title: "P—V" }],
       couponCode: "RECOMPRA", customerId: "u1", cartId: "cart1",
-    }, deps);
-    expect(createOrder).toHaveBeenCalledWith(expect.objectContaining({
-      data: expect.objectContaining({ discountTotal: 0, couponId: null }),
-    }));
+    }, deps)).rejects.toThrow(/Ya usaste este cupón/);
+    expect(createOrder).not.toHaveBeenCalled();
   });
 
   it("aplica el cupón si está por debajo del límite", async () => {

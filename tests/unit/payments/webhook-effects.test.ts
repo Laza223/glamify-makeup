@@ -40,6 +40,19 @@ describe("decideWebhookEffects", () => {
   });
 });
 
+describe("decideWebhookEffects con otro pago aprobado", () => {
+  it("cancelled/refunded de otro intento sobre pedido paid → no toca el pedido (sí guarda el pago)", () => {
+    for (const mpStatus of ["cancelled", "refunded"] as const) {
+      const e = decideWebhookEffects({ currentOrderStatus: "paid", mpStatus, hasCoupon: false, otherApprovedPaymentExists: true });
+      expect(e.updatePaymentTo).toBe(mpStatus);
+      expect(e.setOrderStatusTo).toBeNull();
+    }
+  });
+  it("cancelled sin otro aprobado sobre pending_payment → cancelled (igual que antes)", () => {
+    expect(decideWebhookEffects({ currentOrderStatus: "pending_payment", mpStatus: "cancelled", hasCoupon: false, otherApprovedPaymentExists: false }).setOrderStatusTo).toBe("cancelled");
+  });
+});
+
 describe("paymentStatusAdvances (monotonía de Payment.status)", () => {
   it("approved → in_process (un webhook viejo reordenado) NO avanza", () => {
     expect(paymentStatusAdvances("approved", "in_process")).toBe(false);

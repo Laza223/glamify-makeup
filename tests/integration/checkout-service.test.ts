@@ -88,13 +88,10 @@ describe("createCheckout", () => {
     await expect(createCheckout({ ...baseInput, lines: [] }, deps)).rejects.toThrow();
   });
 
-  it("ignora cupón inválido (no aplica descuento) sin romper", async () => {
+  it("cupón inexistente: corta el checkout con un error claro, no cobra distinto en silencio", async () => {
     const { deps } = makeDeps();
-    const r = await createCheckout({ ...baseInput, couponCode: "NOEXISTE" }, deps);
-    const orderData = (deps as any)._tx.order.create.mock.calls[0][0].data;
-    expect(orderData.discountTotal).toBe(0);
-    expect(orderData.couponId).toBeNull();
-    expect(r.orderNumber).toBe("GLM-000001");
+    await expect(createCheckout({ ...baseInput, couponCode: "NOEXISTE" }, deps)).rejects.toThrow(/cupón ya no está disponible/);
+    expect((deps as any)._tx.order.create).not.toHaveBeenCalled();
   });
 
   it("los ítems de la preference MP suman exactamente el total (con envío, sin cupón)", async () => {

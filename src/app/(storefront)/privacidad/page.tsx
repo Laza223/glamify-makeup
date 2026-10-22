@@ -70,8 +70,8 @@ export default function PrivacidadPage() {
 
       <h2>8. Baja de comunicaciones</h2>
       <p>
-        Podés darte de baja de los emails de marketing en cualquier momento desde el enlace del correo o
-        escribiéndonos a {businessInfo.email}.
+        Podés pedir la baja de los emails de marketing en cualquier momento escribiéndonos a {businessInfo.email} o
+        por WhatsApp, y te damos de baja.
       </p>
 
       <h2>9. Cookies y analítica</h2>

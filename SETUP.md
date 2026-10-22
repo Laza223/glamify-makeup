@@ -106,6 +106,7 @@ MP_WEBHOOK_SECRET
 RESEND_API_KEY
 RESEND_FROM                  # ej. "Glamify Makeup <hola@glamifymakeup.site>"
 RESEND_OWNER_EMAIL           # email donde caen alertas (pedidos + arrepentimientos + devoluciones)
+RESEND_REPLY_TO              # opcional: adonde llegan las respuestas de las clientas (reply_to)
 MICORREO_EMAIL
 MICORREO_PASSWORD
 MICORREO_GATEWAY_AUTH

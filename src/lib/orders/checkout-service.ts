@@ -5,6 +5,7 @@ import { cartSubtotal, lineTotal, physicalSubtotal, isDigitalOnly } from "@/lib/
 import { validateShippingAddress, sanitizeAddress } from "@/lib/shipping/address";
 import { releaseGiftCardReservation } from "@/lib/coupons/gift-card-service";
 import { validateCoupon, applyCoupon } from "@/lib/coupons/apply";
+import { loadCustomerRedemptions } from "@/lib/coupons/redemptions";
 import { formatOrderNumber } from "@/lib/orders/order-number";
 import { createPreference as realCreatePreference } from "@/lib/payments/mercadopago";
 import { quoteShipping as realQuoteShipping, type ShippingQuote } from "@/lib/shipping/index";
@@ -13,7 +14,7 @@ import { getShippingZonesForQuote, getFreeShippingThreshold, getShippingSurcharg
 import type { CartLine } from "@/lib/cart/types";
 import { computeStockDecrements } from "@/lib/orders/stock";
 import { lockStock, stockShortfall, holdExpiry, payDeadline, heldMessage, type LockStock } from "@/lib/orders/stock-hold";
-import { CustomerFacingError } from "@/lib/orders/customer-error";
+import { CouponRejectedError, CustomerFacingError } from "@/lib/orders/customer-error";
 
 export interface CheckoutLineInput {
   line: CartLine;
@@ -189,27 +190,22 @@ export async function createCheckout(input: CreateCheckoutInput, deps: CreateChe
   let giftCardCoupon: CouponRow | null = null;
   if (input.couponCode && !digitalOnly) {
     const coupon = await deps.db.coupon.findUnique({ where: { code: input.couponCode } });
-    if (coupon) {
-      let customerRedemptions = 0;
-      if (input.customerId && coupon.perCustomerLimit != null) {
-        const r = await deps.db.couponRedemption.findUnique({
-          where: { customerId_couponId: { customerId: input.customerId, couponId: coupon.id } },
-        });
-        customerRedemptions = r?.redeemedCount ?? 0;
-      }
-      // El mínimo se mide sobre lo físico: las gift cards no cuentan para cupones.
-      const v = validateCoupon(coupon, { subtotal: physicalSubtotal(cartLines), now, customerRedemptions });
-      if (v.ok) {
-        const res = applyCoupon(coupon, cartLines);
-        // Una gift card que no descuenta nada (ej. carrito solo de gift cards) no se aplica: se quemaría gratis.
-        const isGiftCardCoupon = coupon.sourceOrderId != null;
-        if (!isGiftCardCoupon || res.discount > 0) {
-          discount = res.discount;
-          freeShippingByCoupon = res.freeShipping;
-          couponId = coupon.id;
-          if (isGiftCardCoupon) giftCardCoupon = coupon;
-        }
-      }
+    // Si dejó de valer (se agotó, venció) no se cobra sin él en silencio: la clienta vio otro total.
+    const gone = (reason: string) =>
+      new CouponRejectedError("El cupón ya no está disponible: " + reason + " Lo quitamos de tu carrito; revisá el total y probá de nuevo.");
+    if (!coupon) throw gone("no existe.");
+    const customerRedemptions = await loadCustomerRedemptions(deps.db, input.customerId, coupon);
+    // El mínimo se mide sobre lo físico: las gift cards no cuentan para cupones.
+    const v = validateCoupon(coupon, { subtotal: physicalSubtotal(cartLines), now, customerRedemptions });
+    if (!v.ok) throw gone(v.reason);
+    const res = applyCoupon(coupon, cartLines);
+    // Una gift card que no descuenta nada (ej. carrito solo de gift cards) no se aplica: se quemaría gratis.
+    const isGiftCardCoupon = coupon.sourceOrderId != null;
+    if (!isGiftCardCoupon || res.discount > 0) {
+      discount = res.discount;
+      freeShippingByCoupon = res.freeShipping;
+      couponId = coupon.id;
+      if (isGiftCardCoupon) giftCardCoupon = coupon;
     }
   }
 

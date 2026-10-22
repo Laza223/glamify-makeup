@@ -9,9 +9,10 @@ import type { ActionResult } from "@/lib/forms/action-result";
 export interface RetractionActionResult extends ActionResult {
   ticket?: string;
   date?: string;
+  receiptEmailSent?: boolean;
 }
 
 export async function requestRetractionAction(input: RetractionInput): Promise<RetractionActionResult> {
   const r = await createRetractionRequest(input, { db: prisma, getWhatsappUrl: storeWhatsappUrl });
-  return r.ok ? { ok: true, ticket: r.ticket, date: r.date } : { ok: false, error: r.error };
+  return r.ok ? { ok: true, ticket: r.ticket, date: r.date, receiptEmailSent: r.receiptEmailSent } : { ok: false, error: r.error };
 }
