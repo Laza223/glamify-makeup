@@ -44,8 +44,8 @@ export function RetractionForm() {
           Tu número de constancia es <strong>{ticket}</strong>
           {date ? <> del {date}</> : null}.{" "}
           {emailSent
-            ? "Te enviamos una copia por email y te vamos a contactar para coordinar la devolución y el reintegro."
-            : `Guardá tu constancia ${ticket}: no pudimos enviarte la copia por email. Te vamos a contactar para coordinar la devolución y el reintegro.`}
+            ? "Te enviamos una copia por email y te vamos a contactar para coordinar la devolución (el envío corre por nuestra cuenta) y el reintegro."
+            : `Guardá tu constancia ${ticket}: no pudimos enviarte la copia por email. Te vamos a contactar para coordinar la devolución (el envío corre por nuestra cuenta) y el reintegro.`}
         </p>
       </div>
     );

@@ -26,10 +26,14 @@ export default function ArrepentimientoPage() {
         <li>
           Al enviar la solicitud vas a recibir un <strong>número de constancia</strong> en pantalla.
         </li>
-        <li>Te contactamos por email para coordinar la devolución del producto y el reintegro del importe.</li>
         <li>
-          El producto debe devolverse en las mismas condiciones en que lo recibiste. El reintegro se realiza una
-          vez recibida la devolución, por el mismo medio de pago utilizado.
+          Te contactamos por email para coordinar la devolución del producto y el reintegro del importe. El envío de
+          la devolución corre por nuestra cuenta.
+        </li>
+        <li>
+          Por higiene, pedimos que el producto vuelva sin uso y en su envase original; si ya lo abriste, escribinos
+          igual: tenés derecho al reintegro y lo coordinamos con vos. En cuanto recibimos el producto te reintegramos el total abonado,
+          incluido el envío original, por el mismo medio de pago utilizado.
         </li>
       </ul>
 

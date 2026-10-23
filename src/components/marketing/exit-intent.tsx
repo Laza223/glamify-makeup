@@ -141,7 +141,8 @@ function ExitIntentPopup() {
               </SheetTitle>
               <SheetDescription className="text-xs leading-relaxed text-muted-foreground">
                 Dejanos tu email y te mostramos tu cupón de bienvenida. Si dejás
-                algo en el carrito, te mandamos un recordatorio.
+                algo en el carrito, te mandamos un recordatorio. Al enviar tu email aceptás recibir ese recordatorio; podés pedir la
+                baja cuando quieras.
               </SheetDescription>
             </SheetHeader>
 
