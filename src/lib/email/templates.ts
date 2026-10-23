@@ -445,11 +445,11 @@ export function retractionReceiptEmail(d: RetractionReceiptData): EmailContent {
       title("Recibimos tu solicitud"),
       paragraph(`Hola ${name}, registramos tu solicitud de arrepentimiento.`),
       `<tr><td align="center" style="padding:18px 32px 0 32px;"><table role="presentation" cellpadding="0" cellspacing="0" style="background-color:${COLOR.page};border:1px solid ${COLOR.line};border-radius:12px;"><tr><td align="center" style="padding:14px 28px;font-family:${FONT_BODY};font-size:14px;line-height:22px;color:${COLOR.muted};">Constancia<br /><span style="font-size:20px;font-weight:bold;letter-spacing:1px;color:${COLOR.primary};">${escapeHtml(d.ticket)}</span><br />${escapeHtml(d.date)}</td></tr></table></td></tr>`,
-      paragraph("Te vamos a contactar para coordinar la devolución del producto y el reintegro del importe."),
+      paragraph("Te vamos a contactar para coordinar la devolución del producto y el reintegro del importe. El envío de la devolución corre por nuestra cuenta."),
       helpLine(d.whatsappUrl),
     ].join("\n"),
   });
-  const text = `Recibimos tu solicitud de arrepentimiento.\nConstancia: ${d.ticket}\nFecha: ${d.date}\nTe contactaremos para coordinar la devolución y el reintegro. Guardá este correo como comprobante.${d.whatsappUrl ? `\nDudas por WhatsApp: ${d.whatsappUrl}` : ""}`;
+  const text = `Recibimos tu solicitud de arrepentimiento.\nConstancia: ${d.ticket}\nFecha: ${d.date}\nTe contactaremos para coordinar la devolución (el envío corre por nuestra cuenta) y el reintegro. Guardá este correo como comprobante.${d.whatsappUrl ? `\nDudas por WhatsApp: ${d.whatsappUrl}` : ""}`;
   return { subject, html, text };
 }
 

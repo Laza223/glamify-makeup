@@ -14,7 +14,7 @@ const faqs: Array<{ q: string; a: React.ReactNode }> = [
     q: "¿Hacen envíos a todo el país?",
     a: (
       <>
-        Sí, enviamos a toda la Argentina (a domicilio o sucursal). Mirá zonas, costos y plazos
+        Sí, enviamos a toda la Argentina (a domicilio o sucursal). Mirá costos y plazos
         en <Link href="/envios-y-pagos">Envíos y pagos</Link>.
       </>
     ),
@@ -33,9 +33,12 @@ const faqs: Array<{ q: string; a: React.ReactNode }> = [
       <>
         Tenés {businessInfo.retractionDays} días corridos desde que recibís el pedido (o desde la compra, lo que ocurra último) para arrepentirte de la compra (art. 34 Ley
         24.240): gestionalo desde el{" "}
-        <Link href="/arrepentimiento">Botón de Arrepentimiento</Link>. Si te llegó roto, fallado o equivocado,
-        escribinos por <Link href="/contacto">contacto</Link> con una foto y te lo cambiamos o te devolvemos el dinero,
-        con el envío a nuestro cargo. Por higiene, no hacemos cambios por gusto fuera de esos casos.
+        <Link href="/arrepentimiento">Botón de Arrepentimiento</Link>; el envío de la devolución corre por nuestra
+        cuenta. Si te llegó roto, fallado o equivocado,
+        escribinos por <Link href="/contacto">contacto</Link> con una foto y elegís entre que te lo cambiemos por uno igual
+        (si tenemos stock) o que te devolvamos el dinero,
+        con el envío a nuestro cargo. Por higiene, no hacemos cambios por gusto fuera de esos casos y de tu derecho de
+        arrepentimiento.
       </>
     ),
   },

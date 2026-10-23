@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -115,6 +116,11 @@ export function IngresarForm({ initialError = null, googleEnabled = false, next 
           </Button>
         </>
       )}
+      <p className="text-center text-xs leading-relaxed text-muted-foreground">
+        Al crear una cuenta o continuar con Google aceptás los{" "}
+        <Link href="/terminos" className="underline underline-offset-2">Términos y condiciones</Link> y la{" "}
+        <Link href="/privacidad" className="underline underline-offset-2">Política de privacidad</Link>.
+      </p>
     </div>
   );
 }
