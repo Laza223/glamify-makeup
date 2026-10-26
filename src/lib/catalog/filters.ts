@@ -1,6 +1,6 @@
 import type { Prisma } from "@prisma/client";
 
-export const PAGE_SIZE = 12;
+export const PAGE_SIZE = 30; // múltiplo de 2, 3 y 5: la última fila cierra en 2/3/5 columnas
 
 export type SortKey = "relevancia" | "precio_asc" | "precio_desc" | "novedades";
 export const SORT_KEYS: SortKey[] = ["relevancia", "precio_asc", "precio_desc", "novedades"];
