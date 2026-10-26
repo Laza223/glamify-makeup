@@ -14,7 +14,7 @@ import { detectBrand } from "@/lib/catalog/brand";
 import { formatPrice } from "@/lib/money";
 import type { CatalogListItem } from "@/lib/catalog/types";
 
-const IMAGE_SIZES = "(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw";
+const IMAGE_SIZES = "(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw";
 
 export function ProductCard({ product }: { product: CatalogListItem }) {
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -34,7 +34,7 @@ export function ProductCard({ product }: { product: CatalogListItem }) {
 
   return (
     <article className="group relative flex h-full flex-col">
-      <div className="relative aspect-[4/5] w-full overflow-hidden rounded-[14px] bg-muted">
+      <div className="relative aspect-square w-full overflow-hidden rounded-[14px] bg-muted">
         {primaryUrl && !broken ? (
           <>
             <Image

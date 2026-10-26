@@ -88,8 +88,8 @@ describe("clampPage / totalPagesFor", () => {
   });
   it("?page gigante o inválido no rompe", () => {
     expect(parseProductListParams({ page: "99999999999999999999999" }).page).toBeGreaterThanOrEqual(1);
-    expect(clampPage(parseProductListParams({ page: "abc" }).page, 30)).toBe(1);
-    expect(clampPage(parseProductListParams({ page: "1e21" }).page, 30)).toBe(3);
+    expect(clampPage(parseProductListParams({ page: "abc" }).page, PAGE_SIZE * 3)).toBe(1);
+    expect(clampPage(parseProductListParams({ page: "1e21" }).page, PAGE_SIZE * 3)).toBe(3);
   });
 });
 
