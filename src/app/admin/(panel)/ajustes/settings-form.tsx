@@ -12,6 +12,7 @@ interface SettingsFormProps {
     storeName: string;
     freeShippingThreshold: number;
     shippingSurcharge: number;
+    bundlePackagingFee: number;
     originPostalCode: string;
     whatsappNumber: string | null;
     instagramUrl: string | null;
@@ -143,6 +144,29 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
             <p className="text-[11px] text-muted-foreground">
               Se suma a lo que cotiza Correo Argentino en vivo (por ejemplo, para cubrir el
               empaque). Vacío = $0. No aplica al envío gratis ni a la tabla de zonas de respaldo.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label
+              htmlFor="bundlePackagingFee"
+              className="text-xs font-bold uppercase tracking-wider text-foreground"
+            >
+              Empaque de ramo/box (ARS)
+            </Label>
+            <Input
+              id="bundlePackagingFee"
+              name="bundlePackagingFee"
+              type="number"
+              min="0"
+              step="0.01"
+              defaultValue={initialSettings.bundlePackagingFee}
+              placeholder="0"
+              className="rounded-xl bg-surface-alt"
+            />
+            <p className="text-[11px] text-muted-foreground">
+              Monto fijo que se suma a cada ramo o box armado en la web. No cuenta para el mínimo de $15.000 en
+              productos. Vacío = $0.
             </p>
           </div>
 

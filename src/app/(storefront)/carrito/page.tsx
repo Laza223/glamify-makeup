@@ -1,3 +1,4 @@
+import { bundleSummary } from "@/lib/bundle/summary";
 import type { Metadata } from "next";
 import { getCartView } from "@/lib/cart/cart-view";
 import { round2 } from "@/lib/money";
@@ -59,7 +60,7 @@ export default async function CarritoPage() {
                 item={{
                   id: item.id,
                   name: item.combo ? item.combo.name : item.variant!.product.name,
-                  variantName: item.combo ? null : item.variant!.name,
+                  variantName: item.combo ? bundleSummary(item.combo.bundleKind, item.combo.items) : item.variant!.name,
                   unitPrice: Number(item.unitPriceSnapshot),
                   qty: item.qty,
                   image: productImageUrl(item.combo ? item.combo.images[0] ?? null : item.variant!.image ?? item.variant!.product.images[0] ?? null),

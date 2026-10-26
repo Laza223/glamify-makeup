@@ -12,6 +12,9 @@ export interface ProductTx {
     update: (args: { where: { id: string }; data: Record<string, unknown> }) => Promise<{ id: string }>;
     deleteMany: (args: { where: { id: { in: string[] } } }) => Promise<{ count: number }>;
   };
+  combo: {
+    deleteMany: (args: Record<string, unknown>) => Promise<{ count: number }>;
+  };
   comboItem: {
     findMany: (args: { where: { variantId: { in: string[] } }; select: { variantId: true } }) => Promise<Array<{ variantId: string }>>;
   };
@@ -189,6 +192,10 @@ export async function updateProduct(id: string, input: ProductClean, deps: Creat
       const staleIds = [...existingIds].filter((vid) => !incomingIds.has(vid));
 
       if (staleIds.length > 0) {
+        // Los ramo/box armados por clientas no se ven en /admin/combos: los sin carrito ni pedido se descartan solos.
+        await tx.combo.deleteMany({
+          where: { bundleKind: { not: null }, items: { some: { variantId: { in: staleIds } } }, cartItems: { none: {} }, orderItems: { none: {} } },
+        });
         const refs = await tx.comboItem.findMany({ where: { variantId: { in: staleIds } }, select: { variantId: true } });
         if (refs.length > 0) {
           throw new Error(

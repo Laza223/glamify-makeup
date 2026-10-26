@@ -20,6 +20,8 @@ import { isDigitalOnly, physicalSubtotal } from "@/lib/cart/totals";
 import { validateCoupon, applyCoupon } from "@/lib/coupons/apply";
 import { loadCustomerRedemptions } from "@/lib/coupons/redemptions";
 import { toNumber } from "@/lib/catalog/pricing";
+import { createBundle } from "@/lib/bundle/bundle-service";
+import { isBundleKind } from "@/lib/bundle/rules";
 import { prisma } from "@/lib/prisma";
 import { quoteShipping } from "@/lib/shipping/index";
 import {
@@ -75,6 +77,24 @@ export async function addToCartAction(input: {
     return { ok: true };
   } catch (e) {
     return { ok: false, error: customerErrorMessage(e, "add-to-cart", "No pudimos sumarlo al carrito. Probá de nuevo.") };
+  }
+}
+
+/** Crea el ramo/box armado (precio, stock y mínimo validados en el server) y lo suma al carrito. */
+export async function addBundleToCartAction(input: {
+  kind: string;
+  items: Array<{ variantId: string; qty: number }>;
+}): Promise<ActionResult> {
+  try {
+    if (!isBundleKind(input.kind)) return { ok: false, error: "Tipo de regalo inválido." };
+    const comboId = await createBundle(input.kind, input.items);
+    const cartId = await ensureCartId();
+    await addItem({ cartId, comboId, qty: 1 });
+    revalidatePath("/", "layout");
+    revalidatePath("/carrito");
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: customerErrorMessage(e, "add-bundle", "No pudimos sumar tu regalo al carrito. Probá de nuevo.") };
   }
 }
 

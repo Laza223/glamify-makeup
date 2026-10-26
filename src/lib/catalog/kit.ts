@@ -65,7 +65,7 @@ export async function getKitBuilderData() {
       take: 8,
     }),
     prisma.combo.findMany({
-      where: { active: true },
+      where: { active: true, bundleKind: null },
       include: {
         items: {
           include: {

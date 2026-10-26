@@ -35,7 +35,7 @@ Hoy `NEXT_PUBLIC_APP_URL` apunta a `glamify-makeup-1.vercel.app`: sitemap, robot
 ## Bloque 3 — Catálogo (Vos, desde `/admin`)
 
 - [ ] **3.1** Peso real cargado en cada producto/variante (la cotización de envío depende de eso).
-- [ ] **3.2** "Box de Maquillaje Personalizada" y "Ramo de Maquillaje Personalizado" figuran **Agotado** en la home: cargarles stock o despublicarlos.
+- [ ] **3.2** "Box de Maquillaje Personalizada" y "Ramo de Maquillaje Personalizado" (categorías a pedido): ahora son puerta de entrada al builder `/armar-box` y `/armar-ramo`; definir el empaque en Admin → Ajustes y probar un pedido de ramo y uno de box de punta a punta.
 - [ ] **3.3** Stock y fotos reales de todo lo publicado.
 - [ ] **3.4** Home sin productos de prueba (ver 6.6: "Eduardo" se despublica después de la compra de prueba).
 

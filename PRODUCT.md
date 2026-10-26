@@ -35,7 +35,7 @@ Tienda online de **Glamify Makeup**, un emprendimiento chico de Luján (Buenos A
 - **Despacho:** desde Luján (CP 6700) por Correo Argentino (MiCorreo), a domicilio o sucursal, dentro de **hasta 3 días hábiles** de acreditado el pago; el número de seguimiento llega por email. **No hay retiro en persona.**
 - **Pagos:** Mercado Pago Checkout Pro, tarjeta y dinero en cuenta. **Sin efectivo (Rapipago / Pago Fácil). Sin cuotas sin interés** (no están activas).
 - **Envío gratis** sobre un umbral configurable por la dueña (`Setting.freeShippingThreshold`, hoy $47.500): siempre mostrar el valor real, nunca uno escrito a mano.
-- **Box y ramos:** a pedido, se arman por WhatsApp (no tienen precio fijo en la web).
+- **Box y ramos:** se arman y se pagan en la web (`/armar-ramo`, `/armar-box`): la clienta elige productos con stock, **mínimo $15.000 en productos** (validado en el server) más un empaque fijo editable (`Setting.bundlePackagingFee`, no cuenta para el mínimo). Cada regalo armado es un `Combo` con `bundleKind` (los combos curados lo tienen en `null`). WhatsApp queda como alternativa. Los productos "Ramo/Box personalizado" del catálogo son solo puerta de entrada al builder.
 - **Gift card:** digital, llega por mail con un código; un solo uso, vence a los 6 meses, descuenta productos (no el envío).
 - **Armá tu kit:** se eligen 3 productos (labios, ojos, rostro) y se agregan juntos al carrito **a precio de lista, sin descuento**.
 - También vende en ferias y por redes; la web convive con esos canales.
