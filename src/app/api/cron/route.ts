@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { sendEmail } from "@/lib/email/resend";
 import { runAbandonedCartJob } from "@/lib/cart/abandoned-job";
 import { runOrderExpiryJob } from "@/lib/orders/expiry-job";
+import { runBundleCleanupJob } from "@/lib/bundle/cleanup-job";
 import { runShipmentTrackingJob } from "@/lib/shipping/tracking-job";
 import { storeWhatsappUrl } from "@/lib/email/whatsapp-url";
 
@@ -37,14 +38,15 @@ export async function GET(request: Request): Promise<NextResponse> {
       ownerEmail: process.env.RESEND_OWNER_EMAIL ?? "",
       getWhatsappUrl: storeWhatsappUrl,
     }),
+    runBundleCleanupJob({ db: prisma, now }),
   ]);
 
-  const jobNames = ["abandoned", "expiry", "tracking"];
+  const jobNames = ["abandoned", "expiry", "tracking", "bundleCleanup"];
   results.forEach((r, i) => {
     if (r.status === "rejected") console.error(`[cron] falló el job ${jobNames[i]}`, r.reason);
   });
 
-  const [abandoned, expiry, tracking] = results;
+  const [abandoned, expiry, tracking, bundleCleanup] = results;
   const ok = results.every((r) => r.status === "fulfilled");
   // 500 si algún job rechazó: Vercel lo marca como corrida fallida (los demás jobs ya corrieron).
   return NextResponse.json(
@@ -53,6 +55,7 @@ export async function GET(request: Request): Promise<NextResponse> {
       abandoned: abandoned.status === "fulfilled" ? abandoned.value : { error: String(abandoned.reason) },
       expiry: expiry.status === "fulfilled" ? expiry.value : { error: String(expiry.reason) },
       tracking: tracking.status === "fulfilled" ? tracking.value : { error: String(tracking.reason) },
+      bundleCleanup: bundleCleanup.status === "fulfilled" ? bundleCleanup.value : { error: String(bundleCleanup.reason) },
     },
     { status: ok ? 200 : 500 },
   );

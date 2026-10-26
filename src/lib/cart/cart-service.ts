@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { getEffectivePrice, toNumber } from "@/lib/catalog/pricing";
 import { isProductMadeToOrder } from "@/lib/catalog/made-to-order";
 import { isProductGiftCard } from "@/lib/catalog/gift-card";
+import { round2 } from "@/lib/money";
+import { bundleSummary } from "@/lib/bundle/summary";
 import { CustomerFacingError } from "@/lib/orders/customer-error";
 import type { CartLine } from "@/lib/cart/types";
 
@@ -32,9 +34,16 @@ export function cartItemToCartLine(item: CartItemWithRefs): CartLine {
       (acc, ci) => acc + (ci.variant.weightGrOverride ?? ci.variant.product.weightGr) * ci.qty,
       0,
     );
+    // Ramo/box armado: los productos se cotizan en vivo (+ empaque congelado) para que un carrito viejo no cobre precios vencidos.
+    const unitPrice = item.combo.bundleKind
+      ? round2(
+          item.combo.items.reduce((acc, ci) => acc + getEffectivePrice(ci.variant.product, ci.variant) * ci.qty, 0) +
+            toNumber(item.combo.packagingFee),
+        )
+      : toNumber(item.combo.comboPrice);
     return {
       id: item.id, kind: "combo", refId: item.combo.id,
-      unitPrice: toNumber(item.combo.comboPrice), qty: item.qty,
+      unitPrice, qty: item.qty,
       weightGr, productId: null, categoryId: null, isGiftCard: false, components,
     };
   }
@@ -133,7 +142,7 @@ export function cartToCheckoutLines(cart: CartWithItems): CheckoutLineInput[] {
   return cart.items.map((item) => {
     const line = cartItemToCartLine(item);
     if (item.combo) {
-      return { line, productNameSnapshot: item.combo.name, variantNameSnapshot: null, skuSnapshot: null, title: item.combo.name };
+      return { line, productNameSnapshot: item.combo.name, variantNameSnapshot: bundleSummary(item.combo.bundleKind, item.combo.items), skuSnapshot: null, title: item.combo.name };
     }
     const v = item.variant!;
     return {

@@ -11,7 +11,7 @@ const FAN = [
   "z-0 [transform:translate(0%,-50%)_rotate(9deg)] group-hover:[transform:translate(12%,-53%)_rotate(14deg)]",
 ];
 
-/** Bloque de regalos: ramos y boxes a medida por WhatsApp, más la Gift Card si está a la venta. */
+/** Bloque de regalos: ramo y box armados en la web (desde $15.000), WhatsApp como alternativa y la Gift Card si está a la venta. */
 export function GiftBand({
   whatsappHref,
   photos,
@@ -56,19 +56,23 @@ export function GiftBand({
             Regalá algo <em className="font-medium text-[#FF4FA3]">divino</em>
           </h2>
           <p className="mx-auto max-w-md text-[16px] leading-relaxed text-white/80 md:mx-0 md:text-[17px]">
-            Ramos y boxes de maquillaje armados a medida, con lo que le encanta y el presupuesto que tengas. Lo charlamos
-            por WhatsApp.
+            Armá tu ramo o tu box de maquillaje con lo que le encanta, desde $15.000. Si preferís charlarlo, también
+            lo armamos por WhatsApp.
           </p>
           <div className="flex flex-col items-center gap-3 pt-1 sm:flex-row sm:justify-center md:justify-start">
-            <a
-              href={whatsappHref}
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link
+              href="/armar-ramo"
               className="group/cta inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-primary px-7 text-[15px] font-semibold text-primary-foreground transition hover:bg-primary-hover active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-foreground"
             >
-              Armar mi regalo
+              Armar mi ramo
               <ArrowRight className="size-4 transition-transform group-hover/cta:translate-x-1" aria-hidden />
-            </a>
+            </Link>
+            <Link
+              href="/armar-box"
+              className="inline-flex h-12 items-center justify-center rounded-2xl border border-white/25 px-6 text-[15px] font-semibold text-white transition hover:border-white/60 hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+            >
+              Armar mi box
+            </Link>
             {giftCardHref && (
               <Link
                 href={giftCardHref}
@@ -77,6 +81,14 @@ export function GiftBand({
                 O regalá una gift card
               </Link>
             )}
+            <a
+              href={whatsappHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex min-h-11 items-center text-[15px] font-medium text-white/80 underline underline-offset-4 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+            >
+              Prefiero armarlo por WhatsApp
+            </a>
           </div>
         </div>
       </div>

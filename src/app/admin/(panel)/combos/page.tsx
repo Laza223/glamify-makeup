@@ -14,6 +14,7 @@ export const dynamic = "force-dynamic";
 export default async function CombosPage() {
   await requireAdmin();
   const combos = await prisma.combo.findMany({
+    where: { bundleKind: null }, // los ramo/box armados por clientas no se administran acá
     orderBy: { createdAt: "desc" },
     select: {
       id: true,

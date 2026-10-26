@@ -1,3 +1,4 @@
+import { bundleSummary } from "@/lib/bundle/summary";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getCartView } from "@/lib/cart/cart-view";
@@ -36,7 +37,7 @@ export default async function CheckoutPage() {
         items={cart.items.map((item) => ({
           id: item.id,
           name: item.combo ? item.combo.name : item.variant!.product.name,
-          variantName: item.combo ? null : item.variant!.name,
+          variantName: item.combo ? bundleSummary(item.combo.bundleKind, item.combo.items) : item.variant!.name,
           qty: item.qty,
           unitPrice: Number(item.unitPriceSnapshot),
         }))}

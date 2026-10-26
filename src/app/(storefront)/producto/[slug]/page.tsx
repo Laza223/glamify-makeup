@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { MessageCircle } from "lucide-react";
 import { getProductBySlug, resolveCategoryPath } from "@/lib/catalog/queries";
@@ -13,6 +14,7 @@ import { ProductGallery } from "@/components/catalog/product-gallery";
 import { detectBrand } from "@/lib/catalog/brand";
 import { getFreeShippingThreshold } from "@/lib/orders/checkout-data";
 import { formatPrice } from "@/lib/money";
+import { BUNDLE_MINIMUM } from "@/lib/bundle/rules";
 import { AddToCart } from "@/components/cart/add-to-cart";
 import { WishlistHeart } from "@/components/catalog/wishlist-heart";
 import { TrustBadges } from "@/components/catalog/trust-badges";
@@ -151,6 +153,12 @@ export default async function ProductoPage({ params }: { params: Promise<{ slug:
 
           {madeToOrder ? (
             <div className="space-y-3">
+              <Link
+                href={product.category.slug === "box-maquillaje" || product.categories.some((c) => c.category.slug === "box-maquillaje") ? "/armar-box" : "/armar-ramo"}
+                className="inline-flex h-12 w-full items-center justify-center rounded-2xl bg-primary px-6 text-[16px] font-semibold text-primary-foreground transition hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                Armá el tuyo desde {formatPrice(BUNDLE_MINIMUM)}
+              </Link>
               {whatsappUrl ? (
                 <a
                   href={whatsappUrl}
@@ -165,7 +173,7 @@ export default async function ProductoPage({ params }: { params: Promise<{ slug:
                 <p className="text-[16px] font-semibold text-foreground">Escribinos por WhatsApp para armarlo</p>
               )}
               <p className="text-[16px] text-muted-foreground">
-                Lo armamos a tu gusto: elegís los productos y te pasamos el precio por WhatsApp.
+                Elegí los productos que más te gusten y lo armamos con cariño. También podés pedirlo por WhatsApp.
               </p>
             </div>
           ) : (

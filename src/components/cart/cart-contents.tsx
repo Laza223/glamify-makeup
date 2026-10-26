@@ -1,3 +1,4 @@
+import { bundleSummary } from "@/lib/bundle/summary";
 import Link from "next/link";
 import { Lock } from "lucide-react";
 import { getCartView } from "@/lib/cart/cart-view";
@@ -34,7 +35,7 @@ export async function CartContents() {
             item={{
               id: item.id,
               name: item.combo ? item.combo.name : item.variant!.product.name,
-              variantName: item.combo ? null : item.variant!.name,
+              variantName: item.combo ? bundleSummary(item.combo.bundleKind, item.combo.items) : item.variant!.name,
               unitPrice: Number(item.unitPriceSnapshot),
               qty: item.qty,
               image: productImageUrl(item.combo ? item.combo.images[0] ?? null : item.variant!.image ?? item.variant!.product.images[0] ?? null),

@@ -15,6 +15,8 @@ const columns: Array<{ title: string; links: Array<{ label: string; href: string
     links: [
       { label: "Todo el catálogo", href: "/tienda" },
       { label: "Armá tu kit", href: "/arma-tu-kit" },
+      { label: "Armá tu ramo", href: "/armar-ramo" },
+      { label: "Armá tu box", href: "/armar-box" },
       { label: "Nosotras", href: "/nosotras" },
     ],
   },

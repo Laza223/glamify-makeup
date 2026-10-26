@@ -18,6 +18,8 @@ export async function updateSettingsAction(
   );
   const surchargeRaw = String(formData.get("shippingSurcharge") ?? "").trim();
   const shippingSurcharge = surchargeRaw === "" ? 0 : Number(surchargeRaw);
+  const bundleFeeRaw = String(formData.get("bundlePackagingFee") ?? "").trim();
+  const bundlePackagingFee = bundleFeeRaw === "" ? 0 : Number(bundleFeeRaw);
   const originPostalCode = String(
     formData.get("originPostalCode") ?? "",
   ).trim();
@@ -46,6 +48,9 @@ export async function updateSettingsAction(
       error: "El recargo de envío debe ser un número entre 0 y 10.000.000.",
     };
   }
+  if (!Number.isFinite(bundlePackagingFee) || bundlePackagingFee < 0 || bundlePackagingFee > MAX_AMOUNT) {
+    return { ok: false, error: "El empaque del ramo/box debe ser un número entre 0 y 10.000.000." };
+  }
   if (!originPostalCode || originPostalCode.length < 4) {
     return {
       ok: false,
@@ -62,6 +67,7 @@ export async function updateSettingsAction(
         storeName,
         freeShippingThreshold: freeShippingThresholdRaw,
         shippingSurcharge,
+        bundlePackagingFee,
         originPostalCode,
         whatsappNumber,
         instagramUrl,
@@ -71,6 +77,7 @@ export async function updateSettingsAction(
         storeName,
         freeShippingThreshold: freeShippingThresholdRaw,
         shippingSurcharge,
+        bundlePackagingFee,
         originPostalCode,
         whatsappNumber,
         instagramUrl,

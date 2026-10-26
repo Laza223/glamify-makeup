@@ -9,6 +9,7 @@ vi.mock("@/lib/email/resend", () => ({ sendEmail: vi.fn() }));
 vi.mock("@/lib/email/whatsapp-url", () => ({ storeWhatsappUrl: vi.fn() }));
 vi.mock("@/lib/cart/abandoned-job", () => ({ runAbandonedCartJob: (...a: unknown[]) => abandoned(...a) }));
 vi.mock("@/lib/orders/expiry-job", () => ({ runOrderExpiryJob: (...a: unknown[]) => expiry(...a) }));
+vi.mock("@/lib/bundle/cleanup-job", () => ({ runBundleCleanupJob: async () => ({ deleted: 0 }) }));
 vi.mock("@/lib/shipping/tracking-job", () => ({ runShipmentTrackingJob: (...a: unknown[]) => tracking(...a) }));
 
 import { GET } from "@/app/api/cron/route";

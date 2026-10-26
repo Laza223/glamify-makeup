@@ -76,6 +76,7 @@ function makeDeps(opts: FakeOpts = {}): { deps: CreateProductDeps; tx: any; db: 
       update: vi.fn(async ({ where, data }: any) => ({ id: where.id, ...data })),
       deleteMany: vi.fn(async () => ({ count: 0 })),
     },
+    combo: { deleteMany: vi.fn(async () => ({ count: 0 })) },
     comboItem: {
       findMany: vi.fn(async ({ where }: any) =>
         comboRefs.filter((v) => where.variantId.in.includes(v)).map((variantId) => ({ variantId })),
