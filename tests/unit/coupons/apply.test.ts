@@ -90,3 +90,11 @@ describe("applyCoupon con gift cards en el carrito", () => {
     expect(applyCoupon({ type: "percentage", value: 50, scope: "category", scopeId: "c9" }, [g]).discount).toBe(0);
   });
 });
+
+describe("applyCoupon — empaque de ramo/box", () => {
+  it("el empaque no entra en la base del descuento", () => {
+    const bundle = line({ kind: "combo", unitPrice: 22500, packagingFee: 2500, productId: null, categoryId: null });
+    const res = applyCoupon({ type: "percentage", value: 10, scope: "all", scopeId: null }, [bundle]);
+    expect(res.discount).toBe(2000);
+  });
+});
