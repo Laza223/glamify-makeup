@@ -11,6 +11,7 @@ import {
   type ProductListParams,
 } from "@/lib/catalog/filters";
 import { buildCategoryTree, findCategoryByPath, type CategoryNode } from "@/lib/catalog/categories";
+import { sortAvailableFirst } from "@/lib/catalog/availability";
 import { toCatalogProduct, toCatalogProductDetail } from "@/lib/catalog/dto";
 import type { CatalogProduct, CatalogProductDetail } from "@/lib/catalog/types";
 
@@ -52,13 +53,8 @@ export async function getProductList(
   const page = clampPage(params.page, total);
   const { skip, take } = buildPagination({ ...params, page });
 
-  // Asegura que los productos con stock disponible aparezcan primero (agotados al final de la tienda)
-  const sorted = [...rows].sort((a, b) => {
-    const aInStock = a.variants.some((v) => v.active && v.stock > 0);
-    const bInStock = b.variants.some((v) => v.active && v.stock > 0);
-    if (aInStock === bInStock) return 0;
-    return aInStock ? -1 : 1;
-  });
+  // Agotados al final de la tienda (global, antes de paginar); los "a pedido" cuentan como disponibles.
+  const sorted = sortAvailableFirst(rows);
 
   const pagedItems = sorted.slice(skip, skip + take);
 
