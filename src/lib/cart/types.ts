@@ -18,6 +18,8 @@ export interface CartLine {
   categoryId?: string | null;
   /** Gift Card digital: no pesa, no cuenta para el envío gratis ni recibe descuentos de cupones. */
   isGiftCard: boolean;
+  /** Ramo/box: empaque incluido en unitPrice; no recibe descuentos de cupón ni cuenta para el envío gratis. */
+  packagingFee?: number;
   /** Solo combos: componentes para descuento de stock. */
   components?: Array<{ variantId: string; qty: number }>;
 }

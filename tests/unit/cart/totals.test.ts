@@ -42,3 +42,11 @@ describe("physicalSubtotal / isDigitalOnly", () => {
     expect(isDigitalOnly([])).toBe(false);
   });
 });
+
+describe("empaque de ramo/box", () => {
+  it("physicalSubtotal (base del envío gratis) no cuenta el empaque", () => {
+    const l: CartLine = { id: "b", kind: "combo", refId: "c", unitPrice: 22500, qty: 2, weightGr: 100, isGiftCard: false, packagingFee: 2500 };
+    expect(physicalSubtotal([l])).toBe(40000);
+    expect(cartSubtotal([l])).toBe(45000);
+  });
+});

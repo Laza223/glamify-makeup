@@ -14,6 +14,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ]);
   const staticPages = [
     "/arma-tu-kit",
+    "/armar-ramo",
+    "/armar-box",
     "/terminos",
     "/privacidad",
     "/arrepentimiento",

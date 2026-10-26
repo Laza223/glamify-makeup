@@ -45,6 +45,7 @@ export function cartItemToCartLine(item: CartItemWithRefs): CartLine {
       id: item.id, kind: "combo", refId: item.combo.id,
       unitPrice, qty: item.qty,
       weightGr, productId: null, categoryId: null, isGiftCard: false, components,
+      ...(item.combo.bundleKind ? { packagingFee: toNumber(item.combo.packagingFee) } : {}),
     };
   }
   const v = item.variant!;

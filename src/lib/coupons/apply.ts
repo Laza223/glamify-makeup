@@ -1,5 +1,5 @@
 import { round2, formatPrice } from "@/lib/money";
-import { lineTotal } from "@/lib/cart/totals";
+import { merchandiseTotal } from "@/lib/cart/totals";
 import type { CartLine } from "@/lib/cart/types";
 
 /** Subconjunto de Coupon necesario para validar (compatible con el modelo Prisma). */
@@ -60,7 +60,7 @@ export function applyCoupon(coupon: ApplicableCoupon, lines: CartLine[]): Coupon
   if (coupon.type === "free_shipping") return { discount: 0, freeShipping: true };
 
   const applicable = lines.filter((l) => matchesScope(l, coupon.scope, coupon.scopeId));
-  const base = round2(applicable.reduce((acc, l) => acc + lineTotal(l), 0));
+  const base = round2(applicable.reduce((acc, l) => acc + merchandiseTotal(l), 0));
   if (base <= 0) return { discount: 0, freeShipping: false };
 
   const value = Number(coupon.value);
