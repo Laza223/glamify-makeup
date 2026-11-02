@@ -28,15 +28,23 @@ import { RatingStars } from "@/components/ui/rating-stars";
 import { ReviewCard } from "@/components/catalog/review-card";
 import { buildProductJsonLd, serializeJsonLd } from "@/lib/seo/jsonld";
 import { absoluteUrl } from "@/lib/seo/url";
+import { toMetaDescription } from "@/lib/seo/meta-description";
+import { productImageUrl } from "@/lib/images";
 import { TrackOnMount } from "@/components/analytics/track-on-mount";
 import { ReviewForm } from "./review-form";
+
+/** URL absoluta y pública de una imagen de producto (en DB se guarda el path del bucket, no la URL). */
+function publicImageUrl(path: string): string | null {
+  const url = productImageUrl(path);
+  return url ? absoluteUrl(url) : null;
+}
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   const product = await getProductBySlug(slug);
   if (!product) return { title: "Producto" };
-  const description = product.seoDescription ?? product.description ?? undefined;
-  const image = product.images[0] ? absoluteUrl(product.images[0]) : undefined;
+  const description = product.seoDescription ?? toMetaDescription(product.description) ?? undefined;
+  const image = product.images[0] ? (publicImageUrl(product.images[0]) ?? undefined) : undefined;
   return {
     title: product.seoTitle ? { absolute: product.seoTitle } : product.name,
     description,
@@ -107,11 +115,12 @@ export default async function ProductoPage({ params }: { params: Promise<{ slug:
     {
       name: product.name,
       description: product.seoDescription ?? product.description,
-      images: product.images.map((img) => absoluteUrl(img)),
+      images: product.images.map(publicImageUrl).filter((url): url is string => url !== null),
       sku: product.variants[0]?.sku ?? null,
       price,
       inStock,
       url: absoluteUrl(`/producto/${slug}`),
+      brand: brand ?? undefined,
       madeToOrder,
     },
     { average, count },

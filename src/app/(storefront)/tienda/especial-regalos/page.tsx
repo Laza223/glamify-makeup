@@ -4,14 +4,22 @@ import { getProductList, getCategoryTree, type ProductListResult } from "@/lib/c
 import { ProductListView } from "@/components/catalog/product-list-view";
 import { CatalogBreadcrumbs } from "@/components/catalog/catalog-breadcrumbs";
 import { MADE_TO_ORDER_CATEGORY_SLUGS } from "@/lib/catalog/made-to-order";
+import { listingSeo } from "@/lib/seo/listing";
 
 /** Slugs reales de las 4 categorías de regalo (creadas en /admin/categorias con showInMenu apagado). */
 const GIFT_SLUGS: string[] = ["lip-combos", "gift-cards", ...MADE_TO_ORDER_CATEGORY_SLUGS];
 
-export const metadata: Metadata = {
-  title: "Especial regalos",
-  description: "Todas las opciones para regalar: Lip Combos, Gift Cards, Ramos y Box de Maquillaje.",
-};
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}): Promise<Metadata> {
+  return {
+    title: "Especial regalos",
+    description: "Todas las opciones para regalar: Lip Combos, Gift Cards, Ramos y Box de Maquillaje.",
+    ...listingSeo("/tienda/especial-regalos", parseProductListParams(await searchParams)),
+  };
+}
 
 export default async function EspecialRegalosPage({
   searchParams,

@@ -33,6 +33,8 @@ export const metadata: Metadata = {
   },
   description: DESCRIPTION,
   applicationName: "Glamify Makeup",
+  // "./" se resuelve contra el pathname sin query: cada página queda con canonical a sí misma salvo que lo pise.
+  alternates: { canonical: "./" },
   openGraph: {
     type: "website",
     siteName: "Glamify Makeup",

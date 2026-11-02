@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildProductJsonLd, serializeJsonLd } from "@/lib/seo/jsonld";
+import { buildBreadcrumbListJsonLd, buildProductJsonLd, serializeJsonLd } from "@/lib/seo/jsonld";
 
 describe("buildProductJsonLd", () => {
   const base = {
@@ -58,5 +58,19 @@ describe("serializeJsonLd", () => {
     const out = serializeJsonLd({ name: "</script><script>alert(1)</script>" });
     expect(out).not.toContain("</script>");
     expect(out).toContain("\\u003c");
+  });
+});
+
+describe("buildBreadcrumbListJsonLd", () => {
+  it("numera las migas desde 1 y conserva nombre y URL", () => {
+    const ld = buildBreadcrumbListJsonLd([
+      { label: "Inicio", url: "https://x.test/" },
+      { label: "Labios", url: "https://x.test/tienda/labios" },
+    ]);
+    expect(ld["@type"]).toBe("BreadcrumbList");
+    expect(ld.itemListElement).toEqual([
+      { "@type": "ListItem", position: 1, name: "Inicio", item: "https://x.test/" },
+      { "@type": "ListItem", position: 2, name: "Labios", item: "https://x.test/tienda/labios" },
+    ]);
   });
 });

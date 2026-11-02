@@ -6,12 +6,23 @@ import { getProductList, resolveCategoryPath } from "@/lib/catalog/queries";
 import { ProductListView } from "@/components/catalog/product-list-view";
 import { CatalogBreadcrumbs } from "@/components/catalog/catalog-breadcrumbs";
 import { buildBreadcrumbs } from "@/lib/catalog/categories";
+import { listingSeo } from "@/lib/seo/listing";
 
-export async function generateMetadata({ params }: { params: Promise<{ categoria: string }> }): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ categoria: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}): Promise<Metadata> {
   const { categoria } = await params;
   const { resolved } = await resolveCategoryPath(categoria);
   if (!resolved) return { title: "Categoría" };
-  return { title: resolved.category.name, description: `Productos de ${resolved.category.name}.` };
+  return {
+    title: resolved.category.name,
+    description: `Productos de ${resolved.category.name}.`,
+    ...listingSeo(`/tienda/${categoria}`, parseProductListParams(await searchParams)),
+  };
 }
 
 export default async function CategoriaPage({
