@@ -10,12 +10,16 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import type { Crumb } from "@/lib/catalog/categories";
+import { buildBreadcrumbListJsonLd, serializeJsonLd } from "@/lib/seo/jsonld";
+import { absoluteUrl } from "@/lib/seo/url";
 
 export function CatalogBreadcrumbs({ items }: { items: Crumb[] }) {
   const parent = items.length >= 2 ? items[items.length - 2] : items[0];
+  const jsonLd = buildBreadcrumbListJsonLd(items.map((c) => ({ label: c.label, url: absoluteUrl(c.href) })));
 
   return (
     <nav aria-label="Ruta de navegación">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }} />
       {/* Mobile: Navegación simple ← Categoría sin partirse en dos líneas */}
       {parent && (
         <div className="md:hidden">

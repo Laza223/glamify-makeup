@@ -66,3 +66,17 @@ export function buildWebSiteJsonLd(url: string) {
 export function buildOrganizationJsonLd(url: string) {
   return { "@context": "https://schema.org", "@type": "Organization", name: "Glamify Makeup", url };
 }
+
+/** BreadcrumbList: mismas migas que se muestran (Inicio › Tienda › Categoría › …), con URLs absolutas. */
+export function buildBreadcrumbListJsonLd(items: Array<{ label: string; url: string }>) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: items.map((item, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      name: item.label,
+      item: item.url,
+    })),
+  };
+}
